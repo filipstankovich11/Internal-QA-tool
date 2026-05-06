@@ -1,0 +1,16 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/score.py": {
+      "runtime": "python3.9",
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/api/score",        "destination": "/api/score" },
+    { "source": "/api/views",        "destination": "/api/score" },
+    { "source": "/api/view-tickets", "destination": "/api/score" },
+    { "source": "/(.*)",             "destination": "/index.html" }
+  ]
+}

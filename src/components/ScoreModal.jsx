@@ -1,0 +1,656 @@
+import { useEffect, useRef, useState } from 'react'
+import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
+import { useToast } from './Toast'
+
+function useCountUp(target, duration = 700) {
+  const [val, setVal] = useState(0)
+  const raf = useRef(null)
+  useEffect(() => {
+    const to = target ?? 0
+    const start = performance.now()
+    cancelAnimationFrame(raf.current)
+    const tick = now => {
+      const t = Math.min((now - start) / duration, 1)
+      setVal(Math.round(to * (1 - Math.pow(1 - t, 3))))
+      if (t < 1) raf.current = requestAnimationFrame(tick)
+      else setVal(to)
+    }
+    raf.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf.current)
+  }, [target])
+  return val
+}
+
+const RefreshIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+  </svg>
+)
+
+const VERDICT = {
+  PASS:         { label: 'PASS',        icon: '✓', text: '#10b981', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.2)',  wash: 'rgba(16,185,129,0.06)'  },
+  NEEDS_REVIEW: { label: 'NEEDS REVIEW', icon: '~', text: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)',  wash: 'rgba(245,158,11,0.06)'  },
+  FAIL:         { label: 'FAIL',         icon: '✗', text: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.2)',   wash: 'rgba(239,68,68,0.06)'   },
+}
+
+const VERDICTS = ['PASS', 'NEEDS_REVIEW', 'FAIL']
+
+const scoreColor = n => n >= 4 ? '#10b981' : n >= 3 ? '#f59e0b' : '#ef4444'
+
+// ── 5-dot score indicator ─────────────────────────────────────────────────────
+function ScoreDots({ score }) {
+  const color = scoreColor(score)
+  return (
+    <div className="flex items-center gap-1">
+      {[1,2,3,4,5].map(i => (
+        <div key={i} className="rounded-full transition-all"
+          style={{
+            width: 8, height: 8,
+            background: i <= score ? color : '#222',
+            boxShadow: i <= score ? `0 0 4px ${color}88` : 'none',
+          }} />
+      ))}
+    </div>
+  )
+}
+
+// ── Dimension summary strip ───────────────────────────────────────────────────
+function DimensionStrip({ dimensions }) {
+  return (
+    <div className="grid grid-cols-3 gap-2 mb-4">
+      {dimensions.map(({ name, weight, average }) => {
+        const color = scoreColor(average)
+        const pct   = (average / 5) * 100
+        return (
+          <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
+            style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold tabular-nums" style={{ color }}>{average.toFixed(1)}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#555', background: '#161616' }}>{weight}</span>
+            </div>
+            <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
+            </div>
+            <p className="text-xs leading-tight" style={{ color: '#888' }}>{name}</p>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Criteria row with dots ────────────────────────────────────────────────────
+function SubScoreRow({ label, data }) {
+  const [open, setOpen] = useState(false)
+  const { score, notes } = data
+  const color = scoreColor(score)
+
+  return (
+    <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
+        <span className="text-xs w-3 shrink-0 transition-transform" style={{ color: '#444', display:'inline-block', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
+        <span className="text-sm flex-1" style={{ color: '#ccc' }}>{label}</span>
+        <ScoreDots score={score} />
+        <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
+      </button>
+      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: '#666' }}>{notes}</p>}
+    </div>
+  )
+}
+
+function DimensionCard({ name, weight, average, rows }) {
+  return (
+    <div className="rounded-xl p-4 mb-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#555' }}>{name}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#555', background: '#161616' }}>{weight}</span>
+      </div>
+      <div>{rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}</div>
+    </div>
+  )
+}
+
+function NotesSection({ scoreId, initialNote }) {
+  const { updateScoreNote } = useApp()
+  const { canScore } = useAuth()
+  const toast = useToast()
+  const [note,    setNote]    = useState(initialNote || '')
+  const [editing, setEditing] = useState(false)
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
+  const textareaRef = useRef(null)
+
+  useEffect(() => {
+    if (editing && textareaRef.current) textareaRef.current.focus()
+  }, [editing])
+
+  const save = async () => {
+    if (!scoreId) return
+    setSaving(true)
+    await updateScoreNote(scoreId, note.trim())
+    setSaving(false)
+    setEditing(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    toast.success('Note saved')
+  }
+
+  const cancel = () => { setNote(initialNote || ''); setEditing(false) }
+
+  return (
+    <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Reviewer Note</p>
+        {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
+        {!editing && canScore && scoreId && (
+          <button onClick={() => setEditing(true)}
+            className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
+            onMouseEnter={e => e.target.style.color='#FF9780'} onMouseLeave={e => e.target.style.color='#aaa'}>
+            {note ? 'Edit' : '+ Add note'}
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="flex flex-col gap-2">
+          <textarea ref={textareaRef} value={note} onChange={e => setNote(e.target.value)}
+            placeholder="Add a reviewer note — observations, coaching points, context…"
+            rows={3} className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-none outline-none"
+            style={{ background: '#161616', border: '1px solid rgba(255,151,128,0.4)', color: '#ccc' }}
+            onKeyDown={e => { if (e.key === 'Escape') cancel() }} />
+          <div className="flex gap-2">
+            <button onClick={save} disabled={saving} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg"
+              style={{ opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save'}</button>
+            <button onClick={cancel} className="g-btn-ghost text-xs px-3 py-1.5">Cancel</button>
+          </div>
+        </div>
+      ) : note ? (
+        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#aaa' }}>{note}</p>
+      ) : (
+        <p className="text-sm" style={{ color: '#666' }}>
+          {canScore && scoreId ? 'No note yet — click "Add note" to leave feedback.' : 'No reviewer note.'}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdict, overrideScore, overrideNote, overrideAt }) {
+  const { overrideScore: saveOverride } = useApp()
+  const { isAdmin } = useAuth()
+  const toast = useToast()
+  const [open,    setOpen]    = useState(false)
+  const [verdict, setVerdict] = useState(overrideVerdict || currentVerdict || 'PASS')
+  const [score,   setScore]   = useState(overrideScore   ?? currentScore ?? 80)
+  const [note,    setNote]    = useState('')
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
+
+  if (!scoreId) return null
+
+  const hasOverride = !!overrideVerdict
+
+  const save = async () => {
+    if (!note.trim()) return
+    setSaving(true)
+    await saveOverride(scoreId, { verdict, score: parseFloat(score), note: note.trim() })
+    setSaving(false)
+    setOpen(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    toast.success('Override saved')
+  }
+
+  const vc = VERDICT[overrideVerdict || verdict] || VERDICT.PASS
+
+  return (
+    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#0f0f0f', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: hasOverride ? '#818cf8' : '#888' }}>
+            {hasOverride ? '⊘ Human Override' : 'Override Score'}
+          </p>
+          {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
+          {hasOverride && (
+            <span className="text-xs px-2 py-0.5 rounded-full"
+              style={{ color: vc.text, background: vc.bg, border: `1px solid ${vc.border}` }}>
+              {vc.icon} {vc.label} · {overrideScore?.toFixed(0)}/100
+            </span>
+          )}
+        </div>
+        {isAdmin && (
+          <button onClick={() => setOpen(v => !v)}
+            className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
+            onMouseEnter={e => e.target.style.color='#818cf8'} onMouseLeave={e => e.target.style.color='#aaa'}>
+            {open ? 'Cancel' : hasOverride ? 'Edit override' : 'Override'}
+          </button>
+        )}
+      </div>
+
+      {hasOverride && !open && overrideNote && (
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: '#666' }}>{overrideNote}</p>
+      )}
+      {hasOverride && overrideAt && !open && (
+        <p className="text-xs mt-1" style={{ color: '#333' }}>
+          Overridden {new Date(overrideAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </p>
+      )}
+
+      {open && (
+        <div className="mt-3 flex flex-col gap-3">
+          {/* Verdict picker */}
+          <div>
+            <p className="text-xs mb-1.5" style={{ color: '#555' }}>New verdict</p>
+            <div className="flex gap-2">
+              {VERDICTS.map(v => {
+                const vc2 = VERDICT[v]
+                const active = verdict === v
+                return (
+                  <button key={v} onClick={() => setVerdict(v)}
+                    className="flex-1 text-xs py-1.5 rounded-lg border font-medium transition-all"
+                    style={active
+                      ? { color: vc2.text, background: vc2.bg, borderColor: vc2.border }
+                      : { color: '#555', borderColor: 'rgba(255,255,255,0.07)' }}>
+                    {vc2.icon} {vc2.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Score slider */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs" style={{ color: '#555' }}>Adjusted score</p>
+              <span className="text-sm font-bold tabular-nums"
+                style={{ color: score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444' }}>
+                {parseFloat(score).toFixed(0)}/100
+              </span>
+            </div>
+            <input type="range" min="0" max="100" step="1"
+              value={score} onChange={e => setScore(e.target.value)}
+              className="w-full" style={{ accentColor: '#FF9780' }} />
+          </div>
+
+          {/* Reason (required) */}
+          <div>
+            <p className="text-xs mb-1.5" style={{ color: '#555' }}>Reason <span style={{ color: '#ef4444' }}>*</span></p>
+            <textarea value={note} onChange={e => setNote(e.target.value)}
+              placeholder="Required — explain why you're overriding the AI score…"
+              rows={2} className="w-full rounded-lg px-3 py-2 text-sm resize-none outline-none"
+              style={{ background: '#161616', border: '1px solid rgba(129,140,248,0.3)', color: '#ccc' }} />
+          </div>
+
+          <button onClick={save} disabled={!note.trim() || saving}
+            className="g-btn-primary text-sm py-2 rounded-xl"
+            style={{ opacity: !note.trim() || saving ? 0.5 : 1 }}>
+            {saving ? 'Saving…' : 'Save Override'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function WhatWentWell({ scores }) {
+  // Collect all criteria across dimensions, sort by score desc, take top 2
+  const all = Object.values(scores).flatMap(dim =>
+    Object.entries(dim)
+      .filter(([k, v]) => k !== 'dimension_average' && v?.score != null)
+      .map(([, v]) => v)
+  )
+  const top = [...all].sort((a, b) => b.score - a.score).slice(0, 2).filter(c => c.score >= 4)
+  if (!top.length) return null
+
+  return (
+    <div className="rounded-xl p-4" style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}>
+      <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#10b981' }}>What went well</p>
+      <div className="flex flex-col gap-2">
+        {top.map((c, i) => (
+          <div key={i} className="flex items-start gap-2.5">
+            <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color: '#10b981' }}>✓</span>
+            <p className="text-sm leading-relaxed" style={{ color: '#aaa' }}>{c.notes}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
+  const { flagScore, clearDispute } = useApp()
+  const { isAdmin } = useAuth()
+  const toast = useToast()
+  const [open,    setOpen]    = useState(false)
+  const [note,    setNote]    = useState('')
+  const [saving,  setSaving]  = useState(false)
+
+  if (!scoreId) return null
+
+  const submit = async () => {
+    if (!note.trim()) return
+    setSaving(true)
+    const ok = await flagScore(scoreId, note.trim())
+    setSaving(false)
+    if (ok) { toast.info('Score flagged for dispute'); setOpen(false) }
+    else toast.error('Failed to flag score')
+  }
+
+  const clear = async () => {
+    setSaving(true)
+    const ok = await clearDispute(scoreId)
+    setSaving(false)
+    if (ok) toast.success('Dispute cleared')
+    else toast.error('Failed to clear dispute')
+  }
+
+  return (
+    <div className="rounded-xl p-4"
+      style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#0f0f0f', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider"
+          style={{ color: disputed ? '#f59e0b' : '#888' }}>
+          {disputed ? '⚑ Disputed' : 'Dispute Score'}
+        </p>
+        <div className="flex items-center gap-3">
+          {disputed && isAdmin && (
+            <button onClick={clear} disabled={saving}
+              className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
+              onMouseEnter={e => e.target.style.color='#10b981'}
+              onMouseLeave={e => e.target.style.color='#aaa'}>
+              Clear dispute
+            </button>
+          )}
+          {!disputed && (
+            <button onClick={() => setOpen(v => !v)}
+              className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
+              onMouseEnter={e => e.target.style.color='#f59e0b'}
+              onMouseLeave={e => e.target.style.color='#aaa'}>
+              {open ? 'Cancel' : 'Flag for dispute'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {disputed && disputeNote && !open && (
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{disputeNote}</p>
+      )}
+      {disputed && disputeAt && (
+        <p className="text-xs mt-1" style={{ color: '#444' }}>
+          Flagged {new Date(disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </p>
+      )}
+
+      {open && (
+        <div className="mt-3 flex flex-col gap-2">
+          <textarea value={note} onChange={e => setNote(e.target.value)}
+            placeholder="Describe why this score is incorrect or unfair…"
+            rows={3} className="w-full rounded-lg px-3 py-2 text-sm resize-none outline-none"
+            style={{ background: '#161616', border: '1px solid rgba(245,158,11,0.3)', color: '#ccc' }} />
+          <button onClick={submit} disabled={!note.trim() || saving}
+            className="text-sm py-2 rounded-xl font-medium transition-all"
+            style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', opacity: !note.trim() || saving ? 0.5 : 1 }}>
+            {saving ? 'Submitting…' : 'Submit Dispute'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function ScoreModal({ score, onClose }) {
+  const { agents, addScore, deleteScore, acknowledgeScore, rubric } = useApp()
+  const { isAdmin } = useAuth()
+  const toast = useToast()
+  const [confirmDelete,   setConfirmDelete]   = useState(false)
+  const [rescoring,       setRescoring]       = useState(false)
+  const [liveScore,       setLiveScore]       = useState(null)
+  const [acknowledging,   setAcknowledging]   = useState(false)
+
+  // Use liveScore after a re-score, fall back to the original prop
+  const s = liveScore ?? score
+
+  const displayVerdict  = s.overrideVerdict || s.verdict
+  const displayScore    = s.overrideScore   ?? s.weighted_score
+  const animatedScore   = useCountUp(Math.round(displayScore))
+  const vc = VERDICT[displayVerdict] || VERDICT.FAIL
+  const { inquiry_resolution, internal_processes, customer_perception } = s.scores
+
+  const agentNames = (s.agent_senders || [])
+    .map(a => agents.find(ag =>
+      (a.gorgias_user_id && ag.gorgias_user_id === a.gorgias_user_id) ||
+      (a.email && ag.email?.toLowerCase() === a.email?.toLowerCase())
+    )?.name || a.name)
+    .filter(Boolean)
+
+  const rescore = async () => {
+    setRescoring(true)
+    try {
+      const res  = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric }) })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Re-score failed'); return }
+      const entry = await addScore(data)
+      setLiveScore({ ...data, scoreId: entry?.id, reviewerNote: '', overrideVerdict: null, overrideScore: null, overrideNote: null, overrideAt: null })
+      toast.success('Ticket re-scored')
+    } catch { toast.error('Could not reach the server') }
+    finally { setRescoring(false) }
+  }
+
+  useEffect(() => {
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
+        style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Sticky header — colour-washed by verdict */}
+        <div className="sticky top-0 z-10 px-6 py-4 flex items-start justify-between rounded-t-2xl"
+          style={{ background: `rgba(7,7,7,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs" style={{ color: '#555' }}>Ticket #{s.ticket_id}</p>
+              {agentNames.length > 0 && (
+                <>
+                  <span className="text-xs" style={{ color: '#333' }}>·</span>
+                  {agentNames.map((name, i) => (
+                    <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full"
+                      style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)' }}>
+                      {name}
+                    </span>
+                  ))}
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
+                style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
+                {vc.icon} {vc.label}
+              </span>
+              <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>{animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: '#444' }}>/100</span></span>
+              {s.overrideVerdict && (
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  Human reviewed
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 mt-1 shrink-0">
+            {/* Re-score button */}
+            {s.scoreId && !confirmDelete && (
+              <button onClick={rescore} disabled={rescoring}
+                className="flex items-center gap-1.5 text-xs transition-colors"
+                style={{ color: rescoring ? '#333' : '#555' }}
+                onMouseEnter={e => { if (!rescoring) e.currentTarget.style.color='#FF9780' }}
+                onMouseLeave={e => { if (!rescoring) e.currentTarget.style.color='#555' }}
+                title="Re-run AI scoring on this ticket">
+                {rescoring
+                  ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                  : <RefreshIcon />}
+                {rescoring ? 'Rescoring…' : 'Re-score'}
+              </button>
+            )}
+            {isAdmin && s.scoreId && !confirmDelete && (
+              <button onClick={() => setConfirmDelete(true)}
+                className="text-xs transition-colors" style={{ color: '#444' }}
+                onMouseEnter={e => e.target.style.color='#ef4444'}
+                onMouseLeave={e => e.target.style.color='#444'}>
+                Delete
+              </button>
+            )}
+            {confirmDelete && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: '#ef4444' }}>Delete score?</span>
+                <button onClick={async () => {
+                  const ok = await deleteScore(s.scoreId)
+                  if (ok) { toast.success('Score deleted'); onClose() }
+                  else { toast.error('Failed to delete'); setConfirmDelete(false) }
+                }} className="text-xs font-medium px-2 py-0.5 rounded-md"
+                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
+              </div>
+            )}
+            <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#333' }}
+              onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#333'}>×</button>
+          </div>
+        </div>
+
+        <div className="px-6 py-6 space-y-4">
+          {/* Auto-fail */}
+          {s.auto_fail?.triggered && (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#ef4444' }}>⚠ Auto-Fail Triggered</p>
+              <ul className="space-y-1">{s.auto_fail.reasons.map((r, i) => <li key={i} className="text-sm" style={{ color: '#fca5a5' }}>• {r}</li>)}</ul>
+            </div>
+          )}
+
+          {/* Dimension summary strip */}
+          <DimensionStrip dimensions={[
+            { name: 'Inquiry Resolution',  weight: '50%', average: inquiry_resolution.dimension_average },
+            { name: 'Internal Processes',  weight: '25%', average: internal_processes.dimension_average },
+            { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average },
+          ]} />
+
+          {/* Criteria detail */}
+          <div>
+            <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
+              rows={[
+                { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
+                { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
+                { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
+              ]} />
+            <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
+              rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
+            <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
+              rows={[
+                { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
+                { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
+              ]} />
+          </div>
+
+          {/* Summary */}
+          <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#555' }}>Summary</p>
+            <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>
+          </div>
+
+          {/* What went well */}
+          <WhatWentWell scores={s.scores} />
+
+          {/* Coaching cards */}
+          {s.key_improvements?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#555' }}>Key Improvements</p>
+              <div className="flex flex-col gap-2">
+                {s.key_improvements.map((imp, i) => (
+                  <div key={i} className="rounded-xl p-3.5 flex gap-3"
+                    style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
+                      style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
+                      {i + 1}
+                    </div>
+                    <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{imp}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reviewer note — key forces remount on re-score so note state resets */}
+          <NotesSection key={s.scoreId} scoreId={s.scoreId} initialNote={s.reviewerNote} />
+
+          {/* Acknowledgment */}
+          {s.scoreId && (
+            <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+              style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#0f0f0f', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
+              {s.acknowledged ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: '#10b981' }}>✓ Acknowledged</span>
+                  {s.acknowledgedAt && (
+                    <span className="text-xs" style={{ color: '#333' }}>
+                      {new Date(s.acknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs" style={{ color: '#777' }}>Agent hasn't acknowledged this score yet</p>
+                  <button
+                    onClick={async () => {
+                      setAcknowledging(true)
+                      const ok = await acknowledgeScore(s.scoreId)
+                      setAcknowledging(false)
+                      if (ok) {
+                        setLiveScore(prev => ({ ...(prev ?? s), acknowledged: true, acknowledgedAt: Date.now() }))
+                        toast.success('Score marked as seen')
+                      } else {
+                        toast.error('Failed to acknowledge')
+                      }
+                    }}
+                    disabled={acknowledging}
+                    className="text-xs px-3 py-1.5 rounded-lg transition-colors shrink-0"
+                    style={{ color: '#888', border: '1px solid rgba(255,255,255,0.1)', opacity: acknowledging ? 0.5 : 1 }}
+                    onMouseEnter={e => { if (!acknowledging) e.currentTarget.style.color = '#10b981' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#888' }}>
+                    {acknowledging ? 'Saving…' : 'Mark as seen'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Dispute */}
+          <DisputeSection
+            key={`dsp-${s.scoreId}`}
+            scoreId={s.scoreId}
+            disputed={s.disputed}
+            disputeNote={s.disputeNote}
+            disputeAt={s.disputeAt}
+          />
+
+          {/* Override */}
+          <OverrideSection
+            key={`ovr-${s.scoreId}`}
+            scoreId={s.scoreId}
+            currentVerdict={s.verdict}
+            currentScore={s.weighted_score}
+            overrideVerdict={s.overrideVerdict}
+            overrideScore={s.overrideScore}
+            overrideNote={s.overrideNote}
+            overrideAt={s.overrideAt}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}

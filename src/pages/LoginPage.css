@@ -1,0 +1,318 @@
+/* ── Gorgias QA Login Page ── */
+
+:root {
+  --coral: #FF9780;
+  --bg: #070707;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 151, 128, 0.18);
+  --border-hover: rgba(255, 151, 128, 0.4);
+  --muted: rgba(255, 151, 128, 0.45);
+  --dimmer: rgba(255, 151, 128, 0.28);
+}
+
+/* ── Page ── */
+.login-page {
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  overflow: hidden;
+}
+
+/* ── Intro overlay ── */
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  flex-direction: column;
+  gap: 20px;
+}
+.intro-overlay.hidden {
+  animation: introOut 0.5s ease forwards;
+  pointer-events: none;
+}
+.intro-glow {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 151, 128, 0.13) 0%, transparent 68%);
+  opacity: 0;
+  animation: glowPulse 3.2s ease 0.4s infinite;
+  pointer-events: none;
+}
+.intro-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+.intro-logo-wrap.pulse { animation: logoPulse 2.8s ease-in-out infinite; }
+
+/* Icon SVG strokes */
+.icon-svg {
+  width: 68px;
+  height: 68px;
+  opacity: 0;
+  transform: scale(0.3) rotate(-12deg);
+  animation: iconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s forwards;
+}
+/* back chat bubble */
+.s-back {
+  fill: none; stroke: var(--coral); stroke-width: 6;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: draw 0.85s ease 0.25s forwards;
+}
+/* front rounded rect — fill covers overlap so it reads as "on top" */
+.s-front {
+  fill: var(--bg); stroke: var(--coral); stroke-width: 6;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: draw 0.75s ease 0.85s forwards;
+}
+
+/* Wordmark letter cascade */
+.intro-letters { display: flex; align-items: baseline; }
+.intro-letters span {
+  display: inline-block;
+  color: var(--coral);
+  font-size: 54px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(20px);
+}
+.intro-letters span:nth-child(1) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.60s forwards; }
+.intro-letters span:nth-child(2) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.68s forwards; }
+.intro-letters span:nth-child(3) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.76s forwards; }
+.intro-letters span:nth-child(4) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.84s forwards; }
+.intro-letters span:nth-child(5) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.92s forwards; }
+.intro-letters span:nth-child(6) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 1.00s forwards; }
+.intro-letters span:nth-child(7) { animation: letterUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) 1.08s forwards; }
+
+.qa-badge {
+  display: inline-block;
+  background: var(--coral);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 9px;
+  border-radius: 6px;
+  align-self: center;
+  position: relative;
+  top: -4px;
+  opacity: 0;
+  transform: scale(0.6);
+  animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 1.18s forwards;
+}
+.intro-subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: lp-fadeIn 0.6s ease 1.45s forwards;
+}
+
+/* ── Login form container ── */
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+}
+.login-container.visible {
+  animation: lp-pageIn 0.45s ease 0.15s forwards;
+}
+
+/* Page logo */
+.page-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.page-wordmark { display: flex; align-items: center; gap: 8px; }
+.page-wordmark__name {
+  color: var(--coral);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.page-wordmark__badge {
+  background: var(--coral);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  position: relative;
+  top: -3px;
+}
+.page-tagline {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-top: 8px;
+  margin-bottom: 28px;
+}
+
+/* Card */
+.form-card {
+  width: 100%;
+  background: var(--card-bg);
+  border: 0.5px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Fields */
+.lp-field { display: flex; flex-direction: column; gap: 6px; }
+.lp-field label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.lp-field input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  height: 44px;
+  padding: 0 14px;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+.lp-field input::placeholder { color: rgba(255, 151, 128, 0.22); }
+.lp-field input:focus {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 0 3px rgba(255, 151, 128, 0.08);
+}
+
+/* Password wrapper + eye toggle */
+.input-wrap { position: relative; }
+.input-wrap input { padding-right: 40px; }
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: rgba(255, 151, 128, 0.35);
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+.eye-btn:hover { color: var(--coral); }
+.eye-btn svg { width: 18px; height: 18px; }
+
+/* Rows */
+.forgot-row { display: flex; justify-content: flex-end; margin-top: -8px; }
+.forgot-row a { color: var(--muted); font-size: 12px; text-decoration: none; transition: color 0.2s; }
+.forgot-row a:hover { color: var(--coral); }
+.lp-error { color: #ff6b6b; font-size: 12px; text-align: center; min-height: 16px; letter-spacing: 0.04em; }
+.secure-row { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.secure-row svg { width: 12px; height: 12px; color: var(--dimmer); }
+.secure-row span { color: var(--dimmer); font-size: 11px; letter-spacing: 0.08em; }
+
+/* Sign in button */
+.btn-signin {
+  background: var(--coral);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  height: 46px;
+  width: 100%;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-signin:hover:not(:disabled) { opacity: 0.9; }
+.btn-signin:active:not(:disabled) { transform: scale(0.98); }
+.btn-signin:disabled { opacity: 0.7; cursor: not-allowed; }
+
+/* Spinner */
+.lp-spinner {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(7, 7, 7, 0.25);
+  border-top-color: var(--bg);
+  animation: lp-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Forgot password */
+.back-link {
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+  background: none;
+  border: none;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 0;
+}
+.back-link:hover { color: var(--coral); }
+.reset-note { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.success-msg { color: #6be0a8; font-size: 13px; text-align: center; letter-spacing: 0.04em; line-height: 1.6; }
+
+/* Footer */
+.page-footer { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.env-label { color: var(--dimmer); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
+.env-dot-row { display: flex; align-items: center; gap: 6px; }
+.env-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); opacity: 0.4; }
+.env-sub { color: var(--dimmer); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+
+/* ── Keyframes ── */
+@keyframes iconPop  { to { opacity: 1; transform: scale(1) rotate(0deg); } }
+@keyframes draw     { to { stroke-dashoffset: 0; } }
+@keyframes letterUp { to { opacity: 1; transform: translateY(0); } }
+@keyframes badgePop { to { opacity: 1; transform: scale(1); } }
+@keyframes lp-fadeIn { to { opacity: 1; } }
+@keyframes lp-spin  { to { transform: rotate(360deg); } }
+@keyframes introOut { to { opacity: 0; pointer-events: none; } }
+@keyframes lp-pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes glowPulse {
+  0%   { opacity: 0; transform: scale(0.82); }
+  42%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+@keyframes logoPulse {
+  0%   { filter: drop-shadow(0 0 0px rgba(255, 151, 128, 0)); }
+  45%  { filter: drop-shadow(0 0 20px rgba(255, 151, 128, 0.55)); }
+  100% { filter: drop-shadow(0 0 0px rgba(255, 151, 128, 0)); }
+}
