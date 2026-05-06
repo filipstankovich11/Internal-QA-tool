@@ -440,11 +440,6 @@ export default function ScoreModal({ score, onClose }) {
     )
 
   const notifyAgent = async () => {
-    const botToken = (rubric?.slack_bot_token || '').trim()
-    if (!botToken) {
-      toast.error('Add a Slack Bot Token in QA Guidance → Slack Integration')
-      return
-    }
     const agentsWithEmail = matchedAgents.filter(a => a.email)
     if (!agentsWithEmail.length) {
       toast.error('No email address found for this agent')
@@ -457,12 +452,11 @@ export default function ScoreModal({ score, onClose }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            slack_bot_token: botToken,
             agent_email: agent.email,
             score: s,
             reviewer_note: s.reviewerNote || '',
           }),
-        }).then(r => r.json().then(d => ({ ok: r.ok, ...d, email: agent.email })))
+        }).then(r => r.json().then(d => ({ ok: r.ok, ...d })))
       ))
       const failed = results.filter(r => !r.ok)
       if (failed.length === 0) toast.success('Slack DM sent to agent')

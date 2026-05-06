@@ -188,17 +188,24 @@ def test_webhook():
 
 # ─── Notify agent via Slack DM ───────────────────────────────────────────────
 
+@app.route('/api/slack-status', methods=['GET'])
+@require_auth
+def slack_status():
+    configured = bool((os.environ.get('SLACK_BOT_TOKEN') or '').strip())
+    return jsonify({'configured': configured})
+
+
 @app.route('/api/notify-agent', methods=['POST'])
 @require_auth
 def notify_agent():
     data          = request.get_json(silent=True) or {}
-    bot_token     = (data.get('slack_bot_token') or '').strip()
+    bot_token     = (os.environ.get('SLACK_BOT_TOKEN') or '').strip()
     agent_email   = (data.get('agent_email') or '').strip()
     score_data    = data.get('score') or {}
     reviewer_note = (data.get('reviewer_note') or '').strip()
 
     if not bot_token:
-        return jsonify({'error': 'Slack Bot Token not configured — add it in QA Guidance → Slack Integration'}), 400
+        return jsonify({'error': 'SLACK_BOT_TOKEN is not configured on the server'}), 400
     if not agent_email:
         return jsonify({'error': 'Agent email is required to send a Slack DM'}), 400
 

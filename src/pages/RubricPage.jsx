@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
+import { authFetch } from '../lib/api'
 
 function weightColor(w) {
   return w === 100 ? '#10b981' : '#ef4444'
@@ -107,6 +108,8 @@ function AutoFailEditor({ conditions, onChange }) {
 }
 
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
+
 export default function RubricPage() {
   const { rubric, updateRubric } = useApp()
   const toast = useToast()
@@ -114,6 +117,14 @@ export default function RubricPage() {
   const [saving,      setSaving]      = useState(false)
   const [saved,       setSaved]       = useState(false)
   const [error,       setError]       = useState(null)
+  const [slackStatus, setSlackStatus] = useState(null) // null=loading, true=ok, false=not set
+
+  useEffect(() => {
+    authFetch(`${API_BASE}/api/slack-status`)
+      .then(r => r.json())
+      .then(d => setSlackStatus(d.configured === true))
+      .catch(() => setSlackStatus(false))
+  }, [])
 
   const totalWeight = draft.dimensions.reduce((s, d) => s + d.weight, 0)
   const weightOk    = totalWeight === 100
@@ -212,20 +223,24 @@ export default function RubricPage() {
 
       {/* Slack Integration */}
       <div className="rounded-2xl p-5 mt-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>Slack Integration</p>
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#888' }}>
-            Connect a Slack bot to send score summaries directly to agents as DMs. Create a Slack app with <span style={{ color: '#ccc' }}>chat:write</span> and <span style={{ color: '#ccc' }}>users:read.email</span> scopes, then paste the Bot Token below.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#777' }}>Slack Integration</p>
+            <p className="text-xs leading-relaxed" style={{ color: '#666' }}>
+              Set <span style={{ color: '#ccc' }}>SLACK_BOT_TOKEN</span> in your server environment to enable agent DMs.
+              Your Slack app needs <span style={{ color: '#ccc' }}>chat:write</span> and <span style={{ color: '#ccc' }}>users:read.email</span> scopes.
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
+            style={slackStatus === true
+              ? { background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }
+              : slackStatus === false
+              ? { background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.15)' }
+              : { background: '#1a1a1a', color: '#555', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <span>{slackStatus === true ? '●' : slackStatus === false ? '●' : '○'}</span>
+            <span>{slackStatus === true ? 'Connected' : slackStatus === false ? 'Not configured' : '…'}</span>
+          </div>
         </div>
-        <input
-          type="password"
-          value={draft.slack_bot_token || ''}
-          onChange={e => setDraft(d => ({ ...d, slack_bot_token: e.target.value }))}
-          className="w-full rounded-xl px-4 py-2.5 text-sm g-input"
-          style={{ color: '#ccc' }}
-          placeholder="xoxb-…"
-        />
       </div>
 
       {/* Scoring Guidance */}
