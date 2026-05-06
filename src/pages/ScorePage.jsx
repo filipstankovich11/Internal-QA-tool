@@ -5,8 +5,6 @@ import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { authFetch } from '../lib/api'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
-
 const VERDICT_COLOR = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
 const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,158,11,0.1)', FAIL: 'rgba(239,68,68,0.1)' }
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
@@ -69,144 +67,6 @@ function HistoryItem({ item, onClick }) {
         </span>
       </div>
     </button>
-  )
-}
-
-// ── Single — random sampler ───────────────────────────────────────────────────
-
-function SamplerSection({ onScore }) {
-  const { agents, rubric, addScore } = useApp()
-  const samplerAgents = agents.filter(a => a.gorgias_user_id)
-  const [agentId,  setAgentId]  = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo,   setDateTo]   = useState('')
-  const [count,    setCount]    = useState(5)
-  const [loading,  setLoading]  = useState(false)
-  const [error,    setError]    = useState(null)
-  const [tickets,  setTickets]  = useState(null)
-  const [scoring,  setScoring]  = useState({})
-
-  const sample = async () => {
-    if (!agentId) return
-    setLoading(true); setError(null); setTickets(null)
-    try {
-      const agent  = agents.find(a => a.id === agentId)
-      const params = new URLSearchParams({ gorgias_user_id: agent.gorgias_user_id, count })
-      if (dateFrom) params.set('date_from', dateFrom)
-      if (dateTo)   params.set('date_to',   dateTo)
-      const res  = await authFetch(`${API_BASE}/api/sample-tickets?${params}`)
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Sampling failed'); return }
-      setTickets(data)
-    } catch { setError('Could not reach the server') }
-    finally { setLoading(false) }
-  }
-
-  const scoreTicket = async (ticketId) => {
-    setScoring(prev => ({ ...prev, [ticketId]: 'loading' }))
-    try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(ticketId), rubric }) })
-      const data = await res.json()
-      if (!res.ok) { setScoring(prev => ({ ...prev, [ticketId]: 'error' })); return }
-      const entry = await addScore(data)
-      setScoring(prev => ({ ...prev, [ticketId]: 'done' }))
-      onScore({ ...data, scoreId: entry?.id })
-    } catch { setScoring(prev => ({ ...prev, [ticketId]: 'error' })) }
-  }
-
-  return (
-    <div className="mt-10">
-      <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#666' }}>Random Sample</p>
-      <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-        {samplerAgents.length === 0 ? (
-          <p className="text-xs text-center py-4" style={{ color: '#666' }}>
-            No agents with a Gorgias User ID yet — add one in Agents to enable sampling.
-          </p>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-3 mb-4">
-              <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#777' }}>Agent</label>
-                <select value={agentId} onChange={e => setAgentId(e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-                  <option value="">Select agent…</option>
-                  {samplerAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs" style={{ color: '#777' }}>From</label>
-                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'dark' }} onFocus={onFocus} onBlur={onBlur} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs" style={{ color: '#777' }}>To</label>
-                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'dark' }} onFocus={onFocus} onBlur={onBlur} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs" style={{ color: '#777' }}>Count</label>
-                <select value={count} onChange={e => setCount(Number(e.target.value))}
-                  className="rounded-xl px-3 py-2 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-                  {[3, 5, 8, 10].map(n => <option key={n} value={n}>{n} tickets</option>)}
-                </select>
-              </div>
-            </div>
-
-            <button onClick={sample} disabled={!agentId || loading}
-              className="g-btn-primary text-sm px-5 py-2.5 rounded-xl w-full"
-              style={{ opacity: !agentId || loading ? 0.5 : 1 }}>
-              {loading
-                ? <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                    </svg>Fetching from Gorgias…
-                  </span>
-                : 'Get Random Sample'}
-            </button>
-
-            {error && <p className="text-xs text-center mt-3" style={{ color: '#ef4444' }}>{error}</p>}
-
-            {tickets && (
-              <div className="mt-5">
-                <p className="text-xs mb-3" style={{ color: '#777' }}>
-                  Sampled {tickets.tickets.length} of {tickets.total_found} matching tickets
-                </p>
-                <div className="flex flex-col gap-2">
-                  {tickets.tickets.map(t => {
-                    const st = scoring[t.id]
-                    return (
-                      <div key={t.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                        style={{ background: '#111', border: '1px solid rgba(255,255,255,0.04)' }}>
-                        <a href={gorgiasTicketUrl(t.id)} target="_blank" rel="noopener noreferrer"
-                          className="text-xs font-mono shrink-0" style={{ color: '#FF9780' }}
-                          onMouseEnter={e => e.target.style.textDecoration = 'underline'}
-                          onMouseLeave={e => e.target.style.textDecoration = 'none'}>
-                          #{t.id}
-                        </a>
-                        <span className="text-sm flex-1 truncate" style={{ color: '#ccc' }}>{t.subject || '—'}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full shrink-0 capitalize"
-                          style={{ background: '#1a1a1a', color: '#777' }}>{t.status}</span>
-                        {st === 'done'
-                          ? <span className="text-xs font-medium shrink-0" style={{ color: '#10b981' }}>✓ Scored</span>
-                          : st === 'error'
-                          ? <span className="text-xs shrink-0" style={{ color: '#ef4444' }}>Error</span>
-                          : <button onClick={() => scoreTicket(t.id)} disabled={st === 'loading'}
-                              className="text-xs px-3 py-1 rounded-lg shrink-0 g-btn-primary"
-                              style={{ opacity: st === 'loading' ? 0.5 : 1 }}>
-                              {st === 'loading' ? '…' : 'Score'}
-                            </button>
-                        }
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -567,7 +427,6 @@ export default function ScorePage() {
             </div>
           )}
 
-          {canScore && <SamplerSection onScore={setActiveScore} />}
         </>
       )}
 
