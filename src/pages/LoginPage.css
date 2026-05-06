@@ -6,8 +6,8 @@
   --card-bg: rgba(255, 255, 255, 0.04);
   --border: rgba(255, 151, 128, 0.18);
   --border-hover: rgba(255, 151, 128, 0.4);
-  --muted: rgba(255, 151, 128, 0.45);
-  --dimmer: rgba(255, 151, 128, 0.28);
+  --muted: rgba(255, 151, 128, 0.75);
+  --dimmer: rgba(255, 151, 128, 0.52);
 }
 
 /* ── Page ── */
@@ -201,7 +201,7 @@
   transition: border-color 0.2s, box-shadow 0.2s;
   width: 100%;
 }
-.lp-field input::placeholder { color: rgba(255, 151, 128, 0.22); }
+.lp-field input::placeholder { color: rgba(255, 151, 128, 0.40); }
 .lp-field input:focus {
   border-color: var(--border-hover);
   box-shadow: 0 0 0 3px rgba(255, 151, 128, 0.08);
