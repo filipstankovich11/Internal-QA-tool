@@ -25,7 +25,19 @@ cd ..
 cp .env.example .env.local
 ```
 Fill in `.env.local` with your credentials (Supabase, Gorgias, Anthropic).
-
+  1 # Supabase                                                                                                                                                                                                                                           
+       2 VITE_SUPABASE_URL=https://your-project.supabase.co                                                                                                                                                                                                   
+       3 VITE_SUPABASE_ANON_KEY=your-anon-key                                                                                                                                                                                                                 
+       4                                                                                                                                                                                                                                                      
+       5 # Python API (optional if running locally)                                                                                                                                                                                                           
+       6 VITE_API_URL=http://localhost:5001                                                                                                                                                                                                                   
+       7                                                                                                                                                                                                                                                      
+       8 # Gorgias (required for the Python API server)                                                                                                                                                                                                       
+       9 GORGIAS_AUTH=Basic your-base64-encoded-credentials                                                                                                                                                                                                   
+      10 GORGIAS_DOMAIN=yourcompany.gorgias.com                                                                                                                                                                                                               
+      11                                                                                                                                                                                                                                                      
+      12 # Anthropic (required for AI scoring)                                                                                                                                                                                                                
+      13 ANTHROPIC_API_KEY=sk-ant-...     
 ### 5. Run locally
 In two separate terminals:
 
