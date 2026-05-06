@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
+import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 
@@ -152,11 +153,13 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       </div>
 
       {/* Score */}
-      <span className="text-sm font-bold tabular-nums w-16 text-right shrink-0"
-        style={{ color: scoreColor(s.effectiveScore) }}>
-        {s.effectiveScore?.toFixed(0)}/100
-        {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: '#818cf8' }}>*</span>}
-      </span>
+      <ScoreBreakdownHover scores={s.fullScore?.scores} align="right">
+        <span className="text-sm font-bold tabular-nums w-16 text-right shrink-0 cursor-default"
+          style={{ color: scoreColor(s.effectiveScore) }}>
+          {s.effectiveScore?.toFixed(0)}/100
+          {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: '#818cf8' }}>*</span>}
+        </span>
+      </ScoreBreakdownHover>
 
       {/* Verdict */}
       <span className="text-xs font-medium px-2 py-0.5 rounded-full w-16 text-center shrink-0"
@@ -195,6 +198,14 @@ export default function AgentProfilePage() {
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0)
   const thisMonth  = scores.filter(s => s.scoredAt >= monthStart.getTime()).length
   const unread     = scores.filter(s => !s.acknowledged).length
+
+  // ── Month-over-month ───────────────────────────────────────────────────────
+  const prevMonthStart = new Date(monthStart); prevMonthStart.setMonth(prevMonthStart.getMonth() - 1)
+  const thisMonthScores = scores.filter(s => s.scoredAt >= monthStart.getTime())
+  const prevMonthScores = scores.filter(s => s.scoredAt >= prevMonthStart.getTime() && s.scoredAt < monthStart.getTime())
+  const thisMonthAvg = thisMonthScores.length ? thisMonthScores.reduce((a, x) => a + x.effectiveScore, 0) / thisMonthScores.length : null
+  const prevMonthAvg = prevMonthScores.length ? prevMonthScores.reduce((a, x) => a + x.effectiveScore, 0) / prevMonthScores.length : null
+  const momDelta = thisMonthAvg != null && prevMonthAvg != null ? thisMonthAvg - prevMonthAvg : null
 
   // ── dimension averages ─────────────────────────────────────────────────────
   const dimAvg = key => {
@@ -261,18 +272,46 @@ export default function AgentProfilePage() {
 
       {/* ── Key metrics ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Avg Score',    value: avg != null ? `${avg.toFixed(1)}` : '—', color: avg != null ? scoreColor(avg) : '#555', sub: 'out of 100' },
-          { label: 'Pass Rate',    value: passRate != null ? `${passRate}%` : '—', color: '#10b981', sub: `${pass} of ${total}` },
-          { label: 'Total Scored', value: String(total), color: '#fff', sub: `${thisMonth} this month` },
-          { label: 'New Scores',   value: String(unread), color: unread > 0 ? '#f59e0b' : '#555', sub: 'to acknowledge' },
-        ].map((c, i) => (
-          <div key={c.label} className="rounded-2xl p-5 stagger-item" style={{ '--i': i, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-xs mb-2" style={{ color: '#555' }}>{c.label}</p>
-            <p className="text-3xl font-bold" style={{ color: c.color }}>{c.value}</p>
-            <p className="text-xs mt-1" style={{ color: '#444' }}>{c.sub}</p>
+        {/* Avg Score */}
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-xs mb-2" style={{ color: '#555' }}>Avg Score</p>
+          <p className="text-3xl font-bold" style={{ color: avg != null ? scoreColor(avg) : '#555' }}>{avg != null ? avg.toFixed(1) : '—'}</p>
+          <p className="text-xs mt-1" style={{ color: '#444' }}>out of 100</p>
+        </div>
+
+        {/* Pass Rate */}
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 1, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-xs mb-2" style={{ color: '#555' }}>Pass Rate</p>
+          <p className="text-3xl font-bold" style={{ color: '#10b981' }}>{passRate != null ? `${passRate}%` : '—'}</p>
+          <p className="text-xs mt-1" style={{ color: '#444' }}>{pass} of {total}</p>
+        </div>
+
+        {/* This Month — with MoM delta */}
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 2, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-xs mb-2" style={{ color: '#555' }}>This Month</p>
+          <div className="flex items-end gap-2">
+            <p className="text-3xl font-bold text-white">{thisMonth}</p>
+            {momDelta != null && (() => {
+              const up    = momDelta >= 0
+              const color = Math.abs(momDelta) < 2 ? '#555' : up ? '#10b981' : '#ef4444'
+              return (
+                <span className="text-sm font-semibold mb-1 tabular-nums" style={{ color }}>
+                  {up ? '↑' : '↓'} {Math.abs(momDelta).toFixed(1)}
+                </span>
+              )
+            })()}
           </div>
-        ))}
+          <p className="text-xs mt-1" style={{ color: '#444' }}>
+            {thisMonthAvg != null ? `${thisMonthAvg.toFixed(1)} avg` : 'tickets'}{prevMonthAvg != null ? ` · prev ${prevMonthAvg.toFixed(1)}` : ''}
+          </p>
+        </div>
+
+        {/* Unread */}
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 3, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-xs mb-2" style={{ color: '#555' }}>New Scores</p>
+          <p className="text-3xl font-bold" style={{ color: unread > 0 ? '#f59e0b' : '#555' }}>{unread}</p>
+          <p className="text-xs mt-1" style={{ color: '#444' }}>to acknowledge</p>
+        </div>
       </div>
 
       {/* ── Goal progress ── */}

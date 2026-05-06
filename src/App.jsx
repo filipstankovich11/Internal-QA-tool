@@ -32,6 +32,8 @@ const ScorePage        = lazy(() => import('./pages/ScorePage'))
 const BatchPage        = lazy(() => import('./pages/BatchPage'))
 const AgentsPage       = lazy(() => import('./pages/AgentsPage'))
 const AgentProfilePage = lazy(() => import('./pages/AgentProfilePage'))
+const InboxPage        = lazy(() => import('./pages/InboxPage'))
+const CoachingPage     = lazy(() => import('./pages/CoachingPage'))
 const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
@@ -51,6 +53,8 @@ function Router({ page, role }) {
     case 'review':    return <ReviewQueuePage />
     case 'batch':     return <BatchPage />
     case 'agents':    return role === 'agent' ? <AgentProfilePage /> : <AgentsPage />
+    case 'inbox':     return <InboxPage />
+    case 'coaching':  return <CoachingPage />
     case 'teams':     return <TeamsPage />
     case 'rubric':    return <RubricPage />
     default:          return <ScorePage />

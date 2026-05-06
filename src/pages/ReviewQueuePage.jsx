@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import ScoreModal from '../components/ScoreModal'
+import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 
 function QueueItem({ item, onClick, badge }) {
@@ -9,11 +10,13 @@ function QueueItem({ item, onClick, badge }) {
 
   return (
     <button onClick={onClick}
-      className="w-full rounded-xl px-4 py-3.5 text-left transition-all"
+      className="w-full rounded-xl px-4 text-left transition-all"
       style={{ background: '#0f0f0f', border: `1px solid ${badge.border}` }}
       onMouseEnter={e => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.borderColor = badge.hoverBorder }}
       onMouseLeave={e => { e.currentTarget.style.background = '#0f0f0f'; e.currentTarget.style.borderColor = badge.border }}>
-      <div className="flex items-center justify-between gap-3">
+
+      {/* Main row */}
+      <div className="flex items-center justify-between gap-3 py-3.5">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
             style={{ background: badge.bg, color: badge.color }}>
@@ -40,14 +43,29 @@ function QueueItem({ item, onClick, badge }) {
               ))}
             </div>
           )}
-          <span className="text-sm font-bold tabular-nums" style={{ color: badge.color }}>
-            {item.effectiveScore?.toFixed(0)}/100
-          </span>
+          <ScoreBreakdownHover scores={item.fullScore?.scores} align="right">
+            <span className="text-sm font-bold tabular-nums cursor-default" style={{ color: badge.color }}>
+              {item.effectiveScore?.toFixed(0)}/100
+            </span>
+          </ScoreBreakdownHover>
           <span className="text-xs" style={{ color: '#444' }}>
             {new Date(item.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         </div>
       </div>
+
+      {/* Dispute note — shown inline so reviewer sees it without opening the modal */}
+      {item.disputed && item.disputeNote && (
+        <div className="pb-3.5 pl-1" style={{ borderTop: '1px solid rgba(245,158,11,0.1)' }}>
+          <p className="text-xs pt-2.5 mb-1" style={{ color: '#666' }}>Agent's dispute reason:</p>
+          <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{item.disputeNote}</p>
+          {item.disputeAt && (
+            <p className="text-xs mt-1.5" style={{ color: '#444' }}>
+              Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          )}
+        </div>
+      )}
     </button>
   )
 }
@@ -58,9 +76,6 @@ export default function ReviewQueuePage() {
 
   const needsReview = scoreHistory.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
   const disputed    = scoreHistory.filter(s => s.disputed)
-  const queue = needsReview  // used for total count badge
-
-  const agentName = (id) => agents.find(a => a.id === id)?.name
 
   const open = (item) => setActiveScore({
     ...item.fullScore,
