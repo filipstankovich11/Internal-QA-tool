@@ -233,34 +233,6 @@ export default function RubricPage() {
         conditions={draft.auto_fail_conditions}
         onChange={updated => setDraft(d => ({ ...d, auto_fail_conditions: updated }))} />
 
-      {/* Notifications */}
-      <div className="rounded-2xl p-5 mt-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>Notifications</p>
-          <p className="text-xs mt-1" style={{ color: '#666' }}>
-            Post a Slack message every time a ticket is scored. Paste an incoming webhook URL from your Slack app settings.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <input
-            value={draft.slack_webhook_url || ''}
-            onChange={e => setDraft(d => ({ ...d, slack_webhook_url: e.target.value }))}
-            className="flex-1 rounded-xl px-4 py-2.5 text-sm g-input"
-            style={{ color: '#ccc' }}
-            placeholder="https://hooks.slack.com/services/…"
-          />
-          <button
-            onClick={testWebhook}
-            disabled={testingHook || !(draft.slack_webhook_url || '').trim()}
-            className="shrink-0 text-sm px-4 py-2.5 rounded-xl border transition-colors"
-            style={{ color: '#888', borderColor: 'rgba(255,255,255,0.1)', opacity: testingHook || !(draft.slack_webhook_url || '').trim() ? 0.4 : 1 }}
-            onMouseEnter={e => { if (!testingHook) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.25)' }}}
-            onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
-            {testingHook ? 'Sending…' : 'Test'}
-          </button>
-        </div>
-      </div>
-
       {/* Scoring Guidance */}
       <div className="rounded-2xl p-5 mt-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="mb-3">
