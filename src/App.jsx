@@ -16,7 +16,7 @@ class ErrorBoundary extends Component {
         <div className="text-center px-6 max-w-md">
           <p className="text-4xl mb-4">⚠️</p>
           <p className="text-white font-semibold mb-2">Something went wrong</p>
-          <p className="text-sm mb-6" style={{ color: '#555' }}>{this.state.error.message}</p>
+          <p className="text-sm mb-6" style={{ color: '#777' }}>{this.state.error.message}</p>
           <button onClick={() => this.setState({ error: null })}
             className="g-btn-primary text-sm px-5 py-2 rounded-xl">
             Try again

@@ -25,7 +25,7 @@ function SourceToggle({ mode, setMode }) {
       {[['csv','📄 CSV Upload'],['view','🔗 Gorgias View']].map(([id, label]) => (
         <button key={id} onClick={() => setMode(id)}
           className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={mode === id ? { background: '#1e1e1e', color: '#fff' } : { color: '#555' }}
+          style={mode === id ? { background: '#1e1e1e', color: '#fff' } : { color: '#777' }}
           onMouseEnter={e => { if (mode!==id) e.currentTarget.style.color='#ccc' }}
           onMouseLeave={e => { if (mode!==id) e.currentTarget.style.color='#555' }}
         >
@@ -59,8 +59,8 @@ function CSVUploadZone({ onTickets, disabled }) {
       >
         <p className="text-3xl mb-3">📄</p>
         <p className="text-sm font-medium text-white">Drop your CSV here</p>
-        <p className="text-xs mt-1" style={{ color: '#555' }}>or click to browse</p>
-        <p className="text-xs mt-3" style={{ color: '#333' }}>Expected column: <code style={{ color: '#888' }}>ticket_id</code> or <code style={{ color: '#888' }}>ticket_url</code></p>
+        <p className="text-xs mt-1" style={{ color: '#777' }}>or click to browse</p>
+        <p className="text-xs mt-3" style={{ color: '#555' }}>Expected column: <code style={{ color: '#888' }}>ticket_id</code> or <code style={{ color: '#888' }}>ticket_url</code></p>
         <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={e => onFile(e.target.files[0])} />
       </div>
       {err     && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{err}</p>}
@@ -111,7 +111,7 @@ function ViewPicker({ onTickets, disabled }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <label className="text-xs mb-1.5 block" style={{ color: '#666' }}>Gorgias View</label>
+          <label className="text-xs mb-1.5 block" style={{ color: '#888' }}>Gorgias View</label>
           <select value={viewId} onChange={e=>{setViewId(e.target.value);setPreview(null);onTickets([])}} disabled={disabled||loading}
             className="w-full rounded-xl px-4 py-2.5 text-sm" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}>
             <option value="">{loading ? 'Loading views…' : 'Select a view…'}</option>
@@ -119,7 +119,7 @@ function ViewPicker({ onTickets, disabled }) {
           </select>
         </div>
         <div className="w-24">
-          <label className="text-xs mb-1.5 block" style={{ color: '#666' }}>Limit</label>
+          <label className="text-xs mb-1.5 block" style={{ color: '#888' }}>Limit</label>
           <input type="number" min={1} max={100} value={limit}
             onChange={e=>setLimit(Math.min(100,Math.max(1,+e.target.value)))} disabled={disabled}
             className="w-full rounded-xl px-4 py-2.5 text-sm" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur} />
@@ -137,7 +137,7 @@ function ViewPicker({ onTickets, disabled }) {
           <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
             {preview.map(t => (
               <div key={t.id} className="flex items-center gap-2 text-xs">
-                <span className="font-mono" style={{ color: '#555' }}>#{t.id}</span>
+                <span className="font-mono" style={{ color: '#777' }}>#{t.id}</span>
                 <span className="truncate" style={{ color: '#888' }}>{t.subject||'(no subject)'}</span>
                 <span className="shrink-0 px-1.5 py-0.5 rounded text-xs" style={{ background:'#1a1a1a', color:'#666' }}>{t.status}</span>
               </div>
@@ -174,7 +174,7 @@ function ResultRow({ result, onView }) {
         #{result.ticketId}
       </a>
       <span className="text-xs flex-1 truncate" style={{ color: '#ccc' }}>{result.fullScore?.ticket_subject||'—'}</span>
-      {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#555' }}>{result.agentName}</span>}
+      {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#777' }}>{result.agentName}</span>}
       <span className="text-xs shrink-0 tabular-nums" style={{ color: '#888' }}>{result.weightedScore?.toFixed(0)}/100</span>
       {vs && <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: vs.color, background: vs.bg }}>{vs.label}</span>}
     </button>
@@ -217,7 +217,7 @@ export default function BatchPage() {
     <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Batch Run</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#666' }}>Score multiple tickets at once from a CSV or a Gorgias view</p>
+        <p className="text-sm mt-0.5" style={{ color: '#888' }}>Score multiple tickets at once from a CSV or a Gorgias view</p>
       </div>
 
       <div className="mb-6"><SourceToggle mode={mode} setMode={m=>{setMode(m);setTicketIds([]);setResults([])}} /></div>
@@ -247,7 +247,7 @@ export default function BatchPage() {
         <div>
           {/* Progress */}
           <div className="mb-5">
-            <div className="flex justify-between text-xs mb-1.5" style={{ color: '#666' }}>
+            <div className="flex justify-between text-xs mb-1.5" style={{ color: '#888' }}>
               <span>{done} / {ticketIds.length} scored</span>
               <span>{Math.round(ticketIds.length>0?(done/ticketIds.length)*100:0)}%</span>
             </div>

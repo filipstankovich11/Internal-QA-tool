@@ -27,7 +27,7 @@ export default function ScoreRing({ score, verdict }) {
       </svg>
       <div className="flex flex-col items-center z-10">
         <span className="text-white text-4xl font-bold leading-none tabular-nums">{Math.round(score)}</span>
-        <span className="text-xs mt-1" style={{ color: '#555' }}>/ 100</span>
+        <span className="text-xs mt-1" style={{ color: '#777' }}>/ 100</span>
       </div>
     </div>
   )

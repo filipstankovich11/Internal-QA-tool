@@ -68,11 +68,11 @@ export default function ScoreBreakdownHover({ children, scores, align = 'right' 
                 {/* Dimension header */}
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold" style={{ color: '#666' }}>{dim.label}</span>
-                    <span className="text-xs px-1 rounded" style={{ color: '#444', background: '#1a1a1a', fontSize: 10 }}>{dim.weight}</span>
+                    <span className="text-xs font-semibold" style={{ color: '#888' }}>{dim.label}</span>
+                    <span className="text-xs px-1 rounded" style={{ color: '#666', background: '#1a1a1a', fontSize: 10 }}>{dim.weight}</span>
                   </div>
                   <span className="text-xs font-bold tabular-nums" style={{ color }}>
-                    {avg.toFixed(1)}<span style={{ color: '#333' }}>/5</span>
+                    {avg.toFixed(1)}<span style={{ color: '#555' }}>/5</span>
                   </span>
                 </div>
 
@@ -84,7 +84,7 @@ export default function ScoreBreakdownHover({ children, scores, align = 'right' 
                     const cc = critColor(cd.score)
                     return (
                       <div key={c.key} className="flex items-center gap-2">
-                        <span className="text-xs flex-1" style={{ color: '#444' }}>{c.label}</span>
+                        <span className="text-xs flex-1" style={{ color: '#666' }}>{c.label}</span>
                         <div className="flex gap-0.5">
                           {[1,2,3,4,5].map(i => (
                             <div key={i} style={{

@@ -28,7 +28,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 
         {/* Agent */}
         <div className="flex flex-col gap-1.5 min-w-[160px]">
-          <label className="text-xs" style={{ color: '#555' }}>Agent</label>
+          <label className="text-xs" style={{ color: '#777' }}>Agent</label>
           <select value={filters.agent} onChange={e => set('agent', e.target.value)}
             className="rounded-xl px-3 py-2 text-sm" style={selectStyle}
             onFocus={inputFocus} onBlur={inputBlur}>
@@ -39,7 +39,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 
         {/* Team */}
         <div className="flex flex-col gap-1.5 min-w-[160px]">
-          <label className="text-xs" style={{ color: '#555' }}>Team</label>
+          <label className="text-xs" style={{ color: '#777' }}>Team</label>
           <select value={filters.team} onChange={e => set('team', e.target.value)}
             className="rounded-xl px-3 py-2 text-sm" style={selectStyle}
             onFocus={inputFocus} onBlur={inputBlur}>
@@ -50,7 +50,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 
         {/* Date from */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs" style={{ color: '#555' }}>From</label>
+          <label className="text-xs" style={{ color: '#777' }}>From</label>
           <input type="date" value={filters.dateFrom} onChange={e => set('dateFrom', e.target.value)}
             className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }}
             onFocus={inputFocus} onBlur={inputBlur} />
@@ -58,7 +58,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 
         {/* Date to */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs" style={{ color: '#555' }}>To</label>
+          <label className="text-xs" style={{ color: '#777' }}>To</label>
           <input type="date" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)}
             className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }}
             onFocus={inputFocus} onBlur={inputBlur} />
@@ -66,7 +66,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 
         {/* Verdict toggles */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs" style={{ color: '#555' }}>Status</label>
+          <label className="text-xs" style={{ color: '#777' }}>Status</label>
           <div className="flex gap-1.5">
             {VERDICTS.map(v => {
               const active = filters.verdicts.includes(v)
@@ -78,7 +78,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
                   className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
                   style={active
                     ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                    : { color: '#555', borderColor: 'rgba(255,255,255,0.07)' }
+                    : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }
                   }>
                   {VERDICT_LABEL[v]}
                 </button>
@@ -89,13 +89,13 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 
         {/* Clear + count */}
         <div className="flex items-end gap-3 ml-auto">
-          <span className="text-xs pb-2.5" style={{ color: '#444' }}>
+          <span className="text-xs pb-2.5" style={{ color: '#666' }}>
             {filtered} / {total} tickets
           </span>
           {hasFilters && (
             <button onClick={() => setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })}
               className="text-xs px-3 py-2 rounded-xl transition-colors"
-              style={{ color: '#555', border: '1px solid rgba(255,255,255,0.07)' }}
+              style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
               onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
               onMouseLeave={e => e.currentTarget.style.color = '#555'}>
               Clear filters
@@ -145,7 +145,7 @@ export default function TicketsPage() {
     <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Tickets</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#666' }}>All scored tickets with filters</p>
+        <p className="text-sm mt-0.5" style={{ color: '#888' }}>All scored tickets with filters</p>
       </div>
 
       <FilterBar
@@ -155,7 +155,7 @@ export default function TicketsPage() {
       />
 
       {filtered.length === 0 ? (
-        <div className="text-center py-20" style={{ color: '#333' }}>
+        <div className="text-center py-20" style={{ color: '#555' }}>
           <p className="text-4xl mb-3">🎫</p>
           <p className="text-sm">{scoreHistory.length === 0 ? 'No tickets scored yet.' : 'No tickets match your filters.'}</p>
         </div>
@@ -164,7 +164,7 @@ export default function TicketsPage() {
           {/* Table header */}
           <div className="grid text-xs px-4 py-2.5" style={{
             gridTemplateColumns: '100px 1fr 140px 80px 90px 80px',
-            background: '#0a0a0a', color: '#444', borderBottom: '1px solid rgba(255,255,255,0.05)'
+            background: '#0a0a0a', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.05)'
           }}>
             <span>Ticket</span>
             <span>Subject</span>
@@ -212,7 +212,7 @@ export default function TicketsPage() {
                     <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[110px]"
                       style={{ background: '#1a1a1a', color: '#888' }}>{name}</span>
                   ))
-                  : <span style={{ color: '#333' }}>—</span>
+                  : <span style={{ color: '#555' }}>—</span>
                 }
               </div>
 
@@ -231,7 +231,7 @@ export default function TicketsPage() {
               </div>
 
               {/* Date */}
-              <span className="text-xs text-right" style={{ color: '#444' }}>
+              <span className="text-xs text-right" style={{ color: '#666' }}>
                 {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             </div>

@@ -33,7 +33,7 @@ function TeamCard({ team, agents, scores, onEdit, onDelete, canEdit }) {
         <div className="flex items-center gap-3 shrink-0">
           {canEdit && !confirmDelete && <button onClick={() => setEditing(true)} className="text-xs transition-colors g-btn-ghost">Edit</button>}
           {canEdit && !confirmDelete && (
-            <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#555' }}
+            <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#777' }}
               onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#555'}>Delete</button>
           )}
           {confirmDelete && (
@@ -51,7 +51,7 @@ function TeamCard({ team, agents, scores, onEdit, onDelete, canEdit }) {
         <span style={{ color: '#888' }}>{agents.length} agent{agents.length !== 1 ? 's' : ''}</span>
         {scores.length > 0 ? (
           <>
-            <span style={{ color: '#444' }}>{scores.length} tickets</span>
+            <span style={{ color: '#666' }}>{scores.length} tickets</span>
             <span className="font-bold" style={{ color: avgColor }}>avg {avg}/100</span>
             <div className="flex items-center gap-3 text-xs">
               <span style={{ color: '#10b981' }}>{pass} pass</span>
@@ -59,7 +59,7 @@ function TeamCard({ team, agents, scores, onEdit, onDelete, canEdit }) {
               <span style={{ color: '#ef4444' }}>{fail} fail</span>
             </div>
           </>
-        ) : <span style={{ color: '#444' }} className="text-xs">No tickets scored yet</span>}
+        ) : <span style={{ color: '#666' }} className="text-xs">No tickets scored yet</span>}
       </div>
 
       {agents.length > 0 && (
@@ -97,7 +97,7 @@ export default function TeamsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Teams</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#666' }}>Group agents and track collective performance</p>
+          <p className="text-sm mt-0.5" style={{ color: '#888' }}>Group agents and track collective performance</p>
         </div>
         {isAdmin && <button onClick={() => setAdding(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl">+ Add Team</button>}
       </div>
@@ -115,7 +115,7 @@ export default function TeamsPage() {
       )}
 
       {teams.length === 0 && !adding ? (
-        <div className="text-center py-20" style={{ color: '#333' }}>
+        <div className="text-center py-20" style={{ color: '#555' }}>
           <p className="text-4xl mb-3">👥</p>
           <p className="text-sm">No teams yet. Add one to start grouping agents.</p>
         </div>

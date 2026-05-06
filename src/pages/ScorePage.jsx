@@ -36,7 +36,7 @@ function HistoryItem({ item, onClick }) {
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-4">
-        <span className="text-xs tabular-nums" style={{ color: '#555' }}>{item.weightedScore?.toFixed(0)}/100</span>
+        <span className="text-xs tabular-nums" style={{ color: '#777' }}>{item.weightedScore?.toFixed(0)}/100</span>
         <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: vs.color, background: vs.bg }}>
           {vs.icon} {vs.label}
         </span>
@@ -91,17 +91,17 @@ function SamplerSection({ onScore }) {
 
   return (
     <div className="mt-10">
-      <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#444' }}>Random Sample</p>
+      <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#666' }}>Random Sample</p>
       <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
         {samplerAgents.length === 0 ? (
-          <p className="text-xs text-center py-4" style={{ color: '#444' }}>
+          <p className="text-xs text-center py-4" style={{ color: '#666' }}>
             No agents with a Gorgias User ID yet — add one in the Agents page to enable sampling.
           </p>
         ) : (
           <>
             <div className="flex flex-wrap gap-3 mb-4">
               <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#555' }}>Agent</label>
+                <label className="text-xs" style={{ color: '#777' }}>Agent</label>
                 <select value={agentId} onChange={e => setAgentId(e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">Select agent…</option>
@@ -109,17 +109,17 @@ function SamplerSection({ onScore }) {
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs" style={{ color: '#555' }}>From</label>
+                <label className="text-xs" style={{ color: '#777' }}>From</label>
                 <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs" style={{ color: '#555' }}>To</label>
+                <label className="text-xs" style={{ color: '#777' }}>To</label>
                 <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs" style={{ color: '#555' }}>Count</label>
+                <label className="text-xs" style={{ color: '#777' }}>Count</label>
                 <select value={count} onChange={e => setCount(Number(e.target.value))}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   {[3,5,8,10].map(n => <option key={n} value={n}>{n} tickets</option>)}
@@ -144,7 +144,7 @@ function SamplerSection({ onScore }) {
 
             {tickets && (
               <div className="mt-5">
-                <p className="text-xs mb-3" style={{ color: '#555' }}>
+                <p className="text-xs mb-3" style={{ color: '#777' }}>
                   Sampled {tickets.tickets.length} of {tickets.total_found} matching tickets — click Score to evaluate
                 </p>
                 <div className="flex flex-col gap-2">
@@ -161,7 +161,7 @@ function SamplerSection({ onScore }) {
                         </a>
                         <span className="text-sm flex-1 truncate" style={{ color: '#ccc' }}>{t.subject || '—'}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full shrink-0 capitalize"
-                          style={{ background: '#1a1a1a', color: '#555' }}>{t.status}</span>
+                          style={{ background: '#1a1a1a', color: '#777' }}>{t.status}</span>
                         {st === 'done' ? (
                           <span className="text-xs font-medium shrink-0" style={{ color: '#10b981' }}>✓ Scored</span>
                         ) : st === 'error' ? (
@@ -244,7 +244,7 @@ export default function ScorePage() {
     <div className="max-w-2xl mx-auto px-4 pt-16 pb-16">
       <div className="text-center mb-10">
         <h1 className="text-2xl font-bold text-white mb-1">Score a Ticket</h1>
-        <p className="text-sm" style={{ color: '#666' }}>Paste a Gorgias ticket URL to evaluate agent quality</p>
+        <p className="text-sm" style={{ color: '#888' }}>Paste a Gorgias ticket URL to evaluate agent quality</p>
       </div>
 
       {!canScore && (
@@ -276,18 +276,18 @@ export default function ScorePage() {
       </div>
 
       {urlError && <p className="text-xs mt-2 ml-1" style={{ color: '#f59e0b' }}>⚠ {urlError}</p>}
-      {loading  && <p className="text-xs text-center mt-2" style={{ color: '#555' }}>Claude is scoring this ticket — usually 15–30 seconds</p>}
+      {loading  && <p className="text-xs text-center mt-2" style={{ color: '#777' }}>Claude is scoring this ticket — usually 15–30 seconds</p>}
       {error    && <p className="text-xs text-center mt-2" style={{ color: '#ef4444' }}>{error}</p>}
 
       {scoreHistory.length > 0 && (
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs uppercase tracking-wider" style={{ color: '#444' }}>
+            <p className="text-xs uppercase tracking-wider" style={{ color: '#666' }}>
               History {hasFilters && <span style={{ color: '#FF9780' }}>· {filteredHistory.length} match</span>}
             </p>
             {hasFilters && (
               <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '' })}
-                className="text-xs transition-colors" style={{ color: '#555' }}
+                className="text-xs transition-colors" style={{ color: '#777' }}
                 onMouseEnter={e => e.target.style.color='#ef4444'}
                 onMouseLeave={e => e.target.style.color='#555'}>
                 Clear filters
@@ -300,7 +300,7 @@ export default function ScorePage() {
             style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.05)' }}>
 
             <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-              <label className="text-xs" style={{ color: '#555' }}>Agent</label>
+              <label className="text-xs" style={{ color: '#777' }}>Agent</label>
               <select value={filters.agent} onChange={e => setF('agent', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={hStyle} onFocus={hFocus} onBlur={hBlur}>
                 <option value="">All agents</option>
@@ -309,19 +309,19 @@ export default function ScorePage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>From</label>
+              <label className="text-xs" style={{ color: '#777' }}>From</label>
               <input type="date" value={filters.dateFrom} onChange={e => setF('dateFrom', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={{ ...hStyle, colorScheme: 'dark' }} onFocus={hFocus} onBlur={hBlur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>To</label>
+              <label className="text-xs" style={{ color: '#777' }}>To</label>
               <input type="date" value={filters.dateTo} onChange={e => setF('dateTo', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={{ ...hStyle, colorScheme: 'dark' }} onFocus={hFocus} onBlur={hBlur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>Status</label>
+              <label className="text-xs" style={{ color: '#777' }}>Status</label>
               <div className="flex gap-1.5">
                 {VERDICTS.map(v => {
                   const active = filters.verdicts.includes(v)
@@ -331,7 +331,7 @@ export default function ScorePage() {
                       className="text-xs px-2.5 py-2 rounded-xl border transition-all font-medium"
                       style={active
                         ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                        : { color: '#555', borderColor: 'rgba(255,255,255,0.07)' }}>
+                        : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}>
                       {VERDICT_LABEL[v]}
                     </button>
                   )
@@ -341,7 +341,7 @@ export default function ScorePage() {
           </div>
 
           {filteredHistory.length === 0 ? (
-            <p className="text-xs text-center py-8" style={{ color: '#333' }}>No tickets match your filters.</p>
+            <p className="text-xs text-center py-8" style={{ color: '#555' }}>No tickets match your filters.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {filteredHistory.map((item, i) => (

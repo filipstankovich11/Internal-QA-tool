@@ -60,7 +60,7 @@ function TrendLine({ scores, W = 100, H = 28 }) {
 function TrendChart({ scores }) {
   const pts = buildTrendData(scores, 30)
   if (pts.length < 2) return (
-    <p className="text-xs text-center py-6" style={{ color: '#333' }}>Not enough data for a trend (need scores across 2+ days)</p>
+    <p className="text-xs text-center py-6" style={{ color: '#555' }}>Not enough data for a trend (need scores across 2+ days)</p>
   )
 
   const W = 400, H = 80, padX = 8, padY = 6
@@ -89,8 +89,8 @@ function TrendChart({ scores }) {
         ))}
       </svg>
       <div className="flex justify-between mt-1 px-2">
-        <span className="text-xs" style={{ color: '#333' }}>30 days ago</span>
-        <span className="text-xs" style={{ color: '#333' }}>Today</span>
+        <span className="text-xs" style={{ color: '#555' }}>30 days ago</span>
+        <span className="text-xs" style={{ color: '#555' }}>Today</span>
       </div>
     </div>
   )
@@ -106,9 +106,9 @@ function GoalProgress({ avg, goal }) {
   return (
     <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs" style={{ color: '#555' }}>Score goal</span>
+        <span className="text-xs" style={{ color: '#777' }}>Score goal</span>
         <span className="text-xs font-semibold tabular-nums" style={{ color }}>
-          {avg.toFixed(1)} <span style={{ color: '#444' }}>/ {goal}</span>
+          {avg.toFixed(1)} <span style={{ color: '#666' }}>/ {goal}</span>
           {reached && <span className="ml-1.5">✓</span>}
         </span>
       </div>
@@ -150,7 +150,7 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
           <div>
             <h2 className="text-white font-semibold">{agent.name}</h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-xs" style={{ color: '#555' }}>{scores.length} ticket{scores.length !== 1 ? 's' : ''} scored</p>
+              <p className="text-xs" style={{ color: '#777' }}>{scores.length} ticket{scores.length !== 1 ? 's' : ''} scored</p>
               {avg != null && <span className="text-xs font-bold" style={{ color: avgColor }}>{avg.toFixed(1)} avg</span>}
               {agent.goal_score && avg != null && (
                 <span className="text-xs px-2 py-0.5 rounded-full"
@@ -166,7 +166,7 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
         {/* 30-day trend */}
         {scores.length >= 2 && (
           <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
-            <p className="text-xs mb-3" style={{ color: '#444' }}>30-day score trend</p>
+            <p className="text-xs mb-3" style={{ color: '#666' }}>30-day score trend</p>
             <TrendChart scores={scores} />
           </div>
         )}
@@ -192,7 +192,7 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
                 style={{ color: VERDICT_COLOR[s.effectiveVerdict], background: VERDICT_BG[s.effectiveVerdict] }}>
                 {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
               </span>
-              <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#444' }}>
+              <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#666' }}>
                 {new Date(s.scoredAt).toLocaleDateString()}
               </span>
             </button>
@@ -260,8 +260,8 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
                 )}
               </div>
             </button>
-            {agent.email && <p className="text-xs mt-0.5" style={{ color: '#555' }}>{agent.email}</p>}
-            {agent.gorgias_user_id && <p className="text-xs mt-0.5" style={{ color: '#444' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
+            {agent.email && <p className="text-xs mt-0.5" style={{ color: '#777' }}>{agent.email}</p>}
+            {agent.gorgias_user_id && <p className="text-xs mt-0.5" style={{ color: '#666' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
             {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
           </div>
           <div className="flex items-center gap-3">
@@ -269,7 +269,7 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
             {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
             {canEdit && !confirmDelete && <button onClick={() => setEditing(true)} className="g-btn-ghost text-xs">Edit</button>}
             {canEdit && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#555' }}
+              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#777' }}
                 onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#555'}>Delete</button>
             )}
             {confirmDelete && (
@@ -288,7 +288,7 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
         <>
           <div className="mb-3">
             <div className="flex items-center justify-between mb-1.5 text-xs">
-              <span style={{ color: '#555' }}>{scores.length} tickets scored</span>
+              <span style={{ color: '#777' }}>{scores.length} tickets scored</span>
               <div className="flex gap-3">
                 <span style={{ color: '#10b981' }}>{scores.filter(s=>s.verdict==='PASS').length} pass</span>
                 <span style={{ color: '#f59e0b' }}>{scores.filter(s=>s.verdict==='NEEDS_REVIEW').length} review</span>
@@ -326,7 +326,7 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
             View all {scores.length} ticket{scores.length !== 1 ? 's' : ''} →
           </button>
         </>
-      ) : <p className="text-xs" style={{ color: '#444' }}>No tickets scored yet</p>}
+      ) : <p className="text-xs" style={{ color: '#666' }}>No tickets scored yet</p>}
     </div>
   )
 }
@@ -400,7 +400,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           <div>
             <h2 className="text-white font-semibold">Assign Teams</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#555' }}>Set or change each agent's team</p>
+            <p className="text-xs mt-0.5" style={{ color: '#777' }}>Set or change each agent's team</p>
           </div>
           <button onClick={onClose} className="text-xs g-btn-ghost px-3 py-1.5">Cancel</button>
         </div>
@@ -408,7 +408,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
         {/* Agent list */}
         <div className="overflow-y-auto flex-1 px-4 py-3 flex flex-col gap-1">
           {agents.length === 0 && (
-            <p className="text-sm text-center py-8" style={{ color: '#555' }}>No agents yet.</p>
+            <p className="text-sm text-center py-8" style={{ color: '#777' }}>No agents yet.</p>
           )}
           {agents.map(a => (
             <div key={a.id} className="flex items-center gap-3 py-2 px-3 rounded-xl"
@@ -421,7 +421,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
               {/* Name */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">{a.name}</p>
-                {a.email && <p className="text-xs truncate" style={{ color: '#444' }}>{a.email}</p>}
+                {a.email && <p className="text-xs truncate" style={{ color: '#666' }}>{a.email}</p>}
               </div>
               {/* Team picker */}
               <select
@@ -438,7 +438,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          <p className="text-xs" style={{ color: '#444' }}>
+          <p className="text-xs" style={{ color: '#666' }}>
             {assigned.length}/{agents.length} assigned · {unassigned.length} unassigned
           </p>
           <button onClick={handleSave} disabled={saving}
@@ -497,17 +497,17 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
           <div>
             <h2 className="text-white font-semibold">Import from Gorgias</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#555' }}>Select agents to add — already-imported users are hidden</p>
+            <p className="text-xs mt-0.5" style={{ color: '#777' }}>Select agents to add — already-imported users are hidden</p>
           </div>
           <button onClick={onClose} className="text-xs g-btn-ghost px-3 py-1.5">Cancel</button>
         </div>
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-4 py-3">
-          {loading && <p className="text-sm text-center py-8" style={{ color: '#555' }}>Loading Gorgias users…</p>}
+          {loading && <p className="text-sm text-center py-8" style={{ color: '#777' }}>Loading Gorgias users…</p>}
           {error   && <p className="text-sm text-center py-8" style={{ color: '#ef4444' }}>{error}</p>}
           {!loading && !error && gorgiasUsers.length === 0 && (
-            <p className="text-sm text-center py-8" style={{ color: '#555' }}>All Gorgias agents are already imported.</p>
+            <p className="text-sm text-center py-8" style={{ color: '#777' }}>All Gorgias agents are already imported.</p>
           )}
           {!loading && !error && gorgiasUsers.map(u => {
             const checked = selected.has(u.gorgias_user_id)
@@ -521,9 +521,9 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">{u.name}</p>
-                  <p className="text-xs truncate" style={{ color: '#555' }}>{u.email}</p>
+                  <p className="text-xs truncate" style={{ color: '#777' }}>{u.email}</p>
                 </div>
-                <span className="text-xs shrink-0" style={{ color: '#333' }}>ID: {u.gorgias_user_id}</span>
+                <span className="text-xs shrink-0" style={{ color: '#555' }}>ID: {u.gorgias_user_id}</span>
               </button>
             )
           })}
@@ -572,7 +572,7 @@ export default function AgentsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Agents</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#666' }}>Track individual agent performance</p>
+          <p className="text-sm mt-0.5" style={{ color: '#888' }}>Track individual agent performance</p>
         </div>
         {canEdit && (
           <div className="flex gap-2">
@@ -605,7 +605,7 @@ export default function AgentsPage() {
                 className="text-xs px-3 py-1.5 rounded-full border transition-all"
                 style={active
                   ? { background: 'rgba(255,151,128,0.1)', borderColor: 'rgba(255,151,128,0.3)', color: '#FF9780' }
-                  : { borderColor: 'rgba(255,255,255,0.07)', color: '#555' }}
+                  : { borderColor: 'rgba(255,255,255,0.07)', color: '#777' }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.color='#ccc' }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.color='#555' }}
               >
@@ -617,7 +617,7 @@ export default function AgentsPage() {
       )}
 
       {filtered.length === 0 ? (
-        <div className="text-center py-20" style={{ color: '#333' }}>
+        <div className="text-center py-20" style={{ color: '#555' }}>
           <p className="text-4xl mb-3">🧑‍💻</p>
           <p className="text-sm">No agents yet. Add one to start tracking performance.</p>
         </div>

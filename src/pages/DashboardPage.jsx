@@ -39,9 +39,9 @@ function StatCard({ label, value, format, sub, color }) {
   const display  = value == null ? '—' : format ? format(animated) : Math.round(animated)
   return (
     <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <p className="text-xs mb-2" style={{ color: '#555' }}>{label}</p>
+      <p className="text-xs mb-2" style={{ color: '#777' }}>{label}</p>
       <p className="text-3xl font-bold" style={{ color: color || '#fff' }}>{display}</p>
-      {sub && <p className="text-xs mt-1" style={{ color: '#444' }}>{sub}</p>}
+      {sub && <p className="text-xs mt-1" style={{ color: '#666' }}>{sub}</p>}
     </div>
   )
 }
@@ -63,7 +63,7 @@ function buildTrendData(scores, days = 30) {
 
 function TeamSparkline({ scores }) {
   const pts = buildTrendData(scores, 30)
-  if (pts.length < 2) return <span className="text-xs" style={{ color: '#333' }}>—</span>
+  if (pts.length < 2) return <span className="text-xs" style={{ color: '#555' }}>—</span>
 
   const W = 80, H = 24, pad = 2
   const vals = pts.map(p => p.avg)
@@ -92,7 +92,7 @@ function MiniBar({ value, max, color }) {
       <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#1e1e1e' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#555' }}>{value}</span>
+      <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#777' }}>{value}</span>
     </div>
   )
 }
@@ -116,13 +116,13 @@ function ScoreTrend({ scores }) {
 
   return (
     <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <p className="text-xs mb-4" style={{ color: '#555' }}>Tickets scored — last 7 days</p>
+      <p className="text-xs mb-4" style={{ color: '#777' }}>Tickets scored — last 7 days</p>
       <div className="flex items-end gap-2 h-20">
         {days.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
             <div className="w-full rounded-t-sm transition-all"
               style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: d.count > 0 ? '#FF9780' : '#1e1e1e' }} />
-            <span className="text-xs" style={{ color: '#444' }}>{d.label}</span>
+            <span className="text-xs" style={{ color: '#666' }}>{d.label}</span>
           </div>
         ))}
       </div>
@@ -208,7 +208,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#666' }}>
+        <p className="text-sm mt-0.5" style={{ color: '#888' }}>
           {hasFilters
             ? <><span style={{ color: '#FF9780' }}>{total}</span> ticket{total !== 1 ? 's' : ''} match your filters</>
             : <>{role === 'agent' ? 'Your QA scores' : 'QA performance overview'}{profile?.name && <> · <span style={{ color: '#FF9780' }}>{profile.name}</span></>}</>
@@ -235,15 +235,15 @@ export default function DashboardPage() {
       {/* Distribution + Trend */}
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
         <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-4" style={{ color: '#555' }}>Score distribution</p>
-          {total === 0 ? <p className="text-xs" style={{ color: '#333' }}>No tickets scored yet</p> : (
+          <p className="text-xs mb-4" style={{ color: '#777' }}>Score distribution</p>
+          {total === 0 ? <p className="text-xs" style={{ color: '#555' }}>No tickets scored yet</p> : (
             <div className="flex flex-col gap-3">
               {[['PASS', pass], ['NEEDS_REVIEW', review], ['FAIL', fail]].map(([v, n]) => (
                 <div key={v}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                       style={{ color: VERDICT_COLOR[v], background: VERDICT_BG[v] }}>{VERDICT_LABEL[v]}</span>
-                    <span className="text-xs" style={{ color: '#555' }}>{total > 0 ? Math.round((n/total)*100) : 0}%</span>
+                    <span className="text-xs" style={{ color: '#777' }}>{total > 0 ? Math.round((n/total)*100) : 0}%</span>
                   </div>
                   <MiniBar value={n} max={total} color={VERDICT_COLOR[v]} />
                 </div>
@@ -258,7 +258,7 @@ export default function DashboardPage() {
       {role !== 'agent' && (
         <div className="rounded-2xl p-5 mb-6" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs" style={{ color: '#555' }}>Agent leaderboard</p>
+            <p className="text-xs" style={{ color: '#777' }}>Agent leaderboard</p>
             {agents.length > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full"
                 style={{ background: '#161616', color: leaderboard.length === agents.length ? '#10b981' : '#555' }}>
@@ -266,14 +266,14 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
-          {leaderboard.length === 0 ? <p className="text-xs" style={{ color: '#333' }}>No agent scores yet</p> : (
+          {leaderboard.length === 0 ? <p className="text-xs" style={{ color: '#555' }}>No agent scores yet</p> : (
             <div className="flex flex-col gap-1">
               {leaderboard.slice(0, 8).map((a, i) => (
                 <div key={a.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg stagger-item"
                   style={{ '--i': i, background: i === 0 ? 'rgba(255,151,128,0.04)' : 'transparent' }}>
-                  <span className="text-xs w-4 shrink-0 tabular-nums" style={{ color: '#444' }}>{i + 1}</span>
+                  <span className="text-xs w-4 shrink-0 tabular-nums" style={{ color: '#666' }}>{i + 1}</span>
                   <span className="text-sm text-white flex-1 truncate">{a.name}</span>
-                  <span className="text-xs" style={{ color: '#555' }}>{a.count} ticket{a.count !== 1 ? 's' : ''}</span>
+                  <span className="text-xs" style={{ color: '#777' }}>{a.count} ticket{a.count !== 1 ? 's' : ''}</span>
                   <span className="text-sm font-bold tabular-nums" style={{ color: avgColor(a.avg) }}>{a.avg.toFixed(1)}</span>
                 </div>
               ))}
@@ -283,11 +283,11 @@ export default function DashboardPage() {
                 if (!unreviewed.length) return null
                 return (
                   <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <p className="text-xs mb-1.5 px-2" style={{ color: '#333' }}>Not reviewed in this period</p>
+                    <p className="text-xs mb-1.5 px-2" style={{ color: '#555' }}>Not reviewed in this period</p>
                     <div className="flex flex-wrap gap-1.5 px-2">
                       {unreviewed.map(a => (
                         <span key={a.id} className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: '#111', color: '#444', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          style={{ background: '#111', color: '#666', border: '1px solid rgba(255,255,255,0.05)' }}>
                           {a.name}
                         </span>
                       ))}
@@ -312,15 +312,15 @@ export default function DashboardPage() {
         if (!teamStats.length) return null
         return (
           <div className="rounded-2xl p-5 mb-6" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-xs mb-4" style={{ color: '#555' }}>Team performance — 30-day trend</p>
+            <p className="text-xs mb-4" style={{ color: '#777' }}>Team performance — 30-day trend</p>
             <div className="flex flex-col gap-1">
               {teamStats.map((t, i) => (
                 <div key={t.id} className="flex items-center gap-3 py-2 px-2 rounded-lg stagger-item"
                   style={{ '--i': i, background: i === 0 ? 'rgba(255,151,128,0.04)' : 'transparent' }}>
-                  <span className="text-xs w-4 shrink-0 tabular-nums" style={{ color: '#444' }}>{i + 1}</span>
+                  <span className="text-xs w-4 shrink-0 tabular-nums" style={{ color: '#666' }}>{i + 1}</span>
                   <span className="text-sm text-white flex-1 truncate">{t.name}</span>
-                  <span className="text-xs shrink-0" style={{ color: '#555' }}>{t.agentCount} agent{t.agentCount !== 1 ? 's' : ''}</span>
-                  <span className="text-xs shrink-0" style={{ color: '#555' }}>{t.scores.length} ticket{t.scores.length !== 1 ? 's' : ''}</span>
+                  <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.agentCount} agent{t.agentCount !== 1 ? 's' : ''}</span>
+                  <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.scores.length} ticket{t.scores.length !== 1 ? 's' : ''}</span>
                   <TeamSparkline scores={t.scores} />
                   <span className="text-sm font-bold tabular-nums w-12 text-right shrink-0" style={{ color: avgColor(t.avg) }}>
                     {t.avg.toFixed(1)}
@@ -337,7 +337,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: '#444' }}>{filteredScores.length} / {total}</span>
+            <span className="text-xs" style={{ color: '#666' }}>{filteredScores.length} / {total}</span>
             {filteredScores.length > 0 && (
               <button
                 onClick={() => {
@@ -376,7 +376,7 @@ export default function DashboardPage() {
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#555' }}>Agent</label>
+                <label className="text-xs" style={{ color: '#777' }}>Agent</label>
                 <select value={filters.agent} onChange={e => set('agent', e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">All agents</option>
@@ -387,7 +387,7 @@ export default function DashboardPage() {
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#555' }}>Team</label>
+                <label className="text-xs" style={{ color: '#777' }}>Team</label>
                 <select value={filters.team} onChange={e => set('team', e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">All teams</option>
@@ -397,19 +397,19 @@ export default function DashboardPage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>From</label>
+              <label className="text-xs" style={{ color: '#777' }}>From</label>
               <input type="date" value={filters.dateFrom} onChange={e => set('dateFrom', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>To</label>
+              <label className="text-xs" style={{ color: '#777' }}>To</label>
               <input type="date" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>Quick range</label>
+              <label className="text-xs" style={{ color: '#777' }}>Quick range</label>
               <div className="flex gap-1.5">
                 {[['7d', 7], ['30d', 30], ['90d', 90]].map(([label, days]) => (
                   <button key={label} onClick={() => {
@@ -419,7 +419,7 @@ export default function DashboardPage() {
                     setFilters(f => ({ ...f, dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) }))
                   }}
                     className="text-xs px-3 py-2 rounded-xl border transition-all"
-                    style={{ color: '#555', borderColor: 'rgba(255,255,255,0.07)' }}
+                    style={{ color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}
                     onMouseEnter={e => { e.currentTarget.style.color='#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
                     onMouseLeave={e => { e.currentTarget.style.color='#555'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
                     {label}
@@ -429,7 +429,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#555' }}>Status</label>
+              <label className="text-xs" style={{ color: '#777' }}>Status</label>
               <div className="flex gap-1.5">
                 {VERDICTS.map(v => {
                   const active = filters.verdicts.includes(v)
@@ -438,7 +438,7 @@ export default function DashboardPage() {
                       className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
                       style={active
                         ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                        : { color: '#555', borderColor: 'rgba(255,255,255,0.07)' }}>
+                        : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}>
                       {VERDICT_LABEL[v]}
                     </button>
                   )
@@ -449,7 +449,7 @@ export default function DashboardPage() {
             {hasFilters && (
               <button onClick={() => setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
-                style={{ color: '#555', border: '1px solid rgba(255,255,255,0.07)' }}
+                style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
                 onMouseLeave={e => { e.currentTarget.style.color='#555'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
                 Clear
@@ -460,14 +460,14 @@ export default function DashboardPage() {
 
         {/* Table */}
         {filteredScores.length === 0 ? (
-          <div className="text-center py-16" style={{ color: '#333' }}>
+          <div className="text-center py-16" style={{ color: '#555' }}>
             <p className="text-sm">{total === 0 ? 'No tickets scored yet.' : 'No tickets match your filters.'}</p>
           </div>
         ) : (
           <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="grid text-xs px-4 py-2.5" style={{
               gridTemplateColumns: '100px 1fr 150px 80px 90px 80px',
-              background: '#0a0a0a', color: '#444', borderBottom: '1px solid rgba(255,255,255,0.05)'
+              background: '#0a0a0a', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.05)'
             }}>
               <span>Ticket</span><span>Subject</span><span>Agents</span>
               <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
@@ -500,7 +500,7 @@ export default function DashboardPage() {
                       <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[130px]"
                         style={{ background: '#1a1a1a', color: '#888' }}>{name}</span>
                     ))
-                    : <span style={{ color: '#333' }}>—</span>}
+                    : <span style={{ color: '#555' }}>—</span>}
                 </div>
 
                 <span className="text-sm font-bold tabular-nums text-right"
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                <span className="text-xs text-right" style={{ color: '#444' }}>
+                <span className="text-xs text-right" style={{ color: '#666' }}>
                   {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>

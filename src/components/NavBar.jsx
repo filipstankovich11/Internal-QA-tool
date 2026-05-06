@@ -118,7 +118,7 @@ export default function NavBar({ page, setPage }) {
           <button
             onClick={signOut}
             className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-            style={{ color: '#555', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
             title="Sign out"
             onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
             onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}

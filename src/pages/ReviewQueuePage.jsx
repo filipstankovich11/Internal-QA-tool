@@ -48,7 +48,7 @@ function QueueItem({ item, onClick, badge }) {
               {item.effectiveScore?.toFixed(0)}/100
             </span>
           </ScoreBreakdownHover>
-          <span className="text-xs" style={{ color: '#444' }}>
+          <span className="text-xs" style={{ color: '#666' }}>
             {new Date(item.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         </div>
@@ -57,10 +57,10 @@ function QueueItem({ item, onClick, badge }) {
       {/* Dispute note — shown inline so reviewer sees it without opening the modal */}
       {item.disputed && item.disputeNote && (
         <div className="pb-3.5 pl-1" style={{ borderTop: '1px solid rgba(245,158,11,0.1)' }}>
-          <p className="text-xs pt-2.5 mb-1" style={{ color: '#666' }}>Agent's dispute reason:</p>
+          <p className="text-xs pt-2.5 mb-1" style={{ color: '#888' }}>Agent's dispute reason:</p>
           <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{item.disputeNote}</p>
           {item.disputeAt && (
-            <p className="text-xs mt-1.5" style={{ color: '#444' }}>
+            <p className="text-xs mt-1.5" style={{ color: '#666' }}>
               Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
@@ -107,7 +107,7 @@ export default function ReviewQueuePage() {
             </span>
           )}
         </div>
-        <p className="text-sm" style={{ color: '#666' }}>
+        <p className="text-sm" style={{ color: '#888' }}>
           Tickets needing human attention — Needs Review scores and agent disputes
         </p>
       </div>
@@ -116,13 +116,13 @@ export default function ReviewQueuePage() {
         <div className="text-center py-20">
           <p className="text-4xl mb-4">✓</p>
           <p className="text-white font-semibold mb-1">Queue is clear</p>
-          <p className="text-sm" style={{ color: '#555' }}>No pending reviews or disputes.</p>
+          <p className="text-sm" style={{ color: '#777' }}>No pending reviews or disputes.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
           {needsReview.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#444' }}>
+              <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#666' }}>
                 Needs Review · {needsReview.length}
               </p>
               <div className="flex flex-col gap-2">
@@ -135,7 +135,7 @@ export default function ReviewQueuePage() {
 
           {disputed.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#444' }}>
+              <p className="text-xs uppercase tracking-wider mb-3" style={{ color: '#666' }}>
                 Disputed by agent · {disputed.length}
               </p>
               <div className="flex flex-col gap-2">

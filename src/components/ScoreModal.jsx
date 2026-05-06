@@ -68,7 +68,7 @@ function DimensionStrip({ dimensions }) {
             style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold tabular-nums" style={{ color }}>{average.toFixed(1)}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#555', background: '#161616' }}>{weight}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
             </div>
             <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
               <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
@@ -90,12 +90,12 @@ function SubScoreRow({ label, data }) {
   return (
     <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
-        <span className="text-xs w-3 shrink-0 transition-transform" style={{ color: '#444', display:'inline-block', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
+        <span className="text-xs w-3 shrink-0 transition-transform" style={{ color: '#666', display:'inline-block', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
         <span className="text-sm flex-1" style={{ color: '#ccc' }}>{label}</span>
         <ScoreDots score={score} />
         <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
       </button>
-      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: '#666' }}>{notes}</p>}
+      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: '#888' }}>{notes}</p>}
     </div>
   )
 }
@@ -104,8 +104,8 @@ function DimensionCard({ name, weight, average, rows }) {
   return (
     <div className="rounded-xl p-4 mb-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#555' }}>{name}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#555', background: '#161616' }}>{weight}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>{name}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
       </div>
       <div>{rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}</div>
     </div>
@@ -168,7 +168,7 @@ function NotesSection({ scoreId, initialNote }) {
       ) : note ? (
         <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#aaa' }}>{note}</p>
       ) : (
-        <p className="text-sm" style={{ color: '#666' }}>
+        <p className="text-sm" style={{ color: '#888' }}>
           {canScore && scoreId ? 'No note yet — click "Add note" to leave feedback.' : 'No reviewer note.'}
         </p>
       )}
@@ -230,10 +230,10 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
       </div>
 
       {hasOverride && !open && overrideNote && (
-        <p className="text-xs mt-2 leading-relaxed" style={{ color: '#666' }}>{overrideNote}</p>
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{overrideNote}</p>
       )}
       {hasOverride && overrideAt && !open && (
-        <p className="text-xs mt-1" style={{ color: '#333' }}>
+        <p className="text-xs mt-1" style={{ color: '#555' }}>
           Overridden {new Date(overrideAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       )}
@@ -242,7 +242,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
         <div className="mt-3 flex flex-col gap-3">
           {/* Verdict picker */}
           <div>
-            <p className="text-xs mb-1.5" style={{ color: '#555' }}>New verdict</p>
+            <p className="text-xs mb-1.5" style={{ color: '#777' }}>New verdict</p>
             <div className="flex gap-2">
               {VERDICTS.map(v => {
                 const vc2 = VERDICT[v]
@@ -252,7 +252,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
                     className="flex-1 text-xs py-1.5 rounded-lg border font-medium transition-all"
                     style={active
                       ? { color: vc2.text, background: vc2.bg, borderColor: vc2.border }
-                      : { color: '#555', borderColor: 'rgba(255,255,255,0.07)' }}>
+                      : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}>
                     {vc2.icon} {vc2.label}
                   </button>
                 )
@@ -263,7 +263,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
           {/* Score slider */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs" style={{ color: '#555' }}>Adjusted score</p>
+              <p className="text-xs" style={{ color: '#777' }}>Adjusted score</p>
               <span className="text-sm font-bold tabular-nums"
                 style={{ color: score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444' }}>
                 {parseFloat(score).toFixed(0)}/100
@@ -276,7 +276,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
 
           {/* Reason (required) */}
           <div>
-            <p className="text-xs mb-1.5" style={{ color: '#555' }}>Reason <span style={{ color: '#ef4444' }}>*</span></p>
+            <p className="text-xs mb-1.5" style={{ color: '#777' }}>Reason <span style={{ color: '#ef4444' }}>*</span></p>
             <textarea value={note} onChange={e => setNote(e.target.value)}
               placeholder="Required — explain why you're overriding the AI score…"
               rows={2} className="w-full rounded-lg px-3 py-2 text-sm resize-none outline-none"
@@ -378,7 +378,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
         <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{disputeNote}</p>
       )}
       {disputed && disputeAt && (
-        <p className="text-xs mt-1" style={{ color: '#444' }}>
+        <p className="text-xs mt-1" style={{ color: '#666' }}>
           Flagged {new Date(disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       )}
@@ -461,10 +461,10 @@ export default function ScoreModal({ score, onClose }) {
           style={{ background: `rgba(7,7,7,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-xs" style={{ color: '#555' }}>Ticket #{s.ticket_id}</p>
+              <p className="text-xs" style={{ color: '#777' }}>Ticket #{s.ticket_id}</p>
               {agentNames.length > 0 && (
                 <>
-                  <span className="text-xs" style={{ color: '#333' }}>·</span>
+                  <span className="text-xs" style={{ color: '#555' }}>·</span>
                   {agentNames.map((name, i) => (
                     <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full"
                       style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)' }}>
@@ -479,7 +479,7 @@ export default function ScoreModal({ score, onClose }) {
                 style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
                 {vc.icon} {vc.label}
               </span>
-              <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>{animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: '#444' }}>/100</span></span>
+              <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>{animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: '#666' }}>/100</span></span>
               {s.overrideVerdict && (
                 <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
                   Human reviewed
@@ -504,7 +504,7 @@ export default function ScoreModal({ score, onClose }) {
             )}
             {isAdmin && s.scoreId && !confirmDelete && (
               <button onClick={() => setConfirmDelete(true)}
-                className="text-xs transition-colors" style={{ color: '#444' }}
+                className="text-xs transition-colors" style={{ color: '#666' }}
                 onMouseEnter={e => e.target.style.color='#ef4444'}
                 onMouseLeave={e => e.target.style.color='#444'}>
                 Delete
@@ -522,7 +522,7 @@ export default function ScoreModal({ score, onClose }) {
                 <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
               </div>
             )}
-            <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#333' }}
+            <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#555' }}
               onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#333'}>×</button>
           </div>
         </div>
@@ -562,7 +562,7 @@ export default function ScoreModal({ score, onClose }) {
 
           {/* Summary */}
           <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#555' }}>Summary</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Summary</p>
             <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>
           </div>
 
@@ -572,7 +572,7 @@ export default function ScoreModal({ score, onClose }) {
           {/* Coaching cards */}
           {s.key_improvements?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#555' }}>Key Improvements</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Key Improvements</p>
               <div className="flex flex-col gap-2">
                 {s.key_improvements.map((imp, i) => (
                   <div key={i} className="rounded-xl p-3.5 flex gap-3"
@@ -599,7 +599,7 @@ export default function ScoreModal({ score, onClose }) {
                 <div className="flex items-center gap-2">
                   <span className="text-xs" style={{ color: '#10b981' }}>✓ Acknowledged</span>
                   {s.acknowledgedAt && (
-                    <span className="text-xs" style={{ color: '#333' }}>
+                    <span className="text-xs" style={{ color: '#555' }}>
                       {new Date(s.acknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   )}

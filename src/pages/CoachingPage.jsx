@@ -39,7 +39,7 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-sm font-medium text-white">{criterion.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#555', background: '#161616' }}>
+            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>
               {criterion.dimension}
             </span>
           </div>
@@ -47,10 +47,10 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-lg font-bold tabular-nums" style={{ color }}>
-            {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#444' }}>/5</span>
+            {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#666' }}>/5</span>
           </span>
           {notes.length > 0 && (
-            <span className="text-xs" style={{ color: '#444', transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
+            <span className="text-xs" style={{ color: '#666', transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
           )}
         </div>
       </button>
@@ -58,10 +58,10 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
       {expanded && notes.length > 0 && (
         <div className="px-5 pb-4 flex flex-col gap-2.5"
           style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <p className="text-xs pt-3" style={{ color: '#444' }}>Recent AI feedback on this area:</p>
+          <p className="text-xs pt-3" style={{ color: '#666' }}>Recent AI feedback on this area:</p>
           {notes.slice(0, 4).map((note, i) => (
             <div key={i} className="flex gap-2.5">
-              <span className="text-xs mt-0.5 shrink-0" style={{ color: '#333' }}>•</span>
+              <span className="text-xs mt-0.5 shrink-0" style={{ color: '#555' }}>•</span>
               <p className="text-sm leading-relaxed" style={{ color: '#888' }}>{note}</p>
             </div>
           ))}
@@ -133,7 +133,7 @@ export default function CoachingPage() {
 
   if (scores.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: '#333' }}>
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: '#555' }}>
         <p className="text-4xl mb-4">📋</p>
         <p className="text-sm">No scored tickets yet — coaching insights will appear once tickets are evaluated.</p>
       </div>
@@ -146,7 +146,7 @@ export default function CoachingPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Coaching</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#666' }}>
+        <p className="text-sm mt-0.5" style={{ color: '#888' }}>
           Insights based on <span style={{ color: '#FF9780' }}>{scores.length}</span> scored ticket{scores.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -160,7 +160,7 @@ export default function CoachingPage() {
               Needs attention
             </span>
           </div>
-          <p className="text-xs mb-4" style={{ color: '#555' }}>
+          <p className="text-xs mb-4" style={{ color: '#777' }}>
             These are your lowest-scoring areas. Click a card to see AI feedback from recent tickets.
           </p>
           <div className="flex flex-col gap-3">
@@ -175,7 +175,7 @@ export default function CoachingPage() {
       {improvements.length > 0 && (
         <div className="mb-8">
           <h2 className="text-white font-semibold mb-3">Key Improvements</h2>
-          <p className="text-xs mb-4" style={{ color: '#555' }}>
+          <p className="text-xs mb-4" style={{ color: '#777' }}>
             Recurring suggestions from your most recent scores.
           </p>
           <div className="flex flex-col gap-2">
@@ -190,7 +190,7 @@ export default function CoachingPage() {
       {reviewerNotes.length > 0 && (
         <div className="mb-8">
           <h2 className="text-white font-semibold mb-3">Reviewer Notes</h2>
-          <p className="text-xs mb-4" style={{ color: '#555' }}>
+          <p className="text-xs mb-4" style={{ color: '#777' }}>
             Coaching notes left by your QA reviewer.
           </p>
           <div className="flex flex-col gap-3">
@@ -198,7 +198,7 @@ export default function CoachingPage() {
               <div key={s.id} className="rounded-2xl px-5 py-4"
                 style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.notes}</p>
-                <p className="text-xs mt-2" style={{ color: '#444' }}>
+                <p className="text-xs mt-2" style={{ color: '#666' }}>
                   Ticket #{s.ticketId} · {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
@@ -216,7 +216,7 @@ export default function CoachingPage() {
               Keep it up
             </span>
           </div>
-          <p className="text-xs mb-4" style={{ color: '#555' }}>
+          <p className="text-xs mb-4" style={{ color: '#777' }}>
             Areas where you consistently perform well.
           </p>
           <div className="flex flex-col gap-3">

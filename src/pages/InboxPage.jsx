@@ -29,7 +29,7 @@ function DimMini({ scores }) {
             <div className="w-12 rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
               <div className="h-full rounded-full" style={{ width: `${(avg / 5) * 100}%`, background: color }} />
             </div>
-            <span className="text-xs" style={{ color: '#444' }}>{d.label} {avg.toFixed(1)}</span>
+            <span className="text-xs" style={{ color: '#666' }}>{d.label} {avg.toFixed(1)}</span>
           </div>
         )
       })}
@@ -54,7 +54,7 @@ function DisputeInline({ scoreId, disputed, disputeNote, onDispute }) {
     <div>
       {!open ? (
         <button onClick={() => setOpen(true)}
-          className="text-xs transition-colors" style={{ color: '#444' }}
+          className="text-xs transition-colors" style={{ color: '#666' }}
           onMouseEnter={e => e.target.style.color = '#f59e0b'}
           onMouseLeave={e => e.target.style.color = '#444'}>
           Dispute
@@ -87,7 +87,7 @@ function DisputeInline({ scoreId, disputed, disputeNote, onDispute }) {
               {saving ? 'Submitting…' : 'Submit'}
             </button>
             <button onClick={() => { setOpen(false); setNote('') }}
-              className="text-xs px-3 py-1.5 rounded-lg" style={{ color: '#555' }}>
+              className="text-xs px-3 py-1.5 rounded-lg" style={{ color: '#777' }}>
               Cancel
             </button>
           </div>
@@ -134,7 +134,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
           </span>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs" style={{ color: '#444' }}>
+          <span className="text-xs" style={{ color: '#666' }}>
             {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
           {s.overrideVerdict && (
@@ -157,7 +157,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
           <ScoreBreakdownHover scores={s.fullScore?.scores} align="left">
             <span className="text-2xl font-bold tabular-nums cursor-default" style={{ color: scoreColor(s.effectiveScore) }}>
               {s.effectiveScore?.toFixed(0)}
-              <span className="text-sm font-normal ml-0.5" style={{ color: '#444' }}>/100</span>
+              <span className="text-sm font-normal ml-0.5" style={{ color: '#666' }}>/100</span>
             </span>
           </ScoreBreakdownHover>
         </div>
@@ -167,7 +167,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
       {/* Reviewer note */}
       {s.notes && (
         <div className="px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.01)' }}>
-          <p className="text-xs mb-1" style={{ color: '#555' }}>Reviewer note</p>
+          <p className="text-xs mb-1" style={{ color: '#777' }}>Reviewer note</p>
           <p className="text-sm leading-relaxed" style={{ color: '#aaa' }}>{s.notes}</p>
         </div>
       )}
@@ -184,7 +184,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
               {acking ? 'Saving…' : '✓ Mark as seen'}
             </button>
           ) : (
-            <span className="text-xs" style={{ color: '#333' }}>
+            <span className="text-xs" style={{ color: '#555' }}>
               ✓ Seen {s.acknowledgedAt ? new Date(s.acknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
             </span>
           )}
@@ -196,7 +196,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
           />
         </div>
         <button onClick={() => onView(s)}
-          className="text-xs transition-colors" style={{ color: '#555' }}
+          className="text-xs transition-colors" style={{ color: '#777' }}
           onMouseEnter={e => e.target.style.color = '#ccc'}
           onMouseLeave={e => e.target.style.color = '#555'}>
           Full details →
@@ -255,7 +255,7 @@ export default function InboxPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Inbox</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#666' }}>
+          <p className="text-sm mt-0.5" style={{ color: '#888' }}>
             {unread.length > 0
               ? <><span style={{ color: '#FF9780' }}>{unread.length}</span> new score{unread.length !== 1 ? 's' : ''} to review</>
               : 'All caught up'}
@@ -293,7 +293,7 @@ export default function InboxPage() {
       {/* Previous scores */}
       {read.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#444' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#666' }}>
             Previous — {read.length}
           </p>
           <div className="flex flex-col gap-3">
@@ -309,7 +309,7 @@ export default function InboxPage() {
       )}
 
       {scoreHistory.length === 0 && (
-        <div className="text-center py-20" style={{ color: '#333' }}>
+        <div className="text-center py-20" style={{ color: '#555' }}>
           <p className="text-4xl mb-3">📭</p>
           <p className="text-sm">No scores yet — check back after your tickets are reviewed.</p>
         </div>

@@ -33,7 +33,7 @@ function buildTrendData(scores, days = 30) {
 function TrendChart({ scores }) {
   const pts = buildTrendData(scores, 30)
   if (pts.length < 2) return (
-    <p className="text-xs text-center py-6" style={{ color: '#333' }}>
+    <p className="text-xs text-center py-6" style={{ color: '#555' }}>
       Not enough data yet — need scores across 2+ days
     </p>
   )
@@ -61,8 +61,8 @@ function TrendChart({ scores }) {
         ))}
       </svg>
       <div className="flex justify-between mt-1">
-        <span className="text-xs" style={{ color: '#333' }}>30 days ago</span>
-        <span className="text-xs" style={{ color: '#333' }}>Today</span>
+        <span className="text-xs" style={{ color: '#555' }}>30 days ago</span>
+        <span className="text-xs" style={{ color: '#555' }}>Today</span>
       </div>
     </div>
   )
@@ -78,9 +78,9 @@ function DimBar({ label, weight, avg }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-sm" style={{ color: '#ccc' }}>{label}</span>
-          <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#555', background: '#161616' }}>{weight}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
         </div>
-        <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#444' }}>/5</span></span>
+        <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#666' }}>/5</span></span>
       </div>
       <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: '#1e1e1e' }}>
         <div className="h-full rounded-full"
@@ -148,7 +148,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
           </button>
         )}
         {s.acknowledged && (
-          <span className="text-xs" style={{ color: '#333' }}>✓</span>
+          <span className="text-xs" style={{ color: '#555' }}>✓</span>
         )}
       </div>
 
@@ -168,7 +168,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       </span>
 
       {/* Date */}
-      <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#444' }}>
+      <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#666' }}>
         {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
       </span>
     </div>
@@ -253,7 +253,7 @@ export default function AgentProfilePage() {
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-white truncate">{displayName}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            {agent?.email && <span className="text-sm" style={{ color: '#555' }}>{agent.email}</span>}
+            {agent?.email && <span className="text-sm" style={{ color: '#777' }}>{agent.email}</span>}
             {team && (
               <span className="text-xs px-2 py-0.5 rounded-full"
                 style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>
@@ -274,21 +274,21 @@ export default function AgentProfilePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {/* Avg Score */}
         <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-2" style={{ color: '#555' }}>Avg Score</p>
+          <p className="text-xs mb-2" style={{ color: '#777' }}>Avg Score</p>
           <p className="text-3xl font-bold" style={{ color: avg != null ? scoreColor(avg) : '#555' }}>{avg != null ? avg.toFixed(1) : '—'}</p>
-          <p className="text-xs mt-1" style={{ color: '#444' }}>out of 100</p>
+          <p className="text-xs mt-1" style={{ color: '#666' }}>out of 100</p>
         </div>
 
         {/* Pass Rate */}
         <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 1, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-2" style={{ color: '#555' }}>Pass Rate</p>
+          <p className="text-xs mb-2" style={{ color: '#777' }}>Pass Rate</p>
           <p className="text-3xl font-bold" style={{ color: '#10b981' }}>{passRate != null ? `${passRate}%` : '—'}</p>
-          <p className="text-xs mt-1" style={{ color: '#444' }}>{pass} of {total}</p>
+          <p className="text-xs mt-1" style={{ color: '#666' }}>{pass} of {total}</p>
         </div>
 
         {/* This Month — with MoM delta */}
         <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 2, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-2" style={{ color: '#555' }}>This Month</p>
+          <p className="text-xs mb-2" style={{ color: '#777' }}>This Month</p>
           <div className="flex items-end gap-2">
             <p className="text-3xl font-bold text-white">{thisMonth}</p>
             {momDelta != null && (() => {
@@ -301,16 +301,16 @@ export default function AgentProfilePage() {
               )
             })()}
           </div>
-          <p className="text-xs mt-1" style={{ color: '#444' }}>
+          <p className="text-xs mt-1" style={{ color: '#666' }}>
             {thisMonthAvg != null ? `${thisMonthAvg.toFixed(1)} avg` : 'tickets'}{prevMonthAvg != null ? ` · prev ${prevMonthAvg.toFixed(1)}` : ''}
           </p>
         </div>
 
         {/* Unread */}
         <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 3, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-2" style={{ color: '#555' }}>New Scores</p>
+          <p className="text-xs mb-2" style={{ color: '#777' }}>New Scores</p>
           <p className="text-3xl font-bold" style={{ color: unread > 0 ? '#f59e0b' : '#555' }}>{unread}</p>
-          <p className="text-xs mt-1" style={{ color: '#444' }}>to acknowledge</p>
+          <p className="text-xs mt-1" style={{ color: '#666' }}>to acknowledge</p>
         </div>
       </div>
 
@@ -323,9 +323,9 @@ export default function AgentProfilePage() {
         return (
           <div className="rounded-2xl p-5 mb-6" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs" style={{ color: '#555' }}>Score goal</p>
+              <p className="text-xs" style={{ color: '#777' }}>Score goal</p>
               <span className="text-sm font-bold tabular-nums" style={{ color }}>
-                {avg.toFixed(1)} <span style={{ color: '#444' }}>/ {agent.goal_score}</span>
+                {avg.toFixed(1)} <span style={{ color: '#666' }}>/ {agent.goal_score}</span>
                 {reached && <span className="ml-2 text-xs">✓ Reached</span>}
               </span>
             </div>
@@ -334,7 +334,7 @@ export default function AgentProfilePage() {
                 style={{ width: `${pct}%`, background: color, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
             </div>
             {!reached && (
-              <p className="text-xs mt-2" style={{ color: '#444' }}>
+              <p className="text-xs mt-2" style={{ color: '#666' }}>
                 {(agent.goal_score - avg).toFixed(1)} points away from your goal
               </p>
             )}
@@ -347,9 +347,9 @@ export default function AgentProfilePage() {
 
         {/* Dimension breakdown */}
         <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-5" style={{ color: '#555' }}>Performance by area</p>
+          <p className="text-xs mb-5" style={{ color: '#777' }}>Performance by area</p>
           {total === 0 ? (
-            <p className="text-xs" style={{ color: '#333' }}>No scores yet</p>
+            <p className="text-xs" style={{ color: '#555' }}>No scores yet</p>
           ) : (
             <div className="flex flex-col gap-4">
               <DimBar label="Inquiry Resolution"  weight="50%" avg={irAvg} />
@@ -361,7 +361,7 @@ export default function AgentProfilePage() {
 
         {/* 30-day trend */}
         <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-4" style={{ color: '#555' }}>Score trend — last 30 days</p>
+          <p className="text-xs mb-4" style={{ color: '#777' }}>Score trend — last 30 days</p>
           <TrendChart scores={scores} />
         </div>
       </div>
@@ -370,18 +370,18 @@ export default function AgentProfilePage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white font-semibold">Score History</h2>
-          <span className="text-xs" style={{ color: '#444' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
+          <span className="text-xs" style={{ color: '#666' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
         </div>
 
         {total === 0 ? (
-          <div className="text-center py-16" style={{ color: '#333' }}>
+          <div className="text-center py-16" style={{ color: '#555' }}>
             <p className="text-sm">No tickets scored yet.</p>
           </div>
         ) : (
           <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
             {/* Header row */}
             <div className="grid text-xs px-4 py-2.5"
-              style={{ background: '#0a0a0a', color: '#444', borderBottom: '1px solid rgba(255,255,255,0.05)',
+              style={{ background: '#0a0a0a', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.05)',
                 gridTemplateColumns: '10px 80px 1fr auto 80px 70px 70px' }}>
               <span />
               <span>Ticket</span>
