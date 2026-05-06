@@ -29,7 +29,6 @@ class ErrorBoundary extends Component {
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'))
 const ScorePage        = lazy(() => import('./pages/ScorePage'))
-const BatchPage        = lazy(() => import('./pages/BatchPage'))
 const AgentsPage       = lazy(() => import('./pages/AgentsPage'))
 const AgentProfilePage = lazy(() => import('./pages/AgentProfilePage'))
 const InboxPage        = lazy(() => import('./pages/InboxPage'))
@@ -51,7 +50,6 @@ function Router({ page, role }) {
   switch (page) {
     case 'dashboard': return <DashboardPage />
     case 'review':    return <ReviewQueuePage />
-    case 'batch':     return <BatchPage />
     case 'agents':    return role === 'agent' ? <AgentProfilePage /> : <AgentsPage />
     case 'inbox':     return <InboxPage />
     case 'coaching':  return <CoachingPage />
