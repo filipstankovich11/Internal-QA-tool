@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
+import { authFetch } from '../lib/api'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -187,6 +188,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
   const [saved,   setSaved]   = useState(false)
 
   if (!scoreId) return null
+  if (!isAdmin && !overrideVerdict) return null
 
   const hasOverride = !!overrideVerdict
 
@@ -426,7 +428,7 @@ export default function ScoreModal({ score, onClose }) {
   const rescore = async () => {
     setRescoring(true)
     try {
-      const res  = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric }) })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Re-score failed'); return }
       const entry = await addScore(data)

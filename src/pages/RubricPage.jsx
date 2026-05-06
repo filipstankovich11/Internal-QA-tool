@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
+import { authFetch } from '../lib/api'
 
 function weightColor(w) {
   return w === 100 ? '#10b981' : '#ef4444'
@@ -142,7 +143,7 @@ export default function RubricPage() {
     if (!url) return
     setTestingHook(true)
     try {
-      const res = await fetch(`${API_BASE}/api/test-webhook`, {
+      const res = await authFetch(`${API_BASE}/api/test-webhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ webhook_url: url }),

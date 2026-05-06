@@ -11,6 +11,7 @@ import anthropic
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+from auth import require_auth
 from gorgias_client import GorgiasClient
 from scorer import score_ticket
 
@@ -120,6 +121,7 @@ def fire_slack_notification(webhook_url: str, result: dict, gorgias_domain: str)
 # ─── Score a single ticket ───────────────────────────────────────────────────
 
 @app.route('/api/score', methods=['POST'])
+@require_auth
 def score():
     data = request.get_json(silent=True)
     if not data:
@@ -168,6 +170,7 @@ def score():
 # ─── Test Slack webhook ───────────────────────────────────────────────────────
 
 @app.route('/api/test-webhook', methods=['POST'])
+@require_auth
 def test_webhook():
     data        = request.get_json(silent=True) or {}
     webhook_url = (data.get('webhook_url') or '').strip()
@@ -185,6 +188,7 @@ def test_webhook():
 # ─── List Gorgias users (for agent import) ───────────────────────────────────
 
 @app.route('/api/gorgias-users', methods=['GET'])
+@require_auth
 def gorgias_users():
     gorgias_auth, gorgias_domain, _ = get_env()
     if not gorgias_auth:
@@ -218,6 +222,7 @@ def gorgias_users():
 # ─── List Gorgias views ───────────────────────────────────────────────────────
 
 @app.route('/api/views', methods=['GET'])
+@require_auth
 def list_views():
     gorgias_auth, gorgias_domain, _ = get_env()
     if not gorgias_auth:
@@ -238,6 +243,7 @@ def list_views():
 # ─── Get ticket IDs from a view ───────────────────────────────────────────────
 
 @app.route('/api/view-tickets', methods=['GET'])
+@require_auth
 def view_tickets():
     view_id = request.args.get('view_id')
     limit   = min(int(request.args.get('limit', 30)), 100)
@@ -264,6 +270,7 @@ def view_tickets():
 # ─── Random ticket sampler ────────────────────────────────────────────────────
 
 @app.route('/api/sample-tickets', methods=['GET'])
+@require_auth
 def sample_tickets():
     gorgias_user_id = request.args.get('gorgias_user_id', type=int)
     date_from       = request.args.get('date_from')   # YYYY-MM-DD

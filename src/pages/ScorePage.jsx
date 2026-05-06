@@ -3,6 +3,7 @@ import ScoreModal from '../components/ScoreModal'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { authFetch } from '../lib/api'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
@@ -64,7 +65,7 @@ function SamplerSection({ onScore }) {
       const params = new URLSearchParams({ gorgias_user_id: agent.gorgias_user_id, count })
       if (dateFrom) params.set('date_from', dateFrom)
       if (dateTo)   params.set('date_to',   dateTo)
-      const res  = await fetch(`${API_BASE}/api/sample-tickets?${params}`)
+      const res  = await authFetch(`${API_BASE}/api/sample-tickets?${params}`)
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Sampling failed'); return }
       setTickets(data)
@@ -75,7 +76,7 @@ function SamplerSection({ onScore }) {
   const scoreTicket = async (ticketId) => {
     setScoring(prev => ({ ...prev, [ticketId]: 'loading' }))
     try {
-      const res  = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(ticketId), rubric }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(ticketId), rubric }) })
       const data = await res.json()
       if (!res.ok) { setScoring(prev => ({ ...prev, [ticketId]: 'error' })); return }
       const entry = await addScore(data)
@@ -229,7 +230,7 @@ export default function ScorePage() {
     if (!url || loading || urlError) return
     setLoading(true); setError(null)
     try {
-      const res  = await fetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric }) })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong.'); return }
       addScore(data)

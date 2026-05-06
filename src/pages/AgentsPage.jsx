@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { authFetch } from '../lib/api'
 
 const VERDICT_DOT   = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
@@ -460,7 +461,7 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
   const [importing,    setImporting]    = useState(false)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/gorgias-users`)
+    authFetch(`${API_BASE}/api/gorgias-users`)
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error)

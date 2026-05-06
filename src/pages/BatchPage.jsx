@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../context/AppContext'
 import ScoreModal from '../components/ScoreModal'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { authFetch } from '../lib/api'
 
 const VERDICT_STYLE = {
   PASS:         { color: '#10b981', bg: 'rgba(16,185,129,0.1)',  label: 'PASS'   },
@@ -79,7 +80,7 @@ function ViewPicker({ onTickets, disabled }) {
 
   useEffect(() => {
     setLoading(true)
-    fetch('/api/views')
+    authFetch('/api/views')
       .then(r => r.json())
       .then(d => {
         if (d.error) throw new Error(d.error)
@@ -93,7 +94,7 @@ function ViewPicker({ onTickets, disabled }) {
     if (!viewId) return
     setFetching(true); setErr(null)
     try {
-      const res  = await fetch(`/api/view-tickets?view_id=${viewId}&limit=${limit}`)
+      const res  = await authFetch(`/api/view-tickets?view_id=${viewId}&limit=${limit}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setPreview(data.tickets)
@@ -201,7 +202,7 @@ export default function BatchPage() {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//,'').trim()
       try {
-        const res  = await fetch('/api/score', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ticket_url: ticketId, rubric }) })
+        const res  = await authFetch('/api/score', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ticket_url: ticketId, rubric }) })
         const data = await res.json()
         if (!res.ok) { setResults(p=>[...p,{ticketId, error:data.error||'Failed'}]); continue }
         addScore(data)
