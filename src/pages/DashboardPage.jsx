@@ -139,7 +139,13 @@ const selectStyle = {
 
 export default function DashboardPage() {
   const { scoreHistory, agents, teams } = useApp()
-  const { role, profile } = useAuth()
+  const { role, profile, user } = useAuth()
+
+  // For agents: resolve their own agent record so we can filter by agent ID
+  const myAgentId = useMemo(
+    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
+    [role, agents, user]
+  )
   const [activeScore, setActiveScore] = useState(null)
   const [filters, setFilters] = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
 
@@ -157,13 +163,15 @@ export default function DashboardPage() {
   }, [teams, agents])
 
   const filteredScores = useMemo(() => scoreHistory.filter(s => {
+    // Agents only ever see their own tickets
+    if (myAgentId && !s.agentIds?.includes(myAgentId)) return false
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
     if (filters.team  && !s.agentIds?.some(id => teamAgentMap[filters.team]?.has(id))) return false
     if (filters.verdicts.length && !filters.verdicts.includes(s.effectiveVerdict)) return false
     if (filters.dateFrom && s.scoredAt < new Date(filters.dateFrom).setHours(0,0,0,0)) return false
     if (filters.dateTo   && s.scoredAt > new Date(filters.dateTo).setHours(23,59,59,999)) return false
     return true
-  }), [scoreHistory, filters, teamAgentMap])
+  }), [scoreHistory, filters, teamAgentMap, myAgentId])
 
   const hasFilters = (role !== 'agent' && (filters.agent || filters.team)) || filters.verdicts.length || filters.dateFrom || filters.dateTo
 
