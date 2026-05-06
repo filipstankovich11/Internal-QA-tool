@@ -3,6 +3,7 @@ import os
 import random
 import re
 import sys
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -183,6 +184,113 @@ def test_webhook():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 502
+
+
+# ─── Notify agent via Slack DM ───────────────────────────────────────────────
+
+@app.route('/api/notify-agent', methods=['POST'])
+@require_auth
+def notify_agent():
+    data          = request.get_json(silent=True) or {}
+    bot_token     = (data.get('slack_bot_token') or '').strip()
+    agent_email   = (data.get('agent_email') or '').strip()
+    score_data    = data.get('score') or {}
+    reviewer_note = (data.get('reviewer_note') or '').strip()
+
+    if not bot_token:
+        return jsonify({'error': 'Slack Bot Token not configured — add it in QA Guidance → Slack Integration'}), 400
+    if not agent_email:
+        return jsonify({'error': 'Agent email is required to send a Slack DM'}), 400
+
+    # ── Look up the Slack user by email ──────────────────────────────────────
+    try:
+        lookup_url = 'https://slack.com/api/users.lookupByEmail?' + urllib.parse.urlencode({'email': agent_email})
+        lookup_req = urllib.request.Request(lookup_url, headers={'Authorization': f'Bearer {bot_token}'})
+        with urllib.request.urlopen(lookup_req, timeout=8) as resp:
+            lookup = json.loads(resp.read())
+    except Exception as e:
+        return jsonify({'error': f'Could not reach Slack API: {e}'}), 502
+
+    if not lookup.get('ok'):
+        slack_err = lookup.get('error', 'unknown')
+        if slack_err == 'users_not_found':
+            return jsonify({'error': f'No Slack account found for {agent_email}'}), 404
+        if slack_err in ('invalid_auth', 'not_authed', 'token_revoked'):
+            return jsonify({'error': 'Slack Bot Token is invalid or revoked'}), 401
+        return jsonify({'error': f'Slack error: {slack_err}'}), 502
+
+    slack_user_id = lookup['user']['id']
+
+    # ── Build the DM message ─────────────────────────────────────────────────
+    verdict    = score_data.get('verdict', '')
+    score      = score_data.get('weighted_score', 0)
+    ticket_id  = score_data.get('ticket_id', '')
+    subject    = score_data.get('ticket_subject', '') or f'Ticket #{ticket_id}'
+    summary    = score_data.get('summary', '')
+    improvements = score_data.get('key_improvements') or []
+    emoji      = {'PASS': '✅', 'NEEDS_REVIEW': '⚠️', 'FAIL': '❌'}.get(verdict, '❓')
+    _, gorgias_domain, _ = get_env()
+    ticket_url = f'https://{gorgias_domain}/app/ticket/{ticket_id}'
+
+    blocks = [
+        {
+            'type': 'section',
+            'text': {
+                'type': 'mrkdwn',
+                'text': f'{emoji} *QA Score — <{ticket_url}|#{ticket_id}>*\n_{subject}_',
+            },
+        },
+        {
+            'type': 'section',
+            'fields': [
+                {'type': 'mrkdwn', 'text': f'*Score*\n{score:.1f} / 100'},
+                {'type': 'mrkdwn', 'text': f'*Verdict*\n{verdict.replace("_", " ")}'},
+            ],
+        },
+    ]
+
+    if summary:
+        blocks.append({
+            'type': 'section',
+            'text': {'type': 'mrkdwn', 'text': f'*Summary*\n{summary}'},
+        })
+
+    if improvements:
+        imp_lines = '\n'.join(f'{i + 1}. {imp}' for i, imp in enumerate(improvements))
+        blocks.append({
+            'type': 'section',
+            'text': {'type': 'mrkdwn', 'text': f'*Key Improvements*\n{imp_lines}'},
+        })
+
+    if reviewer_note:
+        blocks.append({
+            'type': 'section',
+            'text': {'type': 'mrkdwn', 'text': f'*Reviewer Note*\n_{reviewer_note}_'},
+        })
+
+    blocks.append({'type': 'divider'})
+    blocks.append({
+        'type': 'context',
+        'elements': [{'type': 'mrkdwn', 'text': 'Sent by your QA tool · <' + ticket_url + '|View ticket>'}],
+    })
+
+    # ── Send the DM ──────────────────────────────────────────────────────────
+    try:
+        msg_body = json.dumps({'channel': slack_user_id, 'blocks': blocks}).encode()
+        msg_req  = urllib.request.Request(
+            'https://slack.com/api/chat.postMessage',
+            data=msg_body,
+            headers={'Authorization': f'Bearer {bot_token}', 'Content-Type': 'application/json'},
+        )
+        with urllib.request.urlopen(msg_req, timeout=8) as resp:
+            msg_result = json.loads(resp.read())
+    except Exception as e:
+        return jsonify({'error': f'Failed to send Slack message: {e}'}), 502
+
+    if not msg_result.get('ok'):
+        return jsonify({'error': f'Slack error: {msg_result.get("error", "unknown")}'}), 502
+
+    return jsonify({'ok': True})
 
 
 # ─── List Gorgias users (for agent import) ───────────────────────────────────

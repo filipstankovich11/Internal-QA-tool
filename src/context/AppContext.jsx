@@ -68,7 +68,7 @@ export const DEFAULT_RUBRIC = {
   ],
   verdict_thresholds: { pass: 80, needs_review: 60 },
   scoring_guidance: '',
-  slack_webhook_url: '',
+  slack_bot_token: '',
 }
 
 export function AppProvider({ children }) {

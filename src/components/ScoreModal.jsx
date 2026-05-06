@@ -400,6 +400,8 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
   )
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
+
 export default function ScoreModal({ score, onClose }) {
   const { agents, addScore, deleteScore, acknowledgeScore, rubric } = useApp()
   const { isAdmin } = useAuth()
@@ -408,6 +410,7 @@ export default function ScoreModal({ score, onClose }) {
   const [rescoring,       setRescoring]       = useState(false)
   const [liveScore,       setLiveScore]       = useState(null)
   const [acknowledging,   setAcknowledging]   = useState(false)
+  const [notifying,       setNotifying]       = useState(false)
 
   // Use liveScore after a re-score, fall back to the original prop
   const s = liveScore ?? score
@@ -418,12 +421,59 @@ export default function ScoreModal({ score, onClose }) {
   const vc = VERDICT[displayVerdict] || VERDICT.FAIL
   const { inquiry_resolution, internal_processes, customer_perception } = s.scores
 
-  const agentNames = (s.agent_senders || [])
+  const matchedAgents = (s.agent_senders || [])
     .map(a => agents.find(ag =>
       (a.gorgias_user_id && ag.gorgias_user_id === a.gorgias_user_id) ||
       (a.email && ag.email?.toLowerCase() === a.email?.toLowerCase())
-    )?.name || a.name)
+    ))
     .filter(Boolean)
+
+  const agentNames = matchedAgents.map(a => a.name).filter(Boolean)
+    .concat(
+      (s.agent_senders || [])
+        .filter(a => !agents.find(ag =>
+          (a.gorgias_user_id && ag.gorgias_user_id === a.gorgias_user_id) ||
+          (a.email && ag.email?.toLowerCase() === a.email?.toLowerCase())
+        ))
+        .map(a => a.name)
+        .filter(Boolean)
+    )
+
+  const notifyAgent = async () => {
+    const botToken = (rubric?.slack_bot_token || '').trim()
+    if (!botToken) {
+      toast.error('Add a Slack Bot Token in QA Guidance → Slack Integration')
+      return
+    }
+    const agentsWithEmail = matchedAgents.filter(a => a.email)
+    if (!agentsWithEmail.length) {
+      toast.error('No email address found for this agent')
+      return
+    }
+    setNotifying(true)
+    try {
+      const results = await Promise.all(agentsWithEmail.map(agent =>
+        authFetch(`${API_BASE}/api/notify-agent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slack_bot_token: botToken,
+            agent_email: agent.email,
+            score: s,
+            reviewer_note: s.reviewerNote || '',
+          }),
+        }).then(r => r.json().then(d => ({ ok: r.ok, ...d, email: agent.email })))
+      ))
+      const failed = results.filter(r => !r.ok)
+      if (failed.length === 0) toast.success('Slack DM sent to agent')
+      else if (failed.length < results.length) toast.success(`Sent to ${results.length - failed.length} agent(s) — ${failed.length} failed`)
+      else toast.error(failed[0]?.error || 'Failed to send Slack DM')
+    } catch {
+      toast.error('Could not reach the server')
+    } finally {
+      setNotifying(false)
+    }
+  }
 
   const rescore = async () => {
     setRescoring(true)
@@ -488,6 +538,21 @@ export default function ScoreModal({ score, onClose }) {
             </div>
           </div>
           <div className="flex items-center gap-3 mt-1 shrink-0">
+            {/* Notify agent on Slack */}
+            {isAdmin && s.scoreId && !confirmDelete && (
+              <button onClick={notifyAgent} disabled={notifying}
+                className="flex items-center gap-1.5 text-xs transition-colors"
+                style={{ color: notifying ? '#555' : '#555' }}
+                onMouseEnter={e => { if (!notifying) e.currentTarget.style.color = '#4ade80' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#555' }}
+                title="Send score summary to agent via Slack DM">
+                {notifying
+                  ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                  : <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                }
+                {notifying ? 'Sending…' : 'Notify'}
+              </button>
+            )}
             {/* Re-score button */}
             {s.scoreId && !confirmDelete && (
               <button onClick={rescore} disabled={rescoring}

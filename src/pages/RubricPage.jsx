@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
-import { authFetch } from '../lib/api'
 
 function weightColor(w) {
   return w === 100 ? '#10b981' : '#ef4444'
@@ -107,7 +106,6 @@ function AutoFailEditor({ conditions, onChange }) {
   )
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function RubricPage() {
   const { rubric, updateRubric } = useApp()
@@ -116,7 +114,6 @@ export default function RubricPage() {
   const [saving,      setSaving]      = useState(false)
   const [saved,       setSaved]       = useState(false)
   const [error,       setError]       = useState(null)
-  const [testingHook, setTestingHook] = useState(false)
 
   const totalWeight = draft.dimensions.reduce((s, d) => s + d.weight, 0)
   const weightOk    = totalWeight === 100
@@ -136,26 +133,6 @@ export default function RubricPage() {
   const reset = () => {
     setDraft(JSON.parse(JSON.stringify(DEFAULT_RUBRIC)))
     setError(null)
-  }
-
-  const testWebhook = async () => {
-    const url = (draft.slack_webhook_url || '').trim()
-    if (!url) return
-    setTestingHook(true)
-    try {
-      const res = await authFetch(`${API_BASE}/api/test-webhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhook_url: url }),
-      })
-      const data = await res.json()
-      if (res.ok) toast.success('Test message sent to Slack')
-      else toast.error(data.error || 'Webhook test failed')
-    } catch {
-      toast.error('Could not reach the server')
-    } finally {
-      setTestingHook(false)
-    }
   }
 
   return (
@@ -232,6 +209,24 @@ export default function RubricPage() {
       <AutoFailEditor
         conditions={draft.auto_fail_conditions}
         onChange={updated => setDraft(d => ({ ...d, auto_fail_conditions: updated }))} />
+
+      {/* Slack Integration */}
+      <div className="rounded-2xl p-5 mt-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>Slack Integration</p>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#888' }}>
+            Connect a Slack bot to send score summaries directly to agents as DMs. Create a Slack app with <span style={{ color: '#ccc' }}>chat:write</span> and <span style={{ color: '#ccc' }}>users:read.email</span> scopes, then paste the Bot Token below.
+          </p>
+        </div>
+        <input
+          type="password"
+          value={draft.slack_bot_token || ''}
+          onChange={e => setDraft(d => ({ ...d, slack_bot_token: e.target.value }))}
+          className="w-full rounded-xl px-4 py-2.5 text-sm g-input"
+          style={{ color: '#ccc' }}
+          placeholder="xoxb-…"
+        />
+      </div>
 
       {/* Scoring Guidance */}
       <div className="rounded-2xl p-5 mt-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
