@@ -411,6 +411,7 @@ export default function ScoreModal({ score, onClose }) {
   const [liveScore,       setLiveScore]       = useState(null)
   const [acknowledging,   setAcknowledging]   = useState(false)
   const [notifying,       setNotifying]       = useState(false)
+  const [showNotifyPreview, setShowNotifyPreview] = useState(false)
 
   // Use liveScore after a re-score, fall back to the original prop
   const s = liveScore ?? score
@@ -439,12 +440,17 @@ export default function ScoreModal({ score, onClose }) {
         .filter(Boolean)
     )
 
-  const notifyAgent = async () => {
+  const openNotifyPreview = () => {
     const agentsWithEmail = matchedAgents.filter(a => a.email)
     if (!agentsWithEmail.length) {
       toast.error('No email address found for this agent')
       return
     }
+    setShowNotifyPreview(true)
+  }
+
+  const sendNotification = async () => {
+    const agentsWithEmail = matchedAgents.filter(a => a.email)
     setNotifying(true)
     try {
       const results = await Promise.all(agentsWithEmail.map(agent =>
@@ -459,6 +465,7 @@ export default function ScoreModal({ score, onClose }) {
         }).then(r => r.json().then(d => ({ ok: r.ok, ...d })))
       ))
       const failed = results.filter(r => !r.ok)
+      setShowNotifyPreview(false)
       if (failed.length === 0) toast.success('Slack DM sent to agent')
       else if (failed.length < results.length) toast.success(`Sent to ${results.length - failed.length} agent(s) — ${failed.length} failed`)
       else toast.error(failed[0]?.error || 'Failed to send Slack DM')
@@ -534,7 +541,7 @@ export default function ScoreModal({ score, onClose }) {
           <div className="flex items-center gap-3 mt-1 shrink-0">
             {/* Notify agent on Slack */}
             {isAdmin && s.scoreId && !confirmDelete && (
-              <button onClick={notifyAgent} disabled={notifying}
+              <button onClick={openNotifyPreview} disabled={notifying}
                 className="flex items-center gap-1.5 text-xs transition-colors"
                 style={{ color: notifying ? '#555' : '#666' }}
                 onMouseEnter={e => { if (!notifying) e.currentTarget.style.color = '#ccc' }}
@@ -713,5 +720,98 @@ export default function ScoreModal({ score, onClose }) {
         </div>
       </div>
     </div>
+
+    {/* Slack notify preview */}
+    {showNotifyPreview && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+        onClick={() => !notifying && setShowNotifyPreview(false)}>
+        <div className="rounded-2xl w-full max-w-md modal-enter"
+          style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}
+          onClick={e => e.stopPropagation()}>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+              <h3 className="text-white font-semibold text-sm">Send Slack DM</h3>
+            </div>
+            <button onClick={() => setShowNotifyPreview(false)} className="text-xl leading-none transition-colors" style={{ color: '#555' }}
+              onMouseEnter={e => e.target.style.color = '#fff'} onMouseLeave={e => e.target.style.color = '#555'}>×</button>
+          </div>
+
+          <div className="px-5 py-4 flex flex-col gap-4">
+            {/* Recipients */}
+            <div>
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Sending to</p>
+              <div className="flex flex-col gap-1.5">
+                {matchedAgents.filter(a => a.email).map(a => (
+                  <div key={a.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: '#161616' }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                      style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}>
+                      {a.name[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{a.name}</p>
+                      <p className="text-xs" style={{ color: '#777' }}>{a.email}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Message preview */}
+            <div>
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Message preview</p>
+              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{{'PASS':'✅','NEEDS_REVIEW':'⚠️','FAIL':'❌'}[s.verdict] || '❓'}</span>
+                  <span className="text-sm font-semibold text-white">Ticket #{s.ticket_id}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{ color: VERDICT[displayVerdict]?.text, background: VERDICT[displayVerdict]?.bg }}>
+                    {displayVerdict?.replace('_', ' ')}
+                  </span>
+                  <span className="text-sm font-bold ml-auto" style={{ color: VERDICT[displayVerdict]?.text }}>
+                    {Math.round(displayScore)}/100
+                  </span>
+                </div>
+                {s.summary && (
+                  <p className="text-xs leading-relaxed" style={{ color: '#aaa' }}>{s.summary}</p>
+                )}
+                {s.key_improvements?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#777' }}>Key Improvements</p>
+                    {s.key_improvements.slice(0, 3).map((imp, i) => (
+                      <p key={i} className="text-xs leading-relaxed" style={{ color: '#888' }}>{i + 1}. {imp}</p>
+                    ))}
+                  </div>
+                )}
+                {s.reviewerNote && (
+                  <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p className="text-xs font-medium mb-1" style={{ color: '#777' }}>Reviewer Note</p>
+                    <p className="text-xs leading-relaxed italic" style={{ color: '#888' }}>{s.reviewerNote}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <button onClick={() => setShowNotifyPreview(false)} disabled={notifying}
+              className="text-sm px-4 py-2 rounded-xl g-btn-ghost">
+              Cancel
+            </button>
+            <button onClick={sendNotification} disabled={notifying}
+              className="g-btn-primary text-sm px-5 py-2 rounded-xl flex items-center gap-2"
+              style={{ opacity: notifying ? 0.6 : 1 }}>
+              {notifying
+                ? <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>Sending…</>
+                : 'Send DM'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   )
 }
