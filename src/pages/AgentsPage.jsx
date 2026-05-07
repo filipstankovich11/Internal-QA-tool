@@ -608,29 +608,36 @@ export default function AgentsPage() {
           <p className="text-sm mt-0.5" style={{ color: '#888' }}>Track individual agent performance</p>
         </div>
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Utility actions — low visual weight */}
             <button onClick={() => setShowImportModal(true)}
-              className="text-sm px-4 py-2 rounded-xl border transition-colors"
-              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#888' }}
-              onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
-              onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
-              Import from Gorgias
+              className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+              style={{ color: '#666' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
+              onMouseLeave={e => e.currentTarget.style.color = '#666'}>
+              Import Gorgias
             </button>
             <button onClick={() => setShowAssignModal(true)}
-              className="text-sm px-4 py-2 rounded-xl border transition-colors"
-              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#888' }}
-              onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
-              onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
+              className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+              style={{ color: '#666' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
+              onMouseLeave={e => e.currentTarget.style.color = '#666'}>
               Assign Teams
             </button>
+
+            <div className="w-px h-4 mx-1" style={{ background: 'rgba(255,255,255,0.08)' }} />
+
+            {/* Creation actions — higher weight */}
             <button onClick={() => setShowCreateTeam(true)}
-              className="text-sm px-4 py-2 rounded-xl border transition-colors"
-              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#888' }}
-              onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
-              onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
+              className="text-sm px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap"
+              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#aaa' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}>
               + New Team
             </button>
-            <button onClick={() => setShowAddModal(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl">+ Add Agent</button>
+            <button onClick={() => setShowAddModal(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl whitespace-nowrap">
+              + Add Agent
+            </button>
           </div>
         )}
       </div>
