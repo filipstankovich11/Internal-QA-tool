@@ -612,16 +612,16 @@ export default function AgentsPage() {
             {/* Utility actions — low visual weight */}
             <button onClick={() => setShowImportModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              style={{ color: '#666' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-              onMouseLeave={e => e.currentTarget.style.color = '#666'}>
+              style={{ color: '#999' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={e => e.currentTarget.style.color = '#999'}>
               Import Gorgias
             </button>
             <button onClick={() => setShowAssignModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              style={{ color: '#666' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-              onMouseLeave={e => e.currentTarget.style.color = '#666'}>
+              style={{ color: '#999' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={e => e.currentTarget.style.color = '#999'}>
               Assign Teams
             </button>
 
