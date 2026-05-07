@@ -120,7 +120,7 @@ function ViewPicker({ onTickets, disabled }) {
   const [views,    setViews]    = useState([])
   const [loading,  setLoading]  = useState(false)
   const [viewId,   setViewId]   = useState('')
-  const [limit,    setLimit]    = useState(30)
+  const [limit,    setLimit]    = useState('30')
   const [fetching, setFetching] = useState(false)
   const [err,      setErr]      = useState(null)
   const [preview,  setPreview]  = useState(null)
@@ -137,7 +137,7 @@ function ViewPicker({ onTickets, disabled }) {
     if (!viewId) return
     setFetching(true); setErr(null)
     try {
-      const res  = await authFetch(`/api/view-tickets?view_id=${viewId}&limit=${limit}`)
+      const res  = await authFetch(`/api/view-tickets?view_id=${viewId}&limit=${Math.min(100, Math.max(1, parseInt(limit) || 30))}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setPreview(data.tickets)
@@ -161,9 +161,11 @@ function ViewPicker({ onTickets, disabled }) {
         <div className="w-24">
           <label className="text-xs mb-1.5 block" style={{ color: '#888' }}>Limit</label>
           <input type="number" min={1} max={100} value={limit}
-            onChange={e => setLimit(Math.min(100, Math.max(1, +e.target.value)))}
+            onChange={e => setLimit(e.target.value)}
+            onBlur={e => setLimit(String(Math.min(100, Math.max(1, parseInt(e.target.value) || 30))))}
+            onFocus={e => e.target.select()}
             disabled={disabled}
-            className="w-full rounded-xl px-4 py-2.5 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
+            className="w-full rounded-xl px-4 py-2.5 text-sm" style={inputStyle} />
         </div>
         <button onClick={load} disabled={!viewId || fetching || disabled}
           className="text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap"
