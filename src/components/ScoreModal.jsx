@@ -497,6 +497,7 @@ export default function ScoreModal({ score, onClose }) {
   }, [onClose])
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
@@ -813,5 +814,6 @@ export default function ScoreModal({ score, onClose }) {
         </div>
       </div>
     )}
+    </>
   )
 }
