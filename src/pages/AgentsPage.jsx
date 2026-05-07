@@ -452,6 +452,37 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
   )
 }
 
+function CreateTeamModal({ onSave, onClose }) {
+  const [name, setName] = useState('')
+
+  const save = () => { if (name.trim()) { onSave(name.trim()); onClose() } }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
+      <div className="rounded-2xl p-6 w-full max-w-sm modal-enter" onClick={e => e.stopPropagation()}
+        style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <h2 className="text-white font-semibold mb-5">Create Team</h2>
+        <div className="flex flex-col gap-3">
+          <input autoFocus placeholder="Team name *" value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && save()}
+            className="rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#444] g-input"
+            style={{ border: name.trim() ? '1px solid rgba(255,151,128,0.4)' : undefined }} />
+          <div className="flex gap-2 mt-1">
+            <button onClick={save} disabled={!name.trim()}
+              className="flex-1 g-btn-primary text-sm font-medium py-2.5 rounded-xl"
+              style={{ opacity: name.trim() ? 1 : 0.4 }}>
+              Create Team
+            </button>
+            <button onClick={onClose} className="px-4 g-btn-ghost text-sm">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
   const [gorgiasUsers, setGorgiasUsers] = useState([])
   const [loading,      setLoading]      = useState(true)
@@ -550,20 +581,22 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
 }
 
 export default function AgentsPage() {
-  const { agents, teams, addAgent, updateAgent, deleteAgent, getAgentScores } = useApp()
+  const { agents, teams, addAgent, addTeam, updateAgent, deleteAgent, getAgentScores } = useApp()
   const { canEdit } = useAuth()
   const toast = useToast()
-  const [teamFilter,       setTeamFilter]       = useState('all')
-  const [showAddModal,     setShowAddModal]     = useState(false)
-  const [showImportModal,  setShowImportModal]  = useState(false)
-  const [showAssignModal,  setShowAssignModal]  = useState(false)
-  const [activeScore,      setActiveScore]      = useState(null)
-  const [historyAgent,     setHistoryAgent]     = useState(null)
+  const [teamFilter,        setTeamFilter]        = useState('all')
+  const [showAddModal,      setShowAddModal]      = useState(false)
+  const [showCreateTeam,    setShowCreateTeam]    = useState(false)
+  const [showImportModal,   setShowImportModal]   = useState(false)
+  const [showAssignModal,   setShowAssignModal]   = useState(false)
+  const [activeScore,       setActiveScore]       = useState(null)
+  const [historyAgent,      setHistoryAgent]      = useState(null)
 
-  const handleAddAgent = async (...args) => { await addAgent(...args); toast.success('Agent added') }
-  const handleDeleteAgent = async (id) => { await deleteAgent(id); toast.success('Agent deleted') }
-  const handleImport = async (...args) => { await addAgent(...args) }
-  const handleAssign = async (...args) => { await updateAgent(...args) }
+  const handleAddAgent    = async (...args) => { await addAgent(...args); toast.success('Agent added') }
+  const handleDeleteAgent = async (id)      => { await deleteAgent(id);   toast.success('Agent deleted') }
+  const handleCreateTeam  = async (name)    => { await addTeam(name);     toast.success(`Team "${name}" created`) }
+  const handleImport      = async (...args) => { await addAgent(...args) }
+  const handleAssign      = async (...args) => { await updateAgent(...args) }
 
   const filtered = teamFilter === 'all' ? agents : agents.filter(a => a.team_id === teamFilter)
 
@@ -589,6 +622,13 @@ export default function AgentsPage() {
               onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
               onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
               Assign Teams
+            </button>
+            <button onClick={() => setShowCreateTeam(true)}
+              className="text-sm px-4 py-2 rounded-xl border transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#888' }}
+              onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
+              + New Team
             </button>
             <button onClick={() => setShowAddModal(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl">+ Add Agent</button>
           </div>
@@ -635,6 +675,7 @@ export default function AgentsPage() {
         </div>
       )}
 
+      {showCreateTeam  && <CreateTeamModal onSave={handleCreateTeam} onClose={() => setShowCreateTeam(false)} />}
       {showAddModal    && <AddAgentModal teams={teams} onSave={handleAddAgent} onClose={() => setShowAddModal(false)} />}
       {showImportModal && <ImportGorgiasModal agents={agents} teams={teams} onSave={handleImport} onClose={() => { setShowImportModal(false); toast.success('Agents imported') }} />}
       {showAssignModal && <AssignTeamsModal agents={agents} teams={teams} onSave={handleAssign} onClose={() => { setShowAssignModal(false); toast.success('Teams updated') }} />}
