@@ -3,57 +3,241 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 
-const SORT_OPTIONS = [
+const SORT_OPTIONS   = [
   { id: 'avg',    label: 'Avg score' },
   { id: 'agents', label: 'Agents'    },
   { id: 'name',   label: 'Name'      },
 ]
+const PERIOD_OPTIONS = [
+  { id: 'week',  label: 'This week'  },
+  { id: 'month', label: 'This month' },
+  { id: 'all',   label: 'All time'   },
+]
 
-function scoreColor(avg) {
-  if (avg === null) return '#555'
-  return avg >= 80 ? '#10b981' : avg >= 60 ? '#f59e0b' : '#ef4444'
+function scoreColor(v) {
+  if (v === null || v === undefined) return '#555'
+  return v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
 }
 
-function TeamCard({ team, agents, scores, onEdit, onDelete, canEdit, getAgentScores, avgScore }) {
+function windowMs(period) {
+  if (period === 'week')  return 7  * 86400000
+  if (period === 'month') return 30 * 86400000
+  return null
+}
+
+function filterByPeriod(scores, period) {
+  const ms = windowMs(period)
+  if (!ms) return scores
+  const cutoff = Date.now() - ms
+  return scores.filter(s => s.scoredAt >= cutoff)
+}
+
+// ── Trend badge ────────────────────────────────────────────────────────────────
+
+function TrendBadge({ current, prev }) {
+  if (current === null || prev === null) return null
+  const diff = +(current - prev).toFixed(1)
+  if (Math.abs(diff) < 1) return <span className="text-xs" style={{ color: '#666' }}>→ stable</span>
+  const up = diff > 0
+  return (
+    <span className="text-xs font-medium" style={{ color: up ? '#10b981' : '#ef4444' }}>
+      {up ? '↑' : '↓'} {Math.abs(diff)} pts
+    </span>
+  )
+}
+
+// ── Comparison bar chart ───────────────────────────────────────────────────────
+
+function ComparisonView({ teams, agents, getTeamScores, avgScore, period }) {
+  const rows = teams.map(t => {
+    const scores     = filterByPeriod(getTeamScores(t.id), period)
+    const avg        = avgScore(scores)
+    const pass       = scores.filter(s => s.effectiveVerdict === 'PASS').length
+    const passRate   = scores.length ? Math.round((pass / scores.length) * 100) : null
+    const agentCount = agents.filter(a => a.team_id === t.id).length
+    return { team: t, avg, agentCount, tickets: scores.length, passRate }
+  }).sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1))
+
+  return (
+    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: '#666' }}>Team Comparison</p>
+      <div className="flex flex-col gap-4">
+        {rows.map(({ team, avg, agentCount, tickets, passRate }) => (
+          <div key={team.id}>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-white">{team.name}</span>
+                <span className="text-xs" style={{ color: '#666' }}>{agentCount} agent{agentCount !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span style={{ color: '#666' }}>{tickets} tickets</span>
+                {passRate !== null && <span style={{ color: '#10b981' }}>{passRate}% pass</span>}
+                <span className="font-bold" style={{ color: scoreColor(avg) }}>
+                  {avg !== null ? `${avg}/100` : '—'}
+                </span>
+              </div>
+            </div>
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: '#1a1a1a' }}>
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: avg !== null ? `${avg}%` : '0%', background: scoreColor(avg), opacity: 0.85 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Manage agents panel ────────────────────────────────────────────────────────
+
+function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign }) {
+  const [search, setSearch] = useState('')
+  const unassigned = allAgents.filter(a =>
+    a.team_id !== teamId &&
+    (!search || a.name?.toLowerCase().includes(search.toLowerCase()))
+  )
+
+  return (
+    <div className="border-t px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
+      <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#777' }}>Manage Agents</p>
+
+      {teamAgents.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs mb-2" style={{ color: '#666' }}>In this team</p>
+          <div className="flex flex-col gap-1">
+            {teamAgents.map(a => (
+              <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#111' }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ background: '#1e1e1e', color: '#FF9780' }}>
+                    {a.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <span className="text-sm" style={{ color: '#ccc' }}>{a.name}</span>
+                </div>
+                <button onClick={() => onUnassign(a.id)}
+                  className="text-xs transition-colors" style={{ color: '#666' }}
+                  onMouseEnter={e => e.target.style.color = '#ef4444'}
+                  onMouseLeave={e => e.target.style.color = '#666'}>Remove</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <p className="text-xs mb-2" style={{ color: '#666' }}>Add agents</p>
+        <input placeholder="Search agents…"
+          value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full rounded-lg px-3 py-2 text-xs mb-2 g-input" style={{ color: '#ccc' }} />
+        {unassigned.length === 0
+          ? <p className="text-xs text-center py-2" style={{ color: '#555' }}>No agents available to add</p>
+          : (
+            <div className="flex flex-col gap-1 max-h-36 overflow-y-auto">
+              {unassigned.map(a => (
+                <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#111' }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                      style={{ background: '#1e1e1e', color: '#777' }}>
+                      {a.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <span className="text-sm" style={{ color: '#ccc' }}>{a.name}</span>
+                    {a.team_id && <span className="text-xs" style={{ color: '#555' }}>· currently in another team</span>}
+                  </div>
+                  <button onClick={() => onAssign(a.id)}
+                    className="text-xs transition-colors" style={{ color: '#FF9780' }}
+                    onMouseEnter={e => e.target.style.color = '#fff'}
+                    onMouseLeave={e => e.target.style.color = '#FF9780'}>+ Add</button>
+                </div>
+              ))}
+            </div>
+          )
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Team card ──────────────────────────────────────────────────────────────────
+
+function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelete, canEdit, getAgentScores, avgScore, onAssign, onUnassign }) {
   const [editing,       setEditing]       = useState(false)
   const [name,          setName]          = useState(team.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [expanded,      setExpanded]      = useState(false)
+  const [managing,      setManaging]      = useState(false)
 
-  const pass   = scores.filter(s => s.effectiveVerdict === 'PASS').length
-  const review = scores.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW').length
-  const fail   = scores.filter(s => s.effectiveVerdict === 'FAIL').length
-  const avg    = scores.length ? +(scores.reduce((s, x) => s + x.effectiveScore, 0) / scores.length).toFixed(1) : null
+  const pass     = scores.filter(s => s.effectiveVerdict === 'PASS').length
+  const review   = scores.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW').length
+  const fail     = scores.filter(s => s.effectiveVerdict === 'FAIL').length
+  const avg      = scores.length    ? +(scores.reduce((s, x)     => s + x.effectiveScore, 0) / scores.length).toFixed(1)    : null
+  const prevAvg  = prevScores.length ? +(prevScores.reduce((s, x) => s + x.effectiveScore, 0) / prevScores.length).toFixed(1) : null
   const passRate = scores.length ? Math.round((pass / scores.length) * 100) : null
+  const pending  = scores.filter(s => !s.acknowledged).length
+
+  // Top / bottom performer (only agents with scores)
+  const agentStats = agents
+    .map(a => { const s = getAgentScores(a.id); return { agent: a, avg: avgScore(s), count: s.length } })
+    .filter(x => x.count > 0)
+    .sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1))
+  const top    = agentStats[0] ?? null
+  const bottom = agentStats.length > 1 ? agentStats[agentStats.length - 1] : null
 
   const save = () => { if (name.trim()) onEdit(team.id, name.trim()); setEditing(false) }
 
+  const accentColor = avg === null ? '#2a2a2a' : avg >= 80 ? '#10b981' : avg >= 60 ? '#f59e0b' : '#ef4444'
+
   return (
-    <div className="rounded-2xl" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-      {/* Card header */}
+    <div className="rounded-2xl overflow-hidden flex" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* Left accent bar */}
+      <div className="w-1 shrink-0" style={{ background: accentColor, opacity: avg === null ? 0.15 : 0.6 }} />
+
+      <div className="flex-1 min-w-0">
       <div className="p-5">
+        {/* Title + actions */}
         <div className="flex items-start justify-between mb-4">
-          {editing ? (
-            <input autoFocus value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
-              onBlur={save}
-              className="rounded-lg px-3 py-1 text-sm text-white outline-none flex-1 mr-3"
-              style={{ background: '#1e1e1e', border: '1px solid #FF9780' }}
-            />
-          ) : (
-            <h3 className="text-white font-semibold">{team.name}</h3>
-          )}
-          <div className="flex items-center gap-3 shrink-0">
-            {canEdit && !confirmDelete && <button onClick={() => setEditing(true)} className="text-xs transition-colors" style={{ color: '#aaa' }} onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#aaa'}>Edit</button>}
+          <div className="min-w-0">
+            {editing ? (
+              <input autoFocus value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
+                onBlur={save}
+                className="rounded-lg px-3 py-1 text-sm text-white outline-none w-full"
+                style={{ background: '#1e1e1e', border: '1px solid #FF9780' }}
+              />
+            ) : (
+              <h3 className="text-base font-semibold text-white">{team.name}</h3>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 ml-4">
             {canEdit && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#aaa' }}
-                onMouseEnter={e => e.target.style.color = '#ef4444'}
-                onMouseLeave={e => e.target.style.color = '#aaa'}>Delete</button>
+              <>
+                <button onClick={() => { setManaging(v => !v); setExpanded(false) }}
+                  className="text-xs px-2.5 py-1 rounded-lg transition-colors"
+                  style={{ color: managing ? '#FF9780' : '#888', background: managing ? 'rgba(255,151,128,0.08)' : 'transparent', border: '1px solid transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.2)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = managing ? '#FF9780' : '#888'; e.currentTarget.style.borderColor = 'transparent' }}>
+                  Manage
+                </button>
+                <button onClick={() => setEditing(true)}
+                  className="text-xs px-2.5 py-1 rounded-lg transition-colors"
+                  style={{ color: '#888', border: '1px solid transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'transparent' }}>
+                  Edit
+                </button>
+                <button onClick={() => setConfirmDelete(true)}
+                  className="text-xs px-2.5 py-1 rounded-lg transition-colors"
+                  style={{ color: '#888', border: '1px solid transparent' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'transparent' }}>
+                  Delete
+                </button>
+              </>
             )}
             {confirmDelete && (
               <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#ef4444' }}>Delete team?</span>
+                <span className="text-xs" style={{ color: '#ef4444' }}>Delete?</span>
                 <button onClick={() => onDelete(team.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
                   style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
                 <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
@@ -62,33 +246,73 @@ function TeamCard({ team, agents, scores, onEdit, onDelete, canEdit, getAgentSco
           </div>
         </div>
 
-        {/* Stats row */}
-        <div className="flex items-center gap-4 flex-wrap text-sm">
-          <span style={{ color: '#aaa' }}>{agents.length} agent{agents.length !== 1 ? 's' : ''}</span>
+        {/* Stats */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Score badge */}
+          {avg !== null && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg shrink-0"
+              style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}30` }}>
+              <span className="text-sm font-bold" style={{ color: accentColor }}>{avg}</span>
+              <span className="text-xs" style={{ color: accentColor, opacity: 0.7 }}>/100</span>
+              <TrendBadge current={avg} prev={prevAvg} />
+            </div>
+          )}
+
+          {/* Divider */}
+          {avg !== null && <div className="w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />}
+
+          <span className="text-xs" style={{ color: '#888' }}>{agents.length} agent{agents.length !== 1 ? 's' : ''}</span>
+
           {scores.length > 0 ? (
             <>
-              <span style={{ color: '#aaa' }}>{scores.length} tickets</span>
-              <span className="font-bold" style={{ color: scoreColor(avg) }}>avg {avg}/100</span>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-                {passRate}% pass
-              </span>
-              <div className="flex items-center gap-3 text-xs">
+              <span className="text-xs" style={{ color: '#888' }}>{scores.length} tickets scored</span>
+              <div className="w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />
+              <div className="flex items-center gap-2.5 text-xs">
                 <span style={{ color: '#10b981' }}>{pass} pass</span>
                 <span style={{ color: '#f59e0b' }}>{review} review</span>
                 <span style={{ color: '#ef4444' }}>{fail} fail</span>
               </div>
+              {passRate !== null && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.15)' }}>
+                  {passRate}% pass rate
+                </span>
+              )}
+              {pending > 0 && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(245,158,11,0.08)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.15)' }}>
+                  {pending} pending
+                </span>
+              )}
             </>
-          ) : <span style={{ color: '#aaa' }} className="text-xs">No tickets scored yet</span>}
+          ) : (
+            <span className="text-xs" style={{ color: '#666' }}>No tickets scored yet</span>
+          )}
         </div>
 
-        {/* Expand toggle */}
-        {agents.length > 0 && (
+        {/* Top / bottom performer */}
+        {(top || bottom) && (
+          <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+            {top && (
+              <span className="text-xs" style={{ color: '#666' }}>
+                🏆 <span style={{ color: '#10b981' }}>{top.agent.name}</span> · {top.avg}/100
+              </span>
+            )}
+            {bottom && (
+              <span className="text-xs" style={{ color: '#666' }}>
+                ↘ <span style={{ color: '#f59e0b' }}>{bottom.agent.name}</span> · {bottom.avg}/100
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Show agents toggle */}
+        {agents.length > 0 && !managing && (
           <button onClick={() => setExpanded(v => !v)}
             className="mt-3 flex items-center gap-1.5 text-xs transition-colors"
-            style={{ color: '#aaa' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = '#aaa'}>
+            style={{ color: '#666' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
+            onMouseLeave={e => e.currentTarget.style.color = '#666'}>
             <span style={{ display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▶</span>
             {expanded ? 'Hide agents' : 'Show agents'}
           </button>
@@ -96,53 +320,93 @@ function TeamCard({ team, agents, scores, onEdit, onDelete, canEdit, getAgentSco
       </div>
 
       {/* Expanded agent list */}
-      {expanded && agents.length > 0 && (
+      {expanded && !managing && agents.length > 0 && (
         <div className="border-t px-5 pb-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-          <div className="flex flex-col divide-y" style={{ '--tw-divide-opacity': 1 }}>
-            {agents.map(agent => {
-              const aScores  = getAgentScores(agent.id)
-              const aAvg     = avgScore(aScores)
-              const aPass    = aScores.filter(s => s.effectiveVerdict === 'PASS').length
-              const aPassPct = aScores.length ? Math.round((aPass / aScores.length) * 100) : null
-              return (
-                <div key={agent.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ background: '#1e1e1e', color: '#FF9780' }}>
-                      {agent.name?.[0]?.toUpperCase() || '?'}
-                    </div>
-                    <span className="text-sm" style={{ color: '#ccc' }}>{agent.name}</span>
+          {agents.map((agent, idx) => {
+            const aScores  = getAgentScores(agent.id)
+            const aAvg     = avgScore(aScores)
+            const aPass    = aScores.filter(s => s.effectiveVerdict === 'PASS').length
+            const aPassPct = aScores.length ? Math.round((aPass / aScores.length) * 100) : null
+            const isTop    = top?.agent.id === agent.id && agentStats.length > 1
+            const isLow    = bottom?.agent.id === agent.id && agentStats.length > 1
+            return (
+              <div key={agent.id} className="flex items-center justify-between py-2.5"
+                style={{ borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ background: '#1e1e1e', color: '#FF9780' }}>
+                    {agent.name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    {aScores.length > 0 ? (
-                      <>
-                        <span style={{ color: '#666' }}>{aScores.length} tickets</span>
-                        <span className="font-medium" style={{ color: scoreColor(aAvg) }}>{aAvg}/100</span>
-                        {aPassPct !== null && (
-                          <span style={{ color: '#10b981' }}>{aPassPct}% pass</span>
-                        )}
-                      </>
-                    ) : (
-                      <span style={{ color: '#aaa' }}>No scores yet</span>
-                    )}
-                  </div>
+                  <span className="text-sm truncate" style={{ color: '#ccc' }}>{agent.name}</span>
+                  {isTop && <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Top</span>}
+                  {isLow && <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>Needs attention</span>}
                 </div>
-              )
-            })}
-          </div>
+                <div className="flex items-center gap-3 text-xs shrink-0 ml-3">
+                  {aScores.length > 0 ? (
+                    <>
+                      <span style={{ color: '#666' }}>{aScores.length} tickets</span>
+                      <span className="font-medium" style={{ color: scoreColor(aAvg) }}>{aAvg}/100</span>
+                      {aPassPct !== null && <span style={{ color: '#10b981' }}>{aPassPct}% pass</span>}
+                    </>
+                  ) : (
+                    <span style={{ color: '#aaa' }}>No scores yet</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
+
+      {/* Manage agents panel */}
+      {managing && (
+        <ManageAgentsPanel
+          teamId={team.id}
+          teamAgents={agents}
+          allAgents={allAgents}
+          onAssign={onAssign}
+          onUnassign={onUnassign}
+        />
+      )}
+      </div>
     </div>
   )
 }
 
+// ── CSV export ─────────────────────────────────────────────────────────────────
+
+function exportCSV(teams, agents, getTeamScores, period) {
+  const header = ['Team', 'Agents', 'Tickets', 'Avg Score', 'Pass Rate %', 'Pass', 'Needs Review', 'Fail']
+  const rows = teams.map(t => {
+    const scores     = filterByPeriod(getTeamScores(t.id), period)
+    const pass       = scores.filter(s => s.effectiveVerdict === 'PASS').length
+    const review     = scores.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW').length
+    const fail       = scores.filter(s => s.effectiveVerdict === 'FAIL').length
+    const avg        = scores.length ? (scores.reduce((s, x) => s + x.effectiveScore, 0) / scores.length).toFixed(1) : ''
+    const passRate   = scores.length ? Math.round((pass / scores.length) * 100) : ''
+    const agentCount = agents.filter(a => a.team_id === t.id).length
+    return [t.name, agentCount, scores.length, avg, passRate, pass, review, fail]
+  })
+  const csv  = [header, ...rows].map(r => r.join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = `teams-${period}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
+
 export default function TeamsPage() {
-  const { teams, agents, addTeam, updateTeam, deleteTeam, getTeamScores, getAgentScores, avgScore } = useApp()
+  const { teams, agents, addTeam, updateTeam, deleteTeam, getTeamScores, getAgentScores, avgScore, updateAgent } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
+
   const [newName, setNewName] = useState('')
   const [adding,  setAdding]  = useState(false)
   const [sort,    setSort]    = useState('avg')
+  const [period,  setPeriod]  = useState('all')
+  const [view,    setView]    = useState('cards')
 
   const handleAdd = async () => {
     if (!newName.trim()) return
@@ -156,29 +420,79 @@ export default function TeamsPage() {
     toast.success('Team deleted')
   }
 
+  const handleAssign = async (agentId, teamId) => {
+    await updateAgent(agentId, { teamId })
+    toast.success('Agent added to team')
+  }
+
+  const handleUnassign = async (agentId) => {
+    await updateAgent(agentId, { teamId: null })
+    toast.success('Agent removed from team')
+  }
+
+  const ms = windowMs(period)
+
+  const getFiltered = (teamId) => filterByPeriod(getTeamScores(teamId), period)
+  const getPrev     = (teamId) => {
+    if (!ms) return []
+    const now = Date.now()
+    return getTeamScores(teamId).filter(s => s.scoredAt >= now - 2 * ms && s.scoredAt < now - ms)
+  }
+
   const sortedTeams = [...teams].sort((a, b) => {
-    if (sort === 'name') return a.name.localeCompare(b.name)
-    if (sort === 'agents') {
-      return agents.filter(x => x.team_id === b.id).length - agents.filter(x => x.team_id === a.id).length
-    }
-    // avg — teams with no scores go to bottom
-    const aAvg = avgScore(getTeamScores(a.id)) ?? -1
-    const bAvg = avgScore(getTeamScores(b.id)) ?? -1
-    return bAvg - aAvg
+    if (sort === 'name')   return a.name.localeCompare(b.name)
+    if (sort === 'agents') return agents.filter(x => x.team_id === b.id).length - agents.filter(x => x.team_id === a.id).length
+    return (avgScore(getFiltered(b.id)) ?? -1) - (avgScore(getFiltered(a.id)) ?? -1)
   })
 
   return (
     <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
-      <div className="flex items-center justify-between mb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Teams</h1>
           <p className="text-sm mt-0.5" style={{ color: '#888' }}>Group agents and track collective performance</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Sort toggle */}
+        {isAdmin && <button onClick={() => setAdding(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl shrink-0">+ Add Team</button>}
+      </div>
+
+      {/* Toolbar */}
+      {teams.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap mb-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          {/* Period */}
+          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {PERIOD_OPTIONS.map(o => (
+              <button key={o.id} onClick={() => setPeriod(o.id)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={period === o.id ? { background: '#1e1e1e', color: '#fff' } : { color: '#aaa' }}
+                onMouseEnter={e => { if (period !== o.id) e.currentTarget.style.color = '#fff' }}
+                onMouseLeave={e => { if (period !== o.id) e.currentTarget.style.color = '#aaa' }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-4" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+          {/* Cards / Compare */}
           {teams.length > 1 && (
+            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+              {['cards', 'compare'].map(v => (
+                <button key={v} onClick={() => setView(v)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
+                  style={view === v ? { background: '#1e1e1e', color: '#fff' } : { color: '#aaa' }}
+                  onMouseEnter={e => { if (view !== v) e.currentTarget.style.color = '#fff' }}
+                  onMouseLeave={e => { if (view !== v) e.currentTarget.style.color = '#aaa' }}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Sort by (cards only) */}
+          {view === 'cards' && teams.length > 1 && (
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#aaa' }}>Sort by</span>
+              <span className="text-xs" style={{ color: '#666' }}>Sort by</span>
               <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
                 {SORT_OPTIONS.map(o => (
                   <button key={o.id} onClick={() => setSort(o.id)}
@@ -192,10 +506,21 @@ export default function TeamsPage() {
               </div>
             </div>
           )}
-          {isAdmin && <button onClick={() => setAdding(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl">+ Add Team</button>}
-        </div>
-      </div>
 
+          {/* Export CSV — pushed to right */}
+          <div className="ml-auto">
+            <button onClick={() => exportCSV(teams, agents, getTeamScores, period)}
+              className="text-xs px-3 py-2 rounded-xl transition-colors"
+              style={{ color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
+              ↓ Export CSV
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add team form */}
       {adding && (
         <div className="rounded-2xl p-5 mb-4 flex items-center gap-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,147,128,0.3)' }}>
           <input autoFocus placeholder="Team name..."
@@ -208,22 +533,32 @@ export default function TeamsPage() {
         </div>
       )}
 
+      {/* Content */}
       {teams.length === 0 && !adding ? (
         <div className="text-center py-20" style={{ color: '#555' }}>
           <p className="text-4xl mb-3">👥</p>
           <p className="text-sm">No teams yet. Add one to start grouping agents.</p>
         </div>
+      ) : view === 'compare' ? (
+        <ComparisonView
+          teams={sortedTeams} agents={agents}
+          getTeamScores={getTeamScores} avgScore={avgScore} period={period}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           {sortedTeams.map(team => (
             <TeamCard key={team.id} team={team}
               agents={agents.filter(a => a.team_id === team.id)}
-              scores={getTeamScores(team.id)}
+              allAgents={agents}
+              scores={getFiltered(team.id)}
+              prevScores={getPrev(team.id)}
               onEdit={updateTeam}
               onDelete={handleDelete}
               canEdit={isAdmin}
               getAgentScores={getAgentScores}
               avgScore={avgScore}
+              onAssign={id => handleAssign(id, team.id)}
+              onUnassign={handleUnassign}
             />
           ))}
         </div>
