@@ -3,6 +3,7 @@ import anthropic
 from rubric import build_system_prompt, DEFAULT_RUBRIC, SCORING_SYSTEM_PROMPT
 
 # change model here for A/B testing
+# random comment
 MODEL = "claude-opus-4-6"
 
 
