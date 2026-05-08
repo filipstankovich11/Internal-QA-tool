@@ -177,16 +177,19 @@ export default function TeamsPage() {
         <div className="flex items-center gap-2">
           {/* Sort toggle */}
           {teams.length > 1 && (
-            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
-              {SORT_OPTIONS.map(o => (
-                <button key={o.id} onClick={() => setSort(o.id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={sort === o.id ? { background: '#1e1e1e', color: '#fff' } : { color: '#aaa' }}
-                  onMouseEnter={e => { if (sort !== o.id) e.currentTarget.style.color = '#fff' }}
-                  onMouseLeave={e => { if (sort !== o.id) e.currentTarget.style.color = '#aaa' }}>
-                  {o.label}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#aaa' }}>Sort by</span>
+              <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+                {SORT_OPTIONS.map(o => (
+                  <button key={o.id} onClick={() => setSort(o.id)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={sort === o.id ? { background: '#1e1e1e', color: '#fff' } : { color: '#aaa' }}
+                    onMouseEnter={e => { if (sort !== o.id) e.currentTarget.style.color = '#fff' }}
+                    onMouseLeave={e => { if (sort !== o.id) e.currentTarget.style.color = '#aaa' }}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {isAdmin && <button onClick={() => setAdding(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl">+ Add Team</button>}
