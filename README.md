@@ -93,7 +93,7 @@ App available at http://localhost:5173
 | Frontend | React, Vite, Tailwind CSS |
 | Auth | Supabase Auth (ES256 JWT) |
 | Database | Supabase (Postgres) |
-| AI scoring | Anthropic Claude (claude-sonnet-4-6) |
+| AI scoring | Anthropic Claude (claude-opus-4-6) |
 | API server | Python 3.11, Flask |
 | Notifications | Slack Bot API (Block Kit DMs) |
 | Ticket source | Gorgias REST API |
