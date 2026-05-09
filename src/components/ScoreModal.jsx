@@ -62,13 +62,14 @@ function DimensionStrip({ dimensions }) {
   return (
     <div className="grid grid-cols-3 gap-2 mb-4">
       {dimensions.map(({ name, weight, average }) => {
-        const color = scoreColor(average)
-        const pct   = (average / 5) * 100
+        const avg   = Number(average)
+        const color = scoreColor(avg)
+        const pct   = (avg / 5) * 100
         return (
           <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
             style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold tabular-nums" style={{ color }}>{average.toFixed(1)}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
               <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
             </div>
             <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
