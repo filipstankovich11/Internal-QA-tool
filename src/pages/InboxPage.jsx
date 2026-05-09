@@ -22,7 +22,7 @@ function DimMini({ scores }) {
     <div className="flex gap-3">
       {dims.map(d => {
         const avg = scores?.[d.key]?.dimension_average
-        if (avg == null) return null
+        if (avg == null || isNaN(avg)) return null
         const color = avg >= 4 ? '#10b981' : avg >= 3 ? '#f59e0b' : '#ef4444'
         return (
           <div key={d.key} className="flex flex-col gap-1" title={`${d.short}: ${avg.toFixed(1)}/5`}>

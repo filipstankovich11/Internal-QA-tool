@@ -183,9 +183,9 @@ export default function AgentProfilePage() {
 
   const [activeScore, setActiveScore] = useState(null)
 
-  const agent  = agents.find(a => a.user_id === user?.id) ?? agents[0] ?? null
+  const agent  = agents.find(a => a.user_id === user?.id) ?? null
   const team   = teams.find(t => t.id === agent?.team_id)
-  const scores = scoreHistory // RLS already filtered to this agent
+  const scores = agent ? scoreHistory.filter(s => s.agentIds?.includes(agent.id)) : []
 
   const sorted = useMemo(() => [...scores].sort((a, b) => b.scoredAt - a.scoredAt), [scores])
 
@@ -193,7 +193,8 @@ export default function AgentProfilePage() {
   const total    = scores.length
   const pass     = scores.filter(s => s.effectiveVerdict === 'PASS').length
   const passRate = total ? Math.round((pass / total) * 100) : null
-  const avg      = total ? scores.reduce((s, x) => s + x.effectiveScore, 0) / total : null
+  const avgRaw   = total ? scores.reduce((s, x) => s + (x.effectiveScore ?? 0), 0) / total : null
+  const avg      = avgRaw != null && !isNaN(avgRaw) ? avgRaw : null
 
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0)
   const thisMonth  = scores.filter(s => s.scoredAt >= monthStart.getTime()).length
