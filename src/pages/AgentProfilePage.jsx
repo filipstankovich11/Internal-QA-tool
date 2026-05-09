@@ -70,9 +70,10 @@ function TrendChart({ scores }) {
 
 // ── dimension bar ─────────────────────────────────────────────────────────────
 function DimBar({ label, weight, avg }) {
-  if (avg == null) return null
-  const pct   = (avg / 5) * 100
-  const color = dimColor(avg)
+  const n = Number(avg)
+  if (!isFinite(n)) return null
+  const pct   = (n / 5) * 100
+  const color = dimColor(n)
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
@@ -80,7 +81,7 @@ function DimBar({ label, weight, avg }) {
           <span className="text-sm" style={{ color: '#ccc' }}>{label}</span>
           <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
         </div>
-        <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#666' }}>/5</span></span>
+        <span className="text-sm font-bold tabular-nums" style={{ color }}>{n.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#666' }}>/5</span></span>
       </div>
       <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: '#1e1e1e' }}>
         <div className="h-full rounded-full"
@@ -210,7 +211,7 @@ export default function AgentProfilePage() {
 
   // ── dimension averages ─────────────────────────────────────────────────────
   const dimAvg = key => {
-    const vals = scores.map(s => s.fullScore?.scores?.[key]?.dimension_average).filter(v => v != null)
+    const vals = scores.map(s => Number(s.fullScore?.scores?.[key]?.dimension_average)).filter(v => isFinite(v))
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
   }
   const irAvg  = dimAvg('inquiry_resolution')

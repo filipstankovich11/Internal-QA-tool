@@ -61,8 +61,8 @@ export default function ScoreBreakdownHover({ children, scores, align = 'right' 
           {DIMS.map((dim, di) => {
             const dimData = scores[dim.key]
             if (!dimData) return null
-            const avg   = dimData.dimension_average
-            if (avg == null || isNaN(avg)) return null
+            const avg   = Number(dimData.dimension_average)
+            if (!isFinite(avg)) return null
             const color = dimColor(avg)
             return (
               <div key={dim.key} style={{ marginBottom: di < DIMS.length - 1 ? 10 : 0 }}>

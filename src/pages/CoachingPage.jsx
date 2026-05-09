@@ -99,7 +99,7 @@ export default function CoachingPage() {
 
       if (!entries.length) return { ...c, avg: null, notes: [] }
 
-      const avg   = entries.reduce((sum, e) => sum + e.score, 0) / entries.length
+      const avg   = entries.reduce((sum, e) => sum + Number(e.score), 0) / entries.length
       const notes = entries
         .filter(e => e.notes?.trim())
         .slice(0, 6)
