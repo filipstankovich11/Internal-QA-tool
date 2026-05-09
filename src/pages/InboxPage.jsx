@@ -44,8 +44,8 @@ function DisputeInline({ scoreId, disputed, disputeNote, onDispute }) {
   const [saving, setSaving] = useState(false)
 
   if (disputed) return (
-    <span className="text-xs px-2 py-1 rounded-lg"
-      style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+    <span className="text-xs px-3 py-1.5 rounded-xl font-medium"
+      style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
       ⚑ Disputed
     </span>
   )
@@ -53,11 +53,13 @@ function DisputeInline({ scoreId, disputed, disputeNote, onDispute }) {
   return (
     <div>
       {!open ? (
-        <button onClick={() => setOpen(true)}
-          className="text-xs transition-colors" style={{ color: '#666' }}
-          onMouseEnter={e => e.target.style.color = '#f59e0b'}
-          onMouseLeave={e => e.target.style.color = '#444'}>
-          Dispute
+        <button
+          onClick={() => setOpen(true)}
+          className="text-sm px-4 py-1.5 rounded-xl font-medium transition-all"
+          style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.14)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}>
+          ⚑ Dispute
         </button>
       ) : (
         <div className="flex flex-col gap-2 mt-2">
@@ -68,7 +70,7 @@ function DisputeInline({ scoreId, disputed, disputeNote, onDispute }) {
             placeholder="Describe why this score seems incorrect…"
             rows={2}
             className="w-full rounded-xl px-3 py-2 text-sm resize-none outline-none"
-            style={{ background: '#161616', border: '1px solid rgba(245,158,11,0.3)', color: '#ccc' }}
+            style={{ background: '#161616', border: '1px solid rgba(239,68,68,0.3)', color: '#ccc' }}
             onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setNote('') } }}
           />
           <div className="flex gap-2">
@@ -83,8 +85,8 @@ function DisputeInline({ scoreId, disputed, disputeNote, onDispute }) {
               }}
               disabled={!note.trim() || saving}
               className="text-xs px-3 py-1.5 rounded-lg font-medium"
-              style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', opacity: !note.trim() || saving ? 0.5 : 1 }}>
-              {saving ? 'Submitting…' : 'Submit'}
+              style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', opacity: !note.trim() || saving ? 0.5 : 1 }}>
+              {saving ? 'Submitting…' : 'Submit dispute'}
             </button>
             <button onClick={() => { setOpen(false); setNote('') }}
               className="text-xs px-3 py-1.5 rounded-lg" style={{ color: '#777' }}>
