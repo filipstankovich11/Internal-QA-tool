@@ -117,11 +117,26 @@ function ScoreTrend({ scores }) {
   return (
     <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
       <p className="text-xs mb-4" style={{ color: '#777' }}>Tickets scored — last 7 days</p>
-      <div className="flex items-end gap-2 h-20">
+      <div className="flex items-end gap-2 h-20 overflow-visible">
         {days.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full rounded-t-sm transition-all"
-              style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: d.count > 0 ? '#FF9780' : '#1e1e1e' }} />
+            <div className="relative w-full">
+              {d.count > 0 && (d.count / maxCount) <= 0.5 && (
+                <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                  style={{ color: '#FF9780' }}>
+                  {d.count}
+                </span>
+              )}
+              <div className="relative w-full rounded-t-sm transition-all"
+                style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: d.count > 0 ? '#FF9780' : '#1e1e1e' }}>
+                {d.count > 0 && (d.count / maxCount) > 0.5 && (
+                  <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                    style={{ color: 'rgba(0,0,0,0.6)' }}>
+                    {d.count}
+                  </span>
+                )}
+              </div>
+            </div>
             <span className="text-xs" style={{ color: '#666' }}>{d.label}</span>
           </div>
         ))}

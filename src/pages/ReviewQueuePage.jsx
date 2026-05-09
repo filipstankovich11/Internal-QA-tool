@@ -170,6 +170,7 @@ export default function ReviewQueuePage() {
   const [sortOrder,    setSortOrder]    = useState('priority')
   const [agentFilter,  setAgentFilter]  = useState('')
   const [selected,     setSelected]     = useState(new Set())
+  const [statusFilter, setStatusFilter] = useState(null) // null | 'needs_review' | 'disputed' | 'fails'
   const [bulkWorking,  setBulkWorking]  = useState(false)
   // claimed: { [scoreId]: userName }
   const [claimed,      setClaimed]      = useState({})
@@ -204,7 +205,11 @@ export default function ReviewQueuePage() {
     })
   }
 
-  const sorted = sortAndFilter(allQueued)
+  const baseList = statusFilter === 'needs_review' ? needsReview
+                 : statusFilter === 'disputed'     ? disputed
+                 : statusFilter === 'fails'        ? failed
+                 : allQueued
+  const sorted = sortAndFilter(baseList)
 
   // Selection
   const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -285,7 +290,7 @@ export default function ReviewQueuePage() {
             )}
           </div>
           <p className="text-sm" style={{ color: '#888' }}>
-            Tickets needing human attention — reviews, disputes and fails
+            Tickets requiring human attention — reviews, disputes and fails
           </p>
         </div>
       </div>
@@ -301,17 +306,31 @@ export default function ReviewQueuePage() {
           {/* Stats bar */}
           <div className="grid grid-cols-4 gap-3 mb-5">
             {[
-              { label: 'Needs Review', value: needsReview.length, color: '#f59e0b' },
-              { label: 'Disputed',     value: disputed.length,    color: '#fb923c' },
-              { label: 'Unack. Fails', value: failed.length,      color: '#ef4444' },
-              { label: 'Avg wait',     value: avgWaitDays ? `${avgWaitDays}d` : '—', color: +avgWaitDays > 2 ? '#ef4444' : '#aaa' },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl p-3 text-center"
-                style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <p className="text-xl font-bold" style={{ color }}>{value}</p>
-                <p className="text-xs mt-0.5" style={{ color: '#666' }}>{label}</p>
-              </div>
-            ))}
+              { label: 'Needs Review',         value: needsReview.length, color: '#f59e0b', filter: 'needs_review' },
+              { label: 'Disputed',             value: disputed.length,    color: '#fb923c', filter: 'disputed'     },
+              { label: 'Unacknowledged Fails', value: failed.length,      color: '#ef4444', filter: 'fails', small: true },
+            ].map(({ label, value, color, filter, small }) => {
+              const active = statusFilter === filter
+              return (
+                <button key={label} onClick={() => setStatusFilter(active ? null : filter)}
+                  className="rounded-xl p-3 text-center transition-all"
+                  style={{
+                    background: active ? `rgba(${color === '#f59e0b' ? '245,158,11' : color === '#fb923c' ? '251,146,60' : '239,68,68'},0.08)` : '#0f0f0f',
+                    border: `1px solid ${active ? color : 'rgba(255,255,255,0.06)'}`,
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = `${color}66` }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
+                  <p className="text-xl font-bold" style={{ color }}>{value}</p>
+                  <p className="mt-0.5" style={{ color: active ? '#aaa' : '#666', fontSize: small ? '10px' : '12px' }}>{label}</p>
+                </button>
+              )
+            })}
+            <div className="rounded-xl p-3 text-center"
+              style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-xl font-bold" style={{ color: +avgWaitDays > 2 ? '#ef4444' : '#aaa' }}>{avgWaitDays ? `${avgWaitDays}d` : '—'}</p>
+              <p className="mt-0.5 text-xs" style={{ color: '#666' }}>Avg wait</p>
+            </div>
           </div>
 
           {/* Toolbar */}
@@ -342,6 +361,15 @@ export default function ReviewQueuePage() {
             {/* Bulk select controls */}
             {isAdmin && sorted.length > 0 && (
               <div className="flex items-center gap-2 ml-auto">
+                {statusFilter && (
+                  <button onClick={() => setStatusFilter(null)}
+                    className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ color: '#aaa', border: '1px solid rgba(255,255,255,0.12)' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}>
+                    Show all
+                  </button>
+                )}
                 {selected.size === 0 ? (
                   <button onClick={selectAll}
                     className="text-xs px-3 py-1.5 rounded-lg transition-colors"

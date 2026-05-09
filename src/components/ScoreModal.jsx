@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
 import { authFetch } from '../lib/api'
+import { gorgiasTicketUrl } from '../lib/gorgias'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -90,7 +91,7 @@ function SubScoreRow({ label, data }) {
   return (
     <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
-        <span className="text-xs w-3 shrink-0 transition-transform" style={{ color: '#666', display:'inline-block', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
+        <span className="shrink-0 transition-transform" style={{ color: '#666', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
         <span className="text-sm flex-1" style={{ color: '#ccc' }}>{label}</span>
         <ScoreDots score={score} />
         <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
@@ -101,11 +102,16 @@ function SubScoreRow({ label, data }) {
 }
 
 function DimensionCard({ name, weight, average, rows }) {
+  const avg = typeof average === 'number' ? average : Number(average) || 0
+  const color = scoreColor(avg)
   return (
     <div className="rounded-xl p-4 mb-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>{name}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}/5</span>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
+        </div>
       </div>
       <div>{rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}</div>
     </div>
@@ -207,27 +213,35 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
 
   return (
     <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#0f0f0f', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: hasOverride ? '#818cf8' : '#888' }}>
-            {hasOverride ? '⊘ Human Override' : 'Override Score'}
-          </p>
-          {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
-          {hasOverride && (
+      {hasOverride ? (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#818cf8' }}>
+              ⊘ Human Override
+            </p>
+            {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
             <span className="text-xs px-2 py-0.5 rounded-full"
               style={{ color: vc.text, background: vc.bg, border: `1px solid ${vc.border}` }}>
               {vc.icon} {vc.label} · {overrideScore?.toFixed(0)}/100
             </span>
+          </div>
+          {isAdmin && (
+            <button onClick={() => setOpen(v => !v)}
+              className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
+              onMouseEnter={e => e.target.style.color='#818cf8'} onMouseLeave={e => e.target.style.color='#aaa'}>
+              {open ? 'Cancel' : 'Edit override'}
+            </button>
           )}
         </div>
-        {isAdmin && (
-          <button onClick={() => setOpen(v => !v)}
-            className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
-            onMouseEnter={e => e.target.style.color='#818cf8'} onMouseLeave={e => e.target.style.color='#aaa'}>
-            {open ? 'Cancel' : hasOverride ? 'Edit override' : 'Override'}
-          </button>
-        )}
-      </div>
+      ) : isAdmin ? (
+        <button onClick={() => setOpen(v => !v)}
+          className="w-[85%] mx-auto block text-sm font-semibold py-2 rounded-lg transition-all"
+          style={{ color: '#f97316', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}
+          onMouseEnter={e => { e.currentTarget.style.background='rgba(249,115,22,0.15)' }}
+          onMouseLeave={e => { e.currentTarget.style.background='rgba(249,115,22,0.08)' }}>
+          {open ? 'Cancel' : 'Override Score'}
+        </button>
+      ) : null}
 
       {hasOverride && !open && overrideNote && (
         <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{overrideNote}</p>
@@ -349,13 +363,12 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
   return (
     <div className="rounded-xl p-4"
       style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#0f0f0f', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider"
-          style={{ color: disputed ? '#f59e0b' : '#888' }}>
-          {disputed ? '⚑ Disputed' : 'Dispute Score'}
-        </p>
-        <div className="flex items-center gap-3">
-          {disputed && isAdmin && (
+      {disputed ? (
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#f59e0b' }}>
+            ⚑ Disputed
+          </p>
+          {isAdmin && (
             <button onClick={clear} disabled={saving}
               className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
               onMouseEnter={e => e.target.style.color='#10b981'}
@@ -363,16 +376,16 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
               Clear dispute
             </button>
           )}
-          {!disputed && (
-            <button onClick={() => setOpen(v => !v)}
-              className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
-              onMouseEnter={e => e.target.style.color='#f59e0b'}
-              onMouseLeave={e => e.target.style.color='#aaa'}>
-              {open ? 'Cancel' : 'Flag for dispute'}
-            </button>
-          )}
         </div>
-      </div>
+      ) : (
+        <button onClick={() => setOpen(v => !v)}
+          className="w-[85%] mx-auto block text-sm font-semibold py-2 rounded-lg transition-all"
+          style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}
+          onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)' }}
+          onMouseLeave={e => { e.currentTarget.style.background='rgba(239,68,68,0.08)' }}>
+          {open ? 'Cancel' : 'Flag for dispute'}
+        </button>
+      )}
 
       {disputed && disputeNote && !open && (
         <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{disputeNote}</p>
@@ -504,93 +517,103 @@ export default function ScoreModal({ score, onClose }) {
       onClick={onClose}
     >
       <div
-        className="rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
+        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
         style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Sticky header — colour-washed by verdict */}
-        <div className="sticky top-0 z-10 px-6 py-4 flex items-start justify-between rounded-t-2xl"
+        <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
           style={{ background: `rgba(7,7,7,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-xs" style={{ color: '#777' }}>Ticket #{s.ticket_id}</p>
-              {agentNames.length > 0 && (
-                <>
-                  <span className="text-xs" style={{ color: '#555' }}>·</span>
-                  {agentNames.map((name, i) => (
-                    <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)' }}>
-                      {name}
-                    </span>
-                  ))}
-                </>
+
+          {/* Row 1: Ticket ID (left) + Actions (right) */}
+          <div className="flex items-center justify-between mb-4">
+            <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
+              className="text-xs transition-colors"
+              style={{ color: '#777' }}
+              onMouseEnter={e => e.currentTarget.style.color='#FF9780'}
+              onMouseLeave={e => e.currentTarget.style.color='#777'}>
+              Ticket #{s.ticket_id}
+            </a>
+            <div className="flex items-center gap-4 shrink-0 pl-8">
+              {isAdmin && s.scoreId && !confirmDelete && (
+                <button onClick={openNotifyPreview} disabled={notifying}
+                  className="flex items-center gap-1.5 text-xs transition-colors"
+                  style={{ color: notifying ? '#555' : '#666' }}
+                  onMouseEnter={e => { if (!notifying) e.currentTarget.style.color = '#ccc' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#666' }}
+                  title="Send score summary to agent via Slack DM">
+                  {notifying
+                    ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                    : <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                  }
+                  {notifying ? 'Sending…' : 'Notify'}
+                </button>
               )}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
-                style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
-                {vc.icon} {vc.label}
-              </span>
-              <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>{animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: '#666' }}>/100</span></span>
-              {s.overrideVerdict && (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  Human reviewed
-                </span>
+              {s.scoreId && !confirmDelete && (
+                <button onClick={rescore} disabled={rescoring}
+                  className="flex items-center gap-1.5 text-xs transition-colors"
+                  style={{ color: rescoring ? '#333' : '#555' }}
+                  onMouseEnter={e => { if (!rescoring) e.currentTarget.style.color='#FF9780' }}
+                  onMouseLeave={e => { if (!rescoring) e.currentTarget.style.color='#555' }}
+                  title="Re-run AI scoring on this ticket">
+                  {rescoring
+                    ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                    : <RefreshIcon />}
+                  {rescoring ? 'Rescoring…' : 'Re-score'}
+                </button>
               )}
+              {isAdmin && s.scoreId && !confirmDelete && (
+                <button onClick={() => setConfirmDelete(true)}
+                  className="text-xs transition-colors" style={{ color: '#555' }}
+                  onMouseEnter={e => e.target.style.color='#ef4444'}
+                  onMouseLeave={e => e.target.style.color='#555'}>
+                  Delete
+                </button>
+              )}
+              {confirmDelete && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete score?</span>
+                  <button onClick={async () => {
+                    const ok = await deleteScore(s.scoreId)
+                    if (ok) { toast.success('Score deleted'); onClose() }
+                    else { toast.error('Failed to delete'); setConfirmDelete(false) }
+                  }} className="text-xs font-medium px-2 py-0.5 rounded-md"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
+                </div>
+              )}
+              <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.08)' }} />
+              <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#555' }}
+                onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#555'}>×</button>
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-1 shrink-0">
-            {/* Notify agent on Slack */}
-            {isAdmin && s.scoreId && !confirmDelete && (
-              <button onClick={openNotifyPreview} disabled={notifying}
-                className="flex items-center gap-1.5 text-xs transition-colors"
-                style={{ color: notifying ? '#555' : '#666' }}
-                onMouseEnter={e => { if (!notifying) e.currentTarget.style.color = '#ccc' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#666' }}
-                title="Send score summary to agent via Slack DM">
-                {notifying
-                  ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                  : <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
-                }
-                {notifying ? 'Sending…' : 'Notify'}
-              </button>
+
+          {/* Row 2: Agent names — max 3 columns, capped at 75% width */}
+          {agentNames.length > 0 && (
+            <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: 'repeat(3, auto)', justifyContent: 'start', maxWidth: '75%' }}>
+              {agentNames.map((name, i) => (
+                <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full text-center"
+                  style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)' }}>
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Row 3: Verdict badge + score */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
+              style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
+              {vc.icon} {vc.label}
+            </span>
+            <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>
+              {animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: '#666' }}>/100</span>
+            </span>
+            {s.overrideVerdict && (
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                Human reviewed
+              </span>
             )}
-            {/* Re-score button */}
-            {s.scoreId && !confirmDelete && (
-              <button onClick={rescore} disabled={rescoring}
-                className="flex items-center gap-1.5 text-xs transition-colors"
-                style={{ color: rescoring ? '#333' : '#555' }}
-                onMouseEnter={e => { if (!rescoring) e.currentTarget.style.color='#FF9780' }}
-                onMouseLeave={e => { if (!rescoring) e.currentTarget.style.color='#555' }}
-                title="Re-run AI scoring on this ticket">
-                {rescoring
-                  ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                  : <RefreshIcon />}
-                {rescoring ? 'Rescoring…' : 'Re-score'}
-              </button>
-            )}
-            {isAdmin && s.scoreId && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)}
-                className="text-xs transition-colors" style={{ color: '#666' }}
-                onMouseEnter={e => e.target.style.color='#ef4444'}
-                onMouseLeave={e => e.target.style.color='#444'}>
-                Delete
-              </button>
-            )}
-            {confirmDelete && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#ef4444' }}>Delete score?</span>
-                <button onClick={async () => {
-                  const ok = await deleteScore(s.scoreId)
-                  if (ok) { toast.success('Score deleted'); onClose() }
-                  else { toast.error('Failed to delete'); setConfirmDelete(false) }
-                }} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
-              </div>
-            )}
-            <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#555' }}
-              onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#333'}>×</button>
           </div>
         </div>
 
@@ -767,7 +790,13 @@ export default function ScoreModal({ score, onClose }) {
               <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{{'PASS':'✅','NEEDS_REVIEW':'⚠️','FAIL':'❌'}[s.verdict] || '❓'}</span>
-                  <span className="text-sm font-semibold text-white">Ticket #{s.ticket_id}</span>
+                  <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
+                    className="text-sm font-semibold transition-colors"
+                    style={{ color: '#fff' }}
+                    onMouseEnter={e => e.currentTarget.style.color='#FF9780'}
+                    onMouseLeave={e => e.currentTarget.style.color='#fff'}>
+                    Ticket #{s.ticket_id}
+                  </a>
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium"
                     style={{ color: VERDICT[displayVerdict]?.text, background: VERDICT[displayVerdict]?.bg }}>
                     {displayVerdict?.replace('_', ' ')}
