@@ -45,6 +45,28 @@ def _asymmetric_public_key(token):
     return None
 
 
+def verify_token(token: str) -> tuple:
+    """Verify a Supabase JWT. Returns (payload_or_None, error_string_or_None)."""
+    try:
+        header = jwt.get_unverified_header(token)
+        alg    = header.get('alg', 'HS256')
+        if alg in ('RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512'):
+            public_key = _asymmetric_public_key(token)
+            if not public_key:
+                return None, f'Could not resolve {alg} signing key'
+            payload = jwt.decode(token, public_key, algorithms=[alg], audience='authenticated')
+        else:
+            secret = os.environ.get('SUPABASE_JWT_SECRET', '')
+            if not secret:
+                return None, 'SUPABASE_JWT_SECRET not configured'
+            payload = jwt.decode(token, secret, algorithms=['HS256'], audience='authenticated')
+        return payload, None
+    except jwt.ExpiredSignatureError:
+        return None, 'Session expired'
+    except jwt.InvalidTokenError as e:
+        return None, f'Invalid token: {e}'
+
+
 def require_auth(f):
     """Validate the Supabase JWT on every request.
 

@@ -15,6 +15,7 @@ from flask_cors import CORS
 from auth import require_auth
 from gorgias_client import GorgiasClient
 from scorer import score_ticket
+from digest import build_digest_data, send_digest_email
 
 app = Flask(__name__)
 CORS(app)
@@ -409,6 +410,36 @@ def sample_tickets():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 502
+
+
+# ─── Weekly digest ───────────────────────────────────────────────────────────
+
+@app.route('/api/send-digest', methods=['POST', 'GET'])
+def send_digest():
+    # Accepts either a Supabase JWT (admin from UI) or the DIGEST_SECRET cron token
+    digest_secret = (os.environ.get('DIGEST_SECRET') or '').strip()
+    auth_header   = request.headers.get('Authorization', '')
+    token         = auth_header.removeprefix('Bearer ').strip()
+
+    if digest_secret and token == digest_secret:
+        pass  # valid cron request
+    else:
+        # Fall back to normal Supabase JWT auth
+        from auth import verify_token
+        payload, err = verify_token(token)
+        if err:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        data = build_digest_data()
+        if not data:
+            return jsonify({'ok': False, 'message': 'No scores in the last 7 days — digest not sent'}), 200
+        send_digest_email(data)
+        return jsonify({'ok': True, 'total': data['total'], 'recipients': (os.environ.get('DIGEST_RECIPIENTS') or '')})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Digest failed: {e}'}), 500
 
 
 # ─── Vercel handler ───────────────────────────────────────────────────────────
