@@ -29,7 +29,7 @@ function DimMini({ scores }) {
             <div className="w-12 rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
               <div className="h-full rounded-full" style={{ width: `${(avg / 5) * 100}%`, background: color }} />
             </div>
-            <span className="text-xs" style={{ color: '#666' }}>{d.label} {avg.toFixed(1)}</span>
+            <span className="text-xs" style={{ color: '#666' }}>{d.short} {avg.toFixed(1)}</span>
           </div>
         )
       })}
