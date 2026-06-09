@@ -623,7 +623,7 @@ export default function ScoreModal({ score, onClose }) {
           {s.auto_fail?.triggered && (
             <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#ef4444' }}>⚠ Auto-Fail Triggered</p>
-              <ul className="space-y-1">{s.auto_fail.reasons.map((r, i) => <li key={i} className="text-sm" style={{ color: '#fca5a5' }}>• {r}</li>)}</ul>
+              <ul className="space-y-1">{(s.auto_fail.reasons || []).map((r, i) => <li key={i} className="text-sm" style={{ color: '#fca5a5' }}>• {r}</li>)}</ul>
             </div>
           )}
 
@@ -774,7 +774,7 @@ export default function ScoreModal({ score, onClose }) {
                   <div key={a.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: '#161616' }}>
                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}>
-                      {a.name[0].toUpperCase()}
+                      {a.name?.[0]?.toUpperCase() || '?'}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{a.name}</p>
