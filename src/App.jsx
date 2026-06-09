@@ -36,6 +36,7 @@ const CoachingPage     = lazy(() => import('./pages/CoachingPage'))
 const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
+const CalibrationPage  = lazy(() => import('./pages/CalibrationPage'))
 
 const Spinner = () => (
   <div className="min-h-screen flex items-center justify-center" style={{ background: '#070707' }}>
@@ -54,8 +55,9 @@ function Router({ page, role }) {
     case 'inbox':     return <InboxPage />
     case 'coaching':  return <CoachingPage />
     case 'teams':     return <TeamsPage />
-    case 'rubric':    return <RubricPage />
-    default:          return <ScorePage />
+    case 'rubric':       return <RubricPage />
+    case 'calibration': return <CalibrationPage />
+    default:             return <ScorePage />
   }
 }
 
