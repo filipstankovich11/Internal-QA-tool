@@ -128,8 +128,9 @@ def score():
     if not data:
         return jsonify({'error': 'Invalid request body'}), 400
 
-    ticket_id = extract_ticket_id(data.get('ticket_url', ''))
-    rubric    = data.get('rubric') or None
+    ticket_id          = extract_ticket_id(data.get('ticket_url', ''))
+    rubric             = data.get('rubric') or None
+    few_shot_examples  = data.get('few_shot_examples') or []
     if not ticket_id:
         return jsonify({'error': 'Could not find a ticket ID in the URL'}), 400
 
@@ -152,7 +153,7 @@ def score():
         return jsonify({'error': 'This ticket has no agent responses to evaluate'}), 400
 
     try:
-        result = score_ticket(claude, ticket, messages, rubric=rubric)
+        result = score_ticket(claude, ticket, messages, rubric=rubric, few_shot_examples=few_shot_examples)
         result['agent_senders'] = extract_agent_senders(ticket, messages)
         result['ticket_subject'] = ticket.get('subject', '')
     except Exception as e:

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
-import { authFetch } from '../lib/api'
+import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 
 function useCountUp(target, duration = 700) {
@@ -417,7 +417,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function ScoreModal({ score, onClose }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, rubric } = useApp()
+  const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
@@ -493,7 +493,7 @@ export default function ScoreModal({ score, onClose }) {
   const rescore = async () => {
     setRescoring(true)
     try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Re-score failed'); return }
       const entry = await addScore(data)

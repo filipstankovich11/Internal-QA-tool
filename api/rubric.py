@@ -148,7 +148,7 @@ DEFAULT_RUBRIC = {
 }
 
 
-def build_system_prompt(rubric: dict) -> str:
+def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
     """Generate a scoring system prompt from a rubric config dict."""
     dims = rubric.get("dimensions", [])
     auto_fails = rubric.get("auto_fail_conditions", [])
@@ -225,6 +225,37 @@ def build_system_prompt(rubric: dict) -> str:
         "Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):",
         "",
     ]
+
+    # ── Few-shot calibration examples ────────────────────────────────────────
+    if few_shot_examples:
+        lines += [
+            "## CALIBRATION EXAMPLES",
+            "The following are real tickets that have been reviewed and corrected by QA managers.",
+            "Use them to calibrate your judgment — pay attention to where the AI score differed",
+            "from the human reviewer's assessment and why.",
+            "",
+        ]
+        for i, ex in enumerate(few_shot_examples, 1):
+            ai_verdict   = ex.get("ai_verdict", "")
+            ai_score     = ex.get("ai_score", "")
+            human_verdict = ex.get("human_verdict", "")
+            human_score   = ex.get("human_score", "")
+            reviewer_note = (ex.get("reviewer_note") or "").strip()
+            summary       = (ex.get("summary") or "").strip()
+            dim_avgs      = ex.get("dimension_averages") or {}
+
+            lines.append(f"### Example {i}")
+            if summary:
+                lines.append(f"Ticket summary: {summary}")
+            if dim_avgs:
+                avgs_str = ", ".join(f'{k}: {v}' for k, v in dim_avgs.items())
+                lines.append(f"Dimension averages: {avgs_str}")
+            lines.append(f"AI score: {ai_score}/100 ({ai_verdict})")
+            lines.append(f"Human corrected to: {human_score}/100 ({human_verdict})")
+            if reviewer_note:
+                lines.append(f"Reviewer reasoning: {reviewer_note}")
+            lines.append("")
+        lines += ["---", ""]
 
     # Dynamic JSON output template
     scores_spec = {}
