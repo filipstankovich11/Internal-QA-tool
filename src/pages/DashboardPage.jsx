@@ -37,8 +37,17 @@ function useCountUp(target, duration = 650) {
 function StatCard({ label, value, format, sub, color }) {
   const animated = useCountUp(typeof value === 'number' ? value : 0)
   const display  = value == null ? '—' : format ? format(animated) : Math.round(animated)
+  const [hovered, setHovered] = useState(false)
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl p-5"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: '#0f0f0f',
+        border: `1px solid ${hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.06)'}`,
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        transition: 'transform 150ms ease, border-color 150ms ease',
+      }}>
       <p className="text-xs mb-2" style={{ color: '#777' }}>{label}</p>
       <p className="text-3xl font-bold" style={{ color: color || '#fff' }}>{display}</p>
       {sub && <p className="text-xs mt-1" style={{ color: '#666' }}>{sub}</p>}

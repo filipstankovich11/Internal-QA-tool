@@ -45,7 +45,7 @@ function HistoryItem({ item, onClick }) {
   return (
     <button onClick={onClick}
       className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left"
-      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)', boxShadow: color ? `inset 3px 0 0 ${color}` : 'none' }}
       onMouseEnter={e => e.currentTarget.style.background = '#161616'}
       onMouseLeave={e => e.currentTarget.style.background = '#0f0f0f'}>
       <div className="flex items-center gap-3 min-w-0">

@@ -1,0 +1,296 @@
+import { useState } from 'react'
+import GorgiasLogo from './GorgiasLogo'
+import { useAuth } from '../context/AuthContext'
+import { useApp } from '../context/AppContext'
+
+const TABS = [
+  { id: 'dashboard',   label: 'Dashboard',   icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
+  { id: 'score',       label: 'Score',       scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
+  { id: 'review',      label: 'Review Queue', scorerOnly: true, badge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
+  { id: 'agents',      label: 'Agents',      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  { id: 'inbox',       label: 'Inbox',       agentOnly: true, inboxBadge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg> },
+  { id: 'coaching',    label: 'Coaching',    agentOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
+  { id: 'teams',       label: 'Teams',       scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
+  { id: 'rubric',      label: 'QA Guidance', adminOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
+  { id: 'calibration', label: 'Calibration', scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg> },
+]
+
+const ROLE_COLOR = { admin: '#FF9780', lead: '#f59e0b', agent: '#888' }
+
+const SignOutIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+)
+
+const ChevronLeft = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+)
+
+const ChevronRight = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+)
+
+export default function Sidebar({ page, setPage }) {
+  const [collapsed, setCollapsed] = useState(false)
+  const { profile, role, canScore, isAdmin, signOut } = useAuth()
+  const { scoreHistory } = useApp()
+
+  const reviewCount = scoreHistory.filter(s =>
+    (s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict) || s.disputed
+  ).length
+
+  const inboxUnread = scoreHistory.filter(s => !s.acknowledged).length
+  const isAgent = role === 'agent'
+
+  const visibleTabs = TABS
+    .filter(t => {
+      if (t.scorerOnly && !canScore) return false
+      if (t.adminOnly && !isAdmin) return false
+      if (t.agentOnly && !isAgent) return false
+      return true
+    })
+    .map(t => t.id === 'agents' && isAgent ? { ...t, label: 'My Profile' } : t)
+
+  return (
+    <aside
+      style={{
+        width: collapsed ? 56 : 220,
+        flexShrink: 0,
+        background: '#111111',
+        borderRight: '1px solid rgba(255,255,255,0.14)',
+        transition: 'width 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        zIndex: 40,
+      }}
+    >
+      {/* Logo + collapse toggle */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'space-between',
+        padding: '0 12px',
+        borderBottom: '1px solid rgba(255,255,255,0.14)',
+        height: 56,
+        flexShrink: 0,
+        gap: 8,
+      }}>
+        {!collapsed && (
+          <button
+            onClick={() => setPage('dashboard')}
+            style={{ opacity: 1, transition: 'opacity 150ms', lineHeight: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.7' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+            title="Dashboard"
+          >
+            <GorgiasLogo />
+          </button>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            color: '#666',
+            padding: '5px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color 150ms, background 150ms',
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.background = 'transparent' }}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        </button>
+      </div>
+
+      {/* Nav items */}
+      <nav style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        padding: '8px',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+      }}>
+        {visibleTabs.map(tab => {
+          const isActive = page === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setPage(tab.id)}
+              title={collapsed ? tab.label : undefined}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: collapsed ? '9px 0' : '9px 12px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                borderRadius: '8px',
+                color: isActive ? '#FF9780' : '#888',
+                background: isActive ? 'rgba(255,151,128,0.13)' : 'transparent',
+                border: 'none',
+                borderLeft: !collapsed ? (isActive ? '2px solid #FF9780' : '2px solid transparent') : 'none',
+                transition: 'color 150ms, background 150ms',
+                fontSize: 13,
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left',
+                position: 'relative',
+              }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  e.currentTarget.style.color = '#ddd'
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  e.currentTarget.style.color = '#888'
+                  e.currentTarget.style.background = 'transparent'
+                }
+              }}
+            >
+              <span style={{ flexShrink: 0, display: 'flex' }}>{tab.icon}</span>
+              {!collapsed && (
+                <span style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0 }}>
+                  {tab.label}
+                  <span style={{ display: 'flex', gap: 4 }}>
+                    {tab.badge && reviewCount > 0 && (
+                      <span style={{ background: 'rgba(245,158,11,0.18)', color: '#f59e0b', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999, lineHeight: 1.4 }}>
+                        {reviewCount}
+                      </span>
+                    )}
+                    {tab.inboxBadge && inboxUnread > 0 && (
+                      <span style={{ background: 'rgba(255,151,128,0.18)', color: '#FF9780', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999, lineHeight: 1.4 }}>
+                        {inboxUnread}
+                      </span>
+                    )}
+                  </span>
+                </span>
+              )}
+              {collapsed && tab.badge && reviewCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: 7, right: 7,
+                  background: '#f59e0b',
+                  width: 6, height: 6,
+                  borderRadius: '50%',
+                }} />
+              )}
+              {collapsed && tab.inboxBadge && inboxUnread > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: 7, right: 7,
+                  background: '#FF9780',
+                  width: 6, height: 6,
+                  borderRadius: '50%',
+                }} />
+              )}
+            </button>
+          )
+        })}
+      </nav>
+
+      {/* User info + sign out */}
+      <div style={{
+        padding: '8px',
+        borderTop: '1px solid rgba(255,255,255,0.14)',
+        flexShrink: 0,
+      }}>
+        {profile && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px',
+            borderRadius: '8px',
+            justifyContent: collapsed ? 'center' : 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <div
+                style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: 'rgba(255,151,128,0.15)', color: '#FF9780',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700, flexShrink: 0,
+                }}
+                title={collapsed ? `${profile.name} · ${role}` : undefined}
+              >
+                {(profile.name || '?')[0].toUpperCase()}
+              </div>
+              {!collapsed && (
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: '#ccc', fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {profile.name}
+                  </div>
+                  <div style={{ color: ROLE_COLOR[role] || '#888', fontSize: 11, textTransform: 'capitalize' }}>
+                    {role}
+                  </div>
+                </div>
+              )}
+            </div>
+            {!collapsed && (
+              <button
+                onClick={signOut}
+                style={{
+                  color: '#777',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '8px',
+                  padding: '5px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'color 150ms, border-color 150ms',
+                  flexShrink: 0,
+                  background: 'transparent',
+                  cursor: 'pointer',
+                }}
+                title="Sign out"
+                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#777'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+              >
+                <SignOutIcon />
+              </button>
+            )}
+          </div>
+        )}
+        {collapsed && (
+          <button
+            onClick={signOut}
+            style={{
+              color: '#555',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '8px',
+              padding: '7px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '100%',
+              transition: 'color 150ms, border-color 150ms',
+              background: 'transparent',
+              cursor: 'pointer',
+            }}
+            title="Sign out"
+            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+          >
+            <SignOutIcon />
+          </button>
+        )}
+      </div>
+    </aside>
+  )
+}
