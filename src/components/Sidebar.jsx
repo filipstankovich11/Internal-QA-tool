@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import GorgiasLogo from './GorgiasLogo'
 import SettingsModal from './SettingsModal'
+import NotificationPanel from './NotificationPanel'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 
@@ -45,10 +47,40 @@ const GearIcon = () => (
   </svg>
 )
 
+const BellIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+)
+
 export default function Sidebar({ page, setPage }) {
   const [collapsed, setCollapsed] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const { profile, role, canScore, isAdmin, signOut } = useAuth()
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const { user, profile, role, canScore, isAdmin, signOut } = useAuth()
+  const { agents } = useApp()
+
+  const fetchUnread = useCallback(async () => {
+    if (!user) return
+    const cutoff = new Date(Date.now() - 30 * 86400000).toISOString()
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('read', false)
+      .gte('created_at', cutoff)
+    setUnreadCount(count || 0)
+  }, [user])
+
+  useEffect(() => {
+    fetchUnread()
+    const channel = supabase.channel('sidebar-notif-count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' },
+        () => fetchUnread())
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [fetchUnread])
   const { scoreHistory } = useApp()
 
   const reviewCount = scoreHistory.filter(s =>
@@ -258,6 +290,34 @@ export default function Sidebar({ page, setPage }) {
             {!collapsed && (
               <div style={{ display: 'flex', gap: 4 }}>
                 <button
+                  onClick={() => { setShowNotifications(true); setShowSettings(false) }}
+                  style={{
+                    color: '#666',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '8px',
+                    padding: '5px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'color 150ms, border-color 150ms',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    position: 'relative',
+                  }}
+                  title="Notifications"
+                  onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.3)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+                >
+                  <BellIcon />
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -4, right: -4,
+                      background: '#FF9780', color: '#070707',
+                      fontSize: 9, fontWeight: 700, lineHeight: 1,
+                      padding: '2px 4px', borderRadius: 999,
+                      minWidth: 14, textAlign: 'center',
+                    }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+                  )}
+                </button>
+                <button
                   onClick={() => setShowSettings(true)}
                   style={{
                     color: '#666',
@@ -299,6 +359,32 @@ export default function Sidebar({ page, setPage }) {
         )}
         {collapsed && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <button
+              onClick={() => { setShowNotifications(true); setShowSettings(false) }}
+              style={{
+                color: '#666',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '8px',
+                padding: '7px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%',
+                transition: 'color 150ms, border-color 150ms',
+                background: 'transparent',
+                cursor: 'pointer',
+                position: 'relative',
+              }}
+              title="Notifications"
+              onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+            >
+              <BellIcon />
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: 2, right: 2,
+                  background: '#FF9780', width: 7, height: 7, borderRadius: '50%',
+                }} />
+              )}
+            </button>
             <button
               onClick={() => setShowSettings(true)}
               style={{
@@ -342,6 +428,12 @@ export default function Sidebar({ page, setPage }) {
       </div>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showNotifications && (
+        <NotificationPanel
+          onClose={() => { setShowNotifications(false); fetchUnread() }}
+          offsetLeft={collapsed ? 56 : 220}
+        />
+      )}
     </aside>
   )
 }
