@@ -55,7 +55,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 
   return (
     <div className="rounded-xl transition-all"
-      style={{ background: selected ? '#161616' : '#0f0f0f', border: `1px solid ${selected ? badge.hoverBorder : badge.border}` }}>
+      style={{ background: selected ? '#161616' : '#0f0f0f', border: `1px solid ${selected ? badge.hoverBorder : badge.border}`, boxShadow: `inset 3px 0 0 ${badge.color}` }}>
 
       <div className="flex items-center gap-3 px-3 py-3.5">
         {/* Checkbox */}
