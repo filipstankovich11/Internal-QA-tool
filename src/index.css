@@ -73,8 +73,14 @@
 }
 
 /* Gorgias design tokens as utilities */
-.g-card   { background: var(--g-900); border: 1px solid var(--g-border); transition: transform 150ms ease, border-color 150ms ease; }
-.g-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.13); }
+.g-card   {
+  background: linear-gradient(180deg, #222 0%, var(--g-900) 100%);
+  border: 1px solid var(--g-border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.g-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.10); }
+.g-label  { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #666; }
 .g-input  { background: var(--g-800); border: 1px solid var(--g-border); color: #fff; outline: none; transition: border-color 0.15s; }
 .g-input:focus { border-color: var(--g-coral); box-shadow: 0 0 0 3px rgba(255,151,128,0.12); }
 .g-btn-primary {

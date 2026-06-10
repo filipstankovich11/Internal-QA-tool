@@ -43,12 +43,14 @@ function StatCard({ label, value, format, sub, color }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: '#0f0f0f',
-        border: `1px solid ${hovered ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.06)'}`,
+        background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)',
+        border: `1px solid ${hovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
+        borderTop: `2px solid ${color || 'rgba(255,255,255,0.15)'}`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,${hovered ? '0.10' : '0.07'})`,
         transform: hovered ? 'translateY(-2px)' : 'none',
-        transition: 'transform 150ms ease, border-color 150ms ease',
+        transition: 'transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
       }}>
-      <p className="text-xs mb-2" style={{ color: '#777' }}>{label}</p>
+      <p className="g-label mb-2">{label}</p>
       <p className="text-3xl font-bold" style={{ color: color || '#fff' }}>{display}</p>
       {sub && <p className="text-xs mt-1" style={{ color: '#666' }}>{sub}</p>}
     </div>
@@ -124,8 +126,8 @@ function ScoreTrend({ scores }) {
   const maxCount = Math.max(...days.map(d => d.count), 1)
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <p className="text-xs mb-4" style={{ color: '#777' }}>Tickets scored — last 7 days</p>
+    <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+      <p className="g-label mb-4">Tickets scored — last 7 days</p>
       <div className="flex items-end gap-2 h-20 overflow-visible">
         {days.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
@@ -258,8 +260,8 @@ export default function DashboardPage() {
 
       {/* Distribution + Trend */}
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
-        <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs mb-4" style={{ color: '#777' }}>Score distribution</p>
+        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+          <p className="g-label mb-4">Score distribution</p>
           {total === 0 ? <p className="text-xs" style={{ color: '#555' }}>No tickets scored yet</p> : (
             <div className="flex flex-col gap-3">
               {[['PASS', pass], ['NEEDS_REVIEW', review], ['FAIL', fail]].map(([v, n]) => (
@@ -280,9 +282,9 @@ export default function DashboardPage() {
 
       {/* Agent leaderboard — hidden for agents */}
       {role !== 'agent' && (
-        <div className="rounded-2xl p-5 mb-6" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs" style={{ color: '#777' }}>Agent leaderboard</p>
+            <p className="g-label">Agent leaderboard</p>
             {agents.length > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full"
                 style={{ background: '#161616', color: leaderboard.length === agents.length ? '#10b981' : '#555' }}>
@@ -335,7 +337,7 @@ export default function DashboardPage() {
 
         if (!teamStats.length) return null
         return (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
             <p className="text-xs mb-4" style={{ color: '#777' }}>Team performance — 30-day trend</p>
             <div className="flex flex-col gap-1">
               {teamStats.map((t, i) => (
@@ -395,7 +397,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Filters */}
-        <div className="rounded-2xl p-4 mb-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-4 mb-4" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
           <div className="flex flex-wrap gap-3 items-end">
 
             {role !== 'agent' && (
@@ -489,9 +491,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div className="grid text-xs px-4 py-2.5" style={{
+            <div className="grid px-4 py-3" style={{
               gridTemplateColumns: '100px 1fr 150px 80px 90px 80px',
-              background: '#0a0a0a', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.05)'
+              background: 'rgba(255,255,255,0.03)',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: '#777',
             }}>
               <span>Ticket</span><span>Subject</span><span>Agents</span>
               <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
