@@ -141,9 +141,10 @@ do $$ begin
   end if;
 end $$;
 
--- gorgias_user_id and goal_score on agents
+-- gorgias_user_id, goal_score, and notify_slack on agents
 alter table public.agents add column if not exists gorgias_user_id integer;
 alter table public.agents add column if not exists goal_score      integer;
+alter table public.agents add column if not exists notify_slack    boolean default true;
 
 -- dispute and acknowledgement flow on scores
 alter table public.scores add column if not exists disputed       boolean default false;

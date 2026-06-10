@@ -147,6 +147,7 @@ export function AppProvider({ children }) {
     if (patch.gorgias_user_id  !== undefined) dbPatch.gorgias_user_id  = patch.gorgias_user_id
     // NOTE: goal_score requires: ALTER TABLE agents ADD COLUMN IF NOT EXISTS goal_score integer;
     if (patch.goal_score       !== undefined) dbPatch.goal_score       = patch.goal_score
+    if (patch.notify_slack     !== undefined) dbPatch.notify_slack     = patch.notify_slack
     const { data, error } = await supabase
       .from('agents').update(dbPatch).eq('id', id).select().single()
     if (!error) setAgents(prev => prev.map(a => a.id === id ? data : a))
@@ -200,17 +201,46 @@ export function AppProvider({ children }) {
     return !error
   }
 
+  // ── Notifications ──────────────────────────────────────────────────────────
+  const notifyAgents = async (agentIds, type, message, scoreId = null) => {
+    if (!agentIds?.length) return
+    await supabase.from('notifications').insert(
+      agentIds.map(agent_id => ({ agent_id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
+    )
+  }
+
+  const notifyAdmins = async (type, message, scoreId = null) => {
+    const { data: admins } = await supabase
+      .from('profiles').select('id').in('role', ['admin', 'lead'])
+    if (!admins?.length) return
+    await supabase.from('notifications').insert(
+      admins.map(a => ({ user_id: a.id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
+    )
+  }
+
   const updateScoreNote = async (id, note) => {
     const { error } = await supabase
       .from('scores').update({ notes: note }).eq('id', id)
-    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, notes: note } : s))
+    if (!error) {
+      setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, notes: note } : s))
+      const score = scoreHistory.find(s => s.id === id)
+      if (score?.agentIds?.length) {
+        notifyAgents(score.agentIds, 'reviewer_note',
+          `A reviewer left a note on your score for ticket #${score.ticketId}`, id)
+      }
+    }
   }
 
   const flagScore = async (id, note) => {
     const { error } = await supabase.from('scores').update({
       disputed: true, dispute_note: note, dispute_at: new Date().toISOString(),
     }).eq('id', id)
-    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, disputed: true, disputeNote: note, disputeAt: Date.now() } : s))
+    if (!error) {
+      setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, disputed: true, disputeNote: note, disputeAt: Date.now() } : s))
+      const score = scoreHistory.find(s => s.id === id)
+      notifyAdmins('dispute_submitted',
+        `An agent disputed a score for ticket #${score?.ticketId || id}`, id)
+    }
     return !error
   }
 
@@ -224,7 +254,14 @@ export function AppProvider({ children }) {
 
   const clearDispute = async (id) => {
     const { error } = await supabase.from('scores').update({ disputed: false, dispute_note: null, dispute_at: null }).eq('id', id)
-    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, disputed: false, disputeNote: '', disputeAt: null } : s))
+    if (!error) {
+      setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, disputed: false, disputeNote: '', disputeAt: null } : s))
+      const score = scoreHistory.find(s => s.id === id)
+      if (score?.agentIds?.length) {
+        notifyAgents(score.agentIds, 'dispute_cleared',
+          `Your dispute for ticket #${score.ticketId} has been reviewed and cleared`, id)
+      }
+    }
     return !error
   }
 
@@ -248,6 +285,11 @@ export function AppProvider({ children }) {
         effectiveVerdict: verdict,
         effectiveScore:   score,
       } : s))
+      const s = scoreHistory.find(s => s.id === id)
+      if (s?.agentIds?.length) {
+        notifyAgents(s.agentIds, 'score_overridden',
+          `Your score for ticket #${s.ticketId} was reviewed and overridden`, id)
+      }
     }
   }
 
