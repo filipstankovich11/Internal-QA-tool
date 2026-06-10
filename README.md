@@ -80,6 +80,8 @@ npm run dev
 
 # Terminal 2 — API server
 python3.11 api/score.py
+python3 api/score.py
+
 ```
 
 App available at http://localhost:5173

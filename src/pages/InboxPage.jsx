@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
@@ -179,6 +180,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
       style={{
         background: isNew ? 'rgba(255,151,128,0.03)' : '#0a0a0a',
         border: isNew ? '1px solid rgba(255,151,128,0.15)' : '1px solid rgba(255,255,255,0.06)',
+        boxShadow: `inset 3px 0 0 ${vc}`,
       }}>
 
       {/* Top bar */}
@@ -269,9 +271,9 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
           )}
         </div>
         <button onClick={() => onView(s)}
-          className="text-xs transition-colors" style={{ color: '#777' }}
+          className="text-xs" style={{ color: '#777', transition: 'color 150ms' }}
           onMouseEnter={e => e.target.style.color = '#ccc'}
-          onMouseLeave={e => e.target.style.color = '#555'}>
+          onMouseLeave={e => e.target.style.color = '#777'}>
           Full details →
         </button>
       </div>
@@ -286,11 +288,22 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function InboxPage() {
-  const { scoreHistory, acknowledgeScore, flagScore } = useApp()
+  const { scoreHistory, agents, acknowledgeScore, flagScore } = useApp()
+  const { user, role } = useAuth()
   const toast  = useToast()
   const [activeScore, setActiveScore] = useState(null)
 
-  const sorted  = [...scoreHistory].sort((a, b) => b.scoredAt - a.scoredAt)
+  // For agents, filter to only their own tickets
+  const myAgentId = useMemo(
+    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
+    [role, agents, user]
+  )
+  const visibleScores = useMemo(
+    () => myAgentId ? scoreHistory.filter(s => s.agentIds?.includes(myAgentId)) : scoreHistory,
+    [scoreHistory, myAgentId]
+  )
+
+  const sorted  = [...visibleScores].sort((a, b) => b.scoredAt - a.scoredAt)
   const unread  = sorted.filter(s => !s.acknowledged)
   const read    = sorted.filter(s =>  s.acknowledged)
 
@@ -386,7 +399,7 @@ export default function InboxPage() {
         </div>
       )}
 
-      {scoreHistory.length === 0 && (
+      {visibleScores.length === 0 && (
         <div className="text-center py-20" style={{ color: '#555' }}>
           <p className="text-4xl mb-3">📭</p>
           <p className="text-sm">No scores yet — check back after your tickets are reviewed.</p>

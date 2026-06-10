@@ -434,7 +434,7 @@ export default function ScoreModal({ score, onClose }) {
   const displayScore    = s.overrideScore   ?? s.weighted_score
   const animatedScore   = useCountUp(Math.round(displayScore))
   const vc = VERDICT[displayVerdict] || VERDICT.FAIL
-  const { inquiry_resolution, internal_processes, customer_perception } = s.scores
+  const { inquiry_resolution, internal_processes, customer_perception } = s.scores ?? {}
 
   const matchedAgents = (s.agent_senders || [])
     .map(a => agents.find(ag =>
@@ -604,7 +604,7 @@ export default function ScoreModal({ score, onClose }) {
           {/* Row 3: Verdict badge + score */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
-              style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
+              style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em', boxShadow: `0 0 12px ${vc.text}44` }}>
               {vc.icon} {vc.label}
             </span>
             <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>

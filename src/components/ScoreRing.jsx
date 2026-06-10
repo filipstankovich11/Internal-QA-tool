@@ -19,11 +19,25 @@ export default function ScoreRing({ score, verdict }) {
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      {/* Ambient bloom behind the ring */}
+      <div style={{
+        position: 'absolute',
+        width: size * 0.55,
+        height: size * 0.55,
+        borderRadius: '50%',
+        background: color,
+        opacity: verdict ? 0.10 : 0,
+        filter: 'blur(22px)',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        transition: 'background 0.6s, opacity 0.6s',
+        pointerEvents: 'none',
+      }} />
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', position: 'absolute', top: 0, left: 0 }}>
-        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#1a1a1a" strokeWidth={strokeWidth} />
+        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#252525" strokeWidth={strokeWidth} />
         <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
           strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)', filter: `drop-shadow(0 0 8px ${color}66)` }} />
+          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.16,1,0.3,1)', filter: `drop-shadow(0 0 5px ${color}dd) drop-shadow(0 0 16px ${color}55)` }} />
       </svg>
       <div className="flex flex-col items-center z-10">
         <span className="text-white text-4xl font-bold leading-none tabular-nums">{Math.round(score)}</span>
