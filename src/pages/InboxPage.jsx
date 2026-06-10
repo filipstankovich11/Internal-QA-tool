@@ -115,6 +115,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
       style={{
         background: isNew ? 'rgba(255,151,128,0.03)' : '#0a0a0a',
         border: isNew ? '1px solid rgba(255,151,128,0.15)' : '1px solid rgba(255,255,255,0.06)',
+        boxShadow: `inset 3px 0 0 ${vc}`,
       }}>
 
       {/* Top bar */}
@@ -196,9 +197,9 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
           />
         </div>
         <button onClick={() => onView(s)}
-          className="text-xs transition-colors" style={{ color: '#777' }}
+          className="text-xs" style={{ color: '#777', transition: 'color 150ms' }}
           onMouseEnter={e => e.target.style.color = '#ccc'}
-          onMouseLeave={e => e.target.style.color = '#555'}>
+          onMouseLeave={e => e.target.style.color = '#777'}>
           Full details →
         </button>
       </div>

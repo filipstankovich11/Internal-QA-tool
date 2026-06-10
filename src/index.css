@@ -72,7 +72,7 @@
 .g-card   { background: var(--g-900); border: 1px solid var(--g-border); transition: transform 150ms ease, border-color 150ms ease; }
 .g-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.13); }
 .g-input  { background: var(--g-800); border: 1px solid var(--g-border); color: #fff; outline: none; transition: border-color 0.15s; }
-.g-input:focus { border-color: var(--g-coral); }
+.g-input:focus { border-color: var(--g-coral); box-shadow: 0 0 0 3px rgba(255,151,128,0.12); }
 .g-btn-primary {
   background: linear-gradient(135deg, #ffb39a 0%, var(--g-coral) 50%, #ff7a5c 100%);
   color: #070707;
