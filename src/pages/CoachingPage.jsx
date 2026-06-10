@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 
 const CRITERIA = [
   { key: 'core_inquiry_resolved',     name: 'Core Resolution',        dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
@@ -85,9 +86,17 @@ function ImprovementCard({ text, index }) {
 }
 
 export default function CoachingPage() {
-  const { scoreHistory } = useApp()
+  const { scoreHistory, agents } = useApp()
+  const { user, role } = useAuth()
 
-  const scores = scoreHistory
+  const myAgentId = useMemo(
+    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
+    [role, agents, user]
+  )
+  const scores = useMemo(
+    () => myAgentId ? scoreHistory.filter(s => s.agentIds?.includes(myAgentId)) : scoreHistory,
+    [scoreHistory, myAgentId]
+  )
   const recentScores = useMemo(() => [...scores].sort((a, b) => b.scoredAt - a.scoredAt).slice(0, 20), [scores])
 
   // ── Per-criterion averages + notes ─────────────────────────────────────────

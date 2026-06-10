@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import GorgiasLogo from './GorgiasLogo'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
@@ -25,14 +26,24 @@ const SignOutIcon = () => (
 )
 
 export default function NavBar({ page, setPage }) {
-  const { profile, role, canScore, isAdmin, signOut } = useAuth()
-  const { scoreHistory } = useApp()
+  const { profile, role, canScore, isAdmin, signOut, user } = useAuth()
+  const { scoreHistory, agents } = useApp()
+
+  const myAgentId = useMemo(
+    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
+    [role, agents, user]
+  )
 
   const reviewCount = scoreHistory.filter(s =>
     (s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict) || s.disputed
   ).length
 
-  const inboxUnread = scoreHistory.filter(s => !s.acknowledged).length
+  const inboxUnread = useMemo(() => {
+    const visible = myAgentId
+      ? scoreHistory.filter(s => s.agentIds?.includes(myAgentId))
+      : scoreHistory
+    return visible.filter(s => !s.acknowledged).length
+  }, [scoreHistory, myAgentId])
 
   const isAgent = role === 'agent'
 

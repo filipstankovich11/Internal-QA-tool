@@ -41,9 +41,9 @@ def _format_thread(ticket: dict, messages: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def score_ticket(client: anthropic.Anthropic, ticket: dict, messages: list[dict], rubric: dict | None = None) -> dict:
+def score_ticket(client: anthropic.Anthropic, ticket: dict, messages: list[dict], rubric: dict | None = None, few_shot_examples: list | None = None) -> dict:
     """Score a single ticket thread using Claude."""
-    system_prompt = build_system_prompt(rubric) if rubric else SCORING_SYSTEM_PROMPT
+    system_prompt = build_system_prompt(rubric or DEFAULT_RUBRIC, few_shot_examples=few_shot_examples or [])
     thread_text = _format_thread(ticket, messages)
     ticket_id = ticket["id"]
 
@@ -58,7 +58,7 @@ Return only the JSON score object as specified in your instructions."""
     with client.messages.stream(
         model=MODEL,
         max_tokens=4096,
-        thinking={"type": "adaptive"},
+        thinking={"type": "enabled", "budget_tokens": 2000},
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     ) as stream:
