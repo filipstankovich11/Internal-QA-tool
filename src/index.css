@@ -74,12 +74,12 @@
 .g-input  { background: var(--g-800); border: 1px solid var(--g-border); color: #fff; outline: none; transition: border-color 0.15s; }
 .g-input:focus { border-color: var(--g-coral); }
 .g-btn-primary {
-  background: var(--g-coral);
+  background: linear-gradient(135deg, #ffb39a 0%, var(--g-coral) 50%, #ff7a5c 100%);
   color: #070707;
   font-weight: 600;
-  transition: background 0.15s, opacity 0.15s;
+  transition: filter 0.15s, opacity 0.15s;
 }
-.g-btn-primary:hover:not(:disabled) { background: var(--g-coral-h); }
+.g-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .g-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 .g-btn-ghost {
   color: #888;
