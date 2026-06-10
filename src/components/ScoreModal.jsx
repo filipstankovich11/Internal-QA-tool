@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
-import { authFetch } from '../lib/api'
+import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 
 function useCountUp(target, duration = 700) {
@@ -62,14 +62,14 @@ function DimensionStrip({ dimensions }) {
   return (
     <div className="grid grid-cols-3 gap-2 mb-4">
       {dimensions.map(({ name, weight, average }) => {
-        const avg   = typeof average === 'number' ? average : Number(average) || 0
+        const avg   = Number(average)
         const color = scoreColor(avg)
         const pct   = (avg / 5) * 100
         return (
           <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
             style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
               <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
             </div>
             <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
@@ -417,7 +417,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function ScoreModal({ score, onClose }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, rubric } = useApp()
+  const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
@@ -493,7 +493,7 @@ export default function ScoreModal({ score, onClose }) {
   const rescore = async () => {
     setRescoring(true)
     try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Re-score failed'); return }
       const entry = await addScore(data)
@@ -623,7 +623,7 @@ export default function ScoreModal({ score, onClose }) {
           {s.auto_fail?.triggered && (
             <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#ef4444' }}>⚠ Auto-Fail Triggered</p>
-              <ul className="space-y-1">{s.auto_fail.reasons.map((r, i) => <li key={i} className="text-sm" style={{ color: '#fca5a5' }}>• {r}</li>)}</ul>
+              <ul className="space-y-1">{(s.auto_fail.reasons || []).map((r, i) => <li key={i} className="text-sm" style={{ color: '#fca5a5' }}>• {r}</li>)}</ul>
             </div>
           )}
 
@@ -774,7 +774,7 @@ export default function ScoreModal({ score, onClose }) {
                   <div key={a.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: '#161616' }}>
                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}>
-                      {a.name[0].toUpperCase()}
+                      {a.name?.[0]?.toUpperCase() || '?'}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-white">{a.name}</p>

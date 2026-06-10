@@ -416,7 +416,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
               {/* Avatar */}
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                 style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
-                {a.name[0].toUpperCase()}
+                {a.name?.[0]?.toUpperCase() || '?'}
               </div>
               {/* Name */}
               <div className="flex-1 min-w-0">

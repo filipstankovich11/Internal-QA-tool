@@ -3,7 +3,7 @@ import ScoreModal from '../components/ScoreModal'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { authFetch } from '../lib/api'
+import { authFetch, buildFewShotExamples } from '../lib/api'
 
 const VERDICT_COLOR = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
 const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,158,11,0.1)', FAIL: 'rgba(239,68,68,0.1)' }
@@ -269,7 +269,7 @@ export default function ScorePage() {
     if (!url || loading || urlError) return
     setLoading(true); setError(null)
     try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong.'); return }
       addScore(data)
@@ -286,7 +286,7 @@ export default function ScorePage() {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//, '').trim()
       try {
-        const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric }) })
+        const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
         const data = await res.json()
         if (!res.ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
         addScore(data)
