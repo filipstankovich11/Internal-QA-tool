@@ -141,8 +141,16 @@ do $$ begin
   end if;
 end $$;
 
--- gorgias_user_id on agents (if not already added)
+-- gorgias_user_id and goal_score on agents
 alter table public.agents add column if not exists gorgias_user_id integer;
+alter table public.agents add column if not exists goal_score      integer;
+
+-- dispute and acknowledgement flow on scores
+alter table public.scores add column if not exists disputed       boolean default false;
+alter table public.scores add column if not exists dispute_note   text;
+alter table public.scores add column if not exists dispute_at     timestamptz;
+alter table public.scores add column if not exists acknowledged   boolean default false;
+alter table public.scores add column if not exists acknowledged_at timestamptz;
 
 -- Calibration sessions
 create table if not exists public.calibration_sessions (
