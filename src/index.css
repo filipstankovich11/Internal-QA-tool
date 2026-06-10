@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --g-black:  #070707;
-    --g-900:    #0f0f0f;
-    --g-800:    #161616;
-    --g-700:    #1e1e1e;
-    --g-border: rgba(255,255,255,0.07);
+    --g-black:  #161616;
+    --g-900:    #1e1e1e;
+    --g-800:    #242424;
+    --g-700:    #2c2c2c;
+    --g-border: rgba(255,255,255,0.14);
     --g-coral:  #FF9780;
     --g-coral-h:#ff8066;
   }
@@ -16,6 +16,10 @@
   body {
     font-family: 'Space Grotesk', system-ui, sans-serif;
     background-color: var(--g-black);
+    background-image:
+      radial-gradient(ellipse 80% 55% at 18% 0%,   rgba(255, 151, 128, 0.11) 0%, transparent 65%),
+      radial-gradient(ellipse 65% 55% at 82% 105%,  rgba(111,  76, 255, 0.09) 0%, transparent 65%);
+    background-attachment: fixed;
     color: #ffffff;
     -webkit-font-smoothing: antialiased;
   }
@@ -26,7 +30,7 @@
   }
   *::-webkit-scrollbar        { width: 5px; }
   *::-webkit-scrollbar-track  { background: transparent; }
-  *::-webkit-scrollbar-thumb  { background-color: #2a2a2a; border-radius: 3px; }
+  *::-webkit-scrollbar-thumb  { background-color: #383838; border-radius: 3px; }
 }
 
 @keyframes modalIn {
@@ -65,7 +69,8 @@
 }
 
 /* Gorgias design tokens as utilities */
-.g-card   { background: var(--g-900); border: 1px solid var(--g-border); }
+.g-card   { background: var(--g-900); border: 1px solid var(--g-border); transition: transform 150ms ease, border-color 150ms ease; }
+.g-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.13); }
 .g-input  { background: var(--g-800); border: 1px solid var(--g-border); color: #fff; outline: none; transition: border-color 0.15s; }
 .g-input:focus { border-color: var(--g-coral); }
 .g-btn-primary {
