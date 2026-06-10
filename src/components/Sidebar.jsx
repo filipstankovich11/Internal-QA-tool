@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import GorgiasLogo from './GorgiasLogo'
+import SettingsModal from './SettingsModal'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 
@@ -37,8 +38,16 @@ const ChevronRight = () => (
   </svg>
 )
 
+const GearIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41"/>
+  </svg>
+)
+
 export default function Sidebar({ page, setPage }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const { profile, role, canScore, isAdmin, signOut } = useAuth()
   const { scoreHistory } = useApp()
 
@@ -247,50 +256,92 @@ export default function Sidebar({ page, setPage }) {
               )}
             </div>
             {!collapsed && (
-              <button
-                onClick={signOut}
-                style={{
-                  color: '#777',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  borderRadius: '8px',
-                  padding: '5px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'color 150ms, border-color 150ms',
-                  flexShrink: 0,
-                  background: 'transparent',
-                  cursor: 'pointer',
-                }}
-                title="Sign out"
-                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#777'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
-              >
-                <SignOutIcon />
-              </button>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button
+                  onClick={() => setShowSettings(true)}
+                  style={{
+                    color: '#666',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '8px',
+                    padding: '5px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'color 150ms, border-color 150ms',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                  title="Settings"
+                  onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.3)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+                >
+                  <GearIcon />
+                </button>
+                <button
+                  onClick={signOut}
+                  style={{
+                    color: '#777',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: '8px',
+                    padding: '5px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'color 150ms, border-color 150ms',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                  title="Sign out"
+                  onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#777'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+                >
+                  <SignOutIcon />
+                </button>
+              </div>
             )}
           </div>
         )}
         {collapsed && (
-          <button
-            onClick={signOut}
-            style={{
-              color: '#555',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '8px',
-              padding: '7px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: '100%',
-              transition: 'color 150ms, border-color 150ms',
-              background: 'transparent',
-              cursor: 'pointer',
-            }}
-            title="Sign out"
-            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
-          >
-            <SignOutIcon />
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <button
+              onClick={() => setShowSettings(true)}
+              style={{
+                color: '#666',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '8px',
+                padding: '7px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%',
+                transition: 'color 150ms, border-color 150ms',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+              title="Settings"
+              onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+            >
+              <GearIcon />
+            </button>
+            <button
+              onClick={signOut}
+              style={{
+                color: '#555',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '8px',
+                padding: '7px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%',
+                transition: 'color 150ms, border-color 150ms',
+                background: 'transparent',
+                cursor: 'pointer',
+              }}
+              title="Sign out"
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+            >
+              <SignOutIcon />
+            </button>
+          </div>
         )}
       </div>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </aside>
   )
 }

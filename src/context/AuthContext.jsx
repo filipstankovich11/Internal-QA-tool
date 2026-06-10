@@ -54,6 +54,17 @@ export function AuthProvider({ children }) {
   const updatePassword = (newPassword) =>
     supabase.auth.updateUser({ password: newPassword })
 
+  const updateProfile = async (patch) => {
+    if (!user) return
+    const { data, error } = await supabase
+      .from('profiles').update(patch).eq('id', user.id).select().single()
+    if (!error && data) setProfile(data)
+    return { error }
+  }
+
+  const sendPasswordReset = () =>
+    supabase.auth.resetPasswordForEmail(user?.email, { redirectTo: window.location.origin })
+
   const role     = profile?.role ?? 'agent'
   const isAdmin  = role === 'admin'
   const isLead   = role === 'lead'
@@ -61,7 +72,7 @@ export function AuthProvider({ children }) {
   const canScore = isAdmin || isLead
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, role, isAdmin, isLead, canEdit, canScore, signIn, signOut, updatePassword, isPasswordReset, setIsPasswordReset }}>
+    <AuthContext.Provider value={{ user, profile, loading, role, isAdmin, isLead, canEdit, canScore, signIn, signOut, updatePassword, updateProfile, sendPasswordReset, isPasswordReset, setIsPasswordReset }}>
       {children}
     </AuthContext.Provider>
   )

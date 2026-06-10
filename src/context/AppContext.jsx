@@ -147,6 +147,7 @@ export function AppProvider({ children }) {
     if (patch.gorgias_user_id  !== undefined) dbPatch.gorgias_user_id  = patch.gorgias_user_id
     // NOTE: goal_score requires: ALTER TABLE agents ADD COLUMN IF NOT EXISTS goal_score integer;
     if (patch.goal_score       !== undefined) dbPatch.goal_score       = patch.goal_score
+    if (patch.notify_slack     !== undefined) dbPatch.notify_slack     = patch.notify_slack
     const { data, error } = await supabase
       .from('agents').update(dbPatch).eq('id', id).select().single()
     if (!error) setAgents(prev => prev.map(a => a.id === id ? data : a))
