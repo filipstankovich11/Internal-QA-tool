@@ -172,10 +172,10 @@ function DigestButton() {
 
   return (
     <button onClick={send} disabled={sending}
-      className="text-xs px-3 py-2 rounded-xl transition-colors shrink-0"
-      style={{ color: '#888', border: '1px solid rgba(255,255,255,0.1)', opacity: sending ? 0.5 : 1 }}
-      onMouseEnter={e => { if (!sending) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
-      onMouseLeave={e => { e.currentTarget.style.color='#888'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
+      className="text-sm font-medium px-4 py-2 rounded-xl transition-colors shrink-0"
+      style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', opacity: sending ? 0.5 : 1 }}
+      onMouseEnter={e => { if (!sending) { e.currentTarget.style.background='rgba(245,158,11,0.18)'; e.currentTarget.style.borderColor='rgba(245,158,11,0.5)' } }}
+      onMouseLeave={e => { e.currentTarget.style.background='rgba(245,158,11,0.1)'; e.currentTarget.style.borderColor='rgba(245,158,11,0.3)' }}>
       {sending ? 'Sending…' : '✉ Send digest'}
     </button>
   )
