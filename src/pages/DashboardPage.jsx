@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { authFetch } from '../lib/api'
+import { useToast } from '../components/Toast'
 
 const VERDICT_COLOR = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
 const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,158,11,0.1)', FAIL: 'rgba(239,68,68,0.1)' }
@@ -163,9 +165,36 @@ const selectStyle = {
   outline: 'none',
 }
 
+function DigestButton() {
+  const toast    = useToast()
+  const [sending, setSending] = useState(false)
+
+  const send = async () => {
+    setSending(true)
+    try {
+      const res  = await authFetch('/api/send-digest', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Failed to send digest'); return }
+      if (!data.ok) { toast.info(data.message || 'Digest not sent'); return }
+      toast.success('Weekly digest sent')
+    } catch { toast.error('Could not reach the server') }
+    finally { setSending(false) }
+  }
+
+  return (
+    <button onClick={send} disabled={sending}
+      className="text-sm font-medium px-4 py-2 rounded-xl transition-colors shrink-0"
+      style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', opacity: sending ? 0.5 : 1 }}
+      onMouseEnter={e => { if (!sending) { e.currentTarget.style.background='rgba(245,158,11,0.18)'; e.currentTarget.style.borderColor='rgba(245,158,11,0.5)' } }}
+      onMouseLeave={e => { e.currentTarget.style.background='rgba(245,158,11,0.1)'; e.currentTarget.style.borderColor='rgba(245,158,11,0.3)' }}>
+      {sending ? 'Sending…' : '✉ Send digest'}
+    </button>
+  )
+}
+
 export default function DashboardPage() {
   const { scoreHistory, agents, teams } = useApp()
-  const { role, profile, user } = useAuth()
+  const { role, profile, user, isAdmin } = useAuth()
 
   // For agents: resolve their own agent record so we can filter by agent ID
   const myAgentId = useMemo(
@@ -232,16 +261,19 @@ export default function DashboardPage() {
     <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#888' }}>
-          {hasFilters
-            ? <><span style={{ color: '#FF9780' }}>{total}</span> ticket{total !== 1 ? 's' : ''} match your filters</>
-            : <>{role === 'agent' ? 'Your QA scores' : 'QA performance overview'}{profile?.name && <> · <span style={{ color: '#FF9780' }}>{profile.name}</span></>}</>
-          }
-          <span className="ml-2 text-xs px-2 py-0.5 rounded-full capitalize"
-            style={{ background: 'rgba(255,151,128,0.08)', color: '#FF9780' }}>{role}</span>
-        </p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#888' }}>
+            {hasFilters
+              ? <><span style={{ color: '#FF9780' }}>{total}</span> ticket{total !== 1 ? 's' : ''} match your filters</>
+              : <>{role === 'agent' ? 'Your QA scores' : 'QA performance overview'}{profile?.name && <> · <span style={{ color: '#FF9780' }}>{profile.name}</span></>}</>
+            }
+            <span className="ml-2 text-xs px-2 py-0.5 rounded-full capitalize"
+              style={{ background: 'rgba(255,151,128,0.08)', color: '#FF9780' }}>{role}</span>
+          </p>
+        </div>
+        {isAdmin && <DigestButton />}
       </div>
 
       {/* Stat cards */}
