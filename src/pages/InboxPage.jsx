@@ -288,20 +288,13 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function InboxPage() {
-  const { scoreHistory, agents, acknowledgeScore, flagScore } = useApp()
-  const { user, role } = useAuth()
+  const { scoreHistory, acknowledgeScore, flagScore } = useApp()
+  const { role } = useAuth()
   const toast  = useToast()
   const [activeScore, setActiveScore] = useState(null)
 
-  // For agents, filter to only their own tickets
-  const myAgentId = useMemo(
-    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
-    [role, agents, user]
-  )
-  const visibleScores = useMemo(
-    () => myAgentId ? scoreHistory.filter(s => s.agentIds?.includes(myAgentId)) : scoreHistory,
-    [scoreHistory, myAgentId]
-  )
+  // scoreHistory is already scoped to the agent's own scores via AppContext
+  const visibleScores = scoreHistory
 
   const sorted  = [...visibleScores].sort((a, b) => b.scoredAt - a.scoredAt)
   const unread  = sorted.filter(s => !s.acknowledged)

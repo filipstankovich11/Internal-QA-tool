@@ -87,6 +87,7 @@ export default function Sidebar({ page, setPage }) {
     (s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict) || s.disputed
   ).length
 
+  // scoreHistory is already filtered to the agent's own scores via AppContext
   const inboxUnread = scoreHistory.filter(s => !s.acknowledged).length
   const isAgent = role === 'agent'
 

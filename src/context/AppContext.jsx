@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAuth } from './AuthContext'
 
 const AppContext = createContext(null)
 
@@ -71,11 +72,26 @@ export const DEFAULT_RUBRIC = {
 }
 
 export function AppProvider({ children }) {
+  const { role, user } = useAuth()
+
   const [teams,        setTeams]        = useState([])
   const [agents,       setAgents]       = useState([])
   const [scoreHistory, setScoreHistory] = useState([])
   const [rubric,       setRubric]       = useState(DEFAULT_RUBRIC)
   const [dataLoading,  setDataLoading]  = useState(true)
+
+  // ── Resolve the current user's agent record (agents only) ───────────────────
+  const myAgentId = useMemo(
+    () => role === 'agent' ? (agents.find(a => a.user_id === user?.id)?.id ?? null) : null,
+    [role, agents, user]
+  )
+
+  // ── Agents only ever see their own scores; unknown agent → empty ────────────
+  const visibleScoreHistory = useMemo(() => {
+    if (role !== 'agent') return scoreHistory
+    if (!myAgentId) return []
+    return scoreHistory.filter(s => s.agentIds?.includes(myAgentId))
+  }, [scoreHistory, role, myAgentId])
 
   // ── Initial load ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -317,7 +333,7 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      teams, agents, scoreHistory, rubric, dataLoading,
+      teams, agents, scoreHistory: visibleScoreHistory, rubric, dataLoading, myAgentId,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,

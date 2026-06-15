@@ -165,13 +165,10 @@ const selectStyle = {
 
 export default function DashboardPage() {
   const { scoreHistory, agents, teams } = useApp()
-  const { role, profile, user } = useAuth()
+  const { role, profile } = useAuth()
 
-  // For agents: resolve their own agent record so we can filter by agent ID
-  const myAgentId = useMemo(
-    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
-    [role, agents, user]
-  )
+  // myAgentId from context — used only for display; scoreHistory is already scoped
+  const { myAgentId } = useApp()
   const [activeScore, setActiveScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
@@ -190,8 +187,7 @@ export default function DashboardPage() {
   }, [teams, agents])
 
   const filteredScores = useMemo(() => scoreHistory.filter(s => {
-    // Agents only ever see their own tickets
-    if (myAgentId && !s.agentIds?.includes(myAgentId)) return false
+    // scoreHistory is already scoped to agent's own tickets via AppContext
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
     if (filters.team  && !s.agentIds?.some(id => teamAgentMap[filters.team]?.has(id))) return false
     if (filters.verdicts.length && !filters.verdicts.includes(s.effectiveVerdict)) return false
