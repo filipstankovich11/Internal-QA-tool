@@ -1,4 +1,5 @@
 import json
+import re
 import anthropic
 from rubric import build_system_prompt, DEFAULT_RUBRIC, SCORING_SYSTEM_PROMPT
 
@@ -30,8 +31,6 @@ def _format_thread(ticket: dict, messages: list[dict]) -> str:
 
         body = msg.get("body_text") or ""
         if not body and msg.get("body_html"):
-            # Strip basic HTML tags for readability
-            import re
             body = re.sub(r"<[^>]+>", " ", msg.get("body_html", ""))
             body = re.sub(r"\s+", " ", body).strip()
 
@@ -58,7 +57,7 @@ Return only the JSON score object as specified in your instructions."""
     with client.messages.stream(
         model=MODEL,
         max_tokens=4096,
-        thinking={"type": "enabled", "budget_tokens": 2000},
+        thinking={"type": "enabled", "budget_tokens": 8000},
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     ) as stream:

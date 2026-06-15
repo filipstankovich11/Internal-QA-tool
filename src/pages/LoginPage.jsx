@@ -3,6 +3,103 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import './LoginPage.css'
 
+const TESTIMONIALS = [
+  {
+    quote: "Just got 100% on my latest ticket! The rubric finally made it click — I knew exactly what a perfect response looked like.",
+    name: "Filip",
+    role: "Support Agent · 100% score",
+    rating: 5,
+  },
+  {
+    quote: "100% on a billing dispute ticket I thought was impossible to nail. The coaching notes made all the difference.",
+    name: "Katarina",
+    role: "Support Agent · 100% score",
+    rating: 5,
+  },
+  {
+    quote: "First perfect score! Seeing the breakdown after every ticket helps me know exactly where to improve next time.",
+    name: "Ognjen",
+    role: "Support Agent · 100% score",
+    rating: 5,
+  },
+]
+
+function Stars({ count }) {
+  return (
+    <div className="tc-stars">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i < count ? '#FF9780' : 'none'} stroke="#FF9780" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
+function TestimonialCarousel() {
+  const [index, setIndex] = useState(0)
+  const [animKey, setAnimKey] = useState(0)
+  const [direction, setDirection] = useState('up')
+  const timerRef = useRef(null)
+
+  const goTo = (next, dir = 'up') => {
+    setDirection(dir)
+    setIndex(next)
+    setAnimKey(k => k + 1)
+  }
+
+  const advance = useRef(() => {})
+  advance.current = () => {
+    goTo((index + 1) % TESTIMONIALS.length, 'up')
+  }
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => advance.current(), 3000)
+    return () => clearInterval(timerRef.current)
+  }, [])
+
+  const handleDot = (i) => {
+    if (i === index) return
+    clearInterval(timerRef.current)
+    goTo(i, i > index ? 'up' : 'down')
+    timerRef.current = setInterval(() => advance.current(), 3000)
+  }
+
+  const t = TESTIMONIALS[index]
+  const initials = t.name.split(' ').map(w => w[0]).join('')
+
+  return (
+    <div className="tc-wrap">
+      <div className="tc-card">
+        <div
+          key={animKey}
+          className={`tc-content tc-slide-${direction}`}
+        >
+          <Stars count={t.rating} />
+          <p className="tc-quote">"{t.quote}"</p>
+          <div className="tc-author">
+            <div className="tc-avatar">{initials}</div>
+            <div>
+              <div className="tc-name">{t.name}</div>
+              <div className="tc-role">{t.role}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="tc-dots">
+        {TESTIMONIALS.map((_, i) => (
+          <button
+            key={i}
+            className={`tc-dot${i === index ? ' active' : ''}`}
+            onClick={() => handleDot(i)}
+            aria-label={`Go to testimonial ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ── Animated Gorgias icon ── two overlapping rounded rects */
 function GorgiasIcon() {
   return (
@@ -110,6 +207,21 @@ export default function LoginPage() {
 
       {/* ── Main login page ── */}
       <div className="login-page">
+        {/* Left panel — testimonials (hidden on small screens) */}
+        <div className={`login-left${introState !== 'showing' ? ' visible' : ''}`}>
+          <div className="login-left-inner">
+            <div className="login-left-header">
+              <div className="page-wordmark" style={{ marginBottom: 8 }}>
+                <span className="page-wordmark__name">Gorgias</span>
+                <span className="page-wordmark__badge">QA</span>
+              </div>
+              <p className="login-left-tagline">Internal quality control application</p>
+            </div>
+            <TestimonialCarousel />
+          </div>
+        </div>
+
+        {/* Right panel — login form */}
         <div className={`login-container${introState !== 'showing' ? ' visible' : ''}`}>
 
           {/* Logo */}

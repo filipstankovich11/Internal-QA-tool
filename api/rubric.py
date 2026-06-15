@@ -202,7 +202,7 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
             "",
         ]
         for af in auto_fails:
-            lines.append(f'- **{af["id"]}**: {af["description"]}')
+            lines.append(f'- **{af["name"]}**: {af["description"]}')
         lines += ["", "---", ""]
 
     # Weighted score formula
