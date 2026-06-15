@@ -424,8 +424,9 @@ export default function ScoreModal({ score, onClose }) {
   const [rescoring,       setRescoring]       = useState(false)
   const [liveScore,       setLiveScore]       = useState(null)
   const [acknowledging,   setAcknowledging]   = useState(false)
-  const [notifying,       setNotifying]       = useState(false)
+  const [notifying,         setNotifying]         = useState(false)
   const [showNotifyPreview, setShowNotifyPreview] = useState(false)
+  const [selectedAgentIds,  setSelectedAgentIds]  = useState([])
 
   // Use liveScore after a re-score, fall back to the original prop
   const s = liveScore ?? score
@@ -460,11 +461,12 @@ export default function ScoreModal({ score, onClose }) {
       toast.error('No email address found for this agent')
       return
     }
+    setSelectedAgentIds(agentsWithEmail.map(a => a.id))
     setShowNotifyPreview(true)
   }
 
   const sendNotification = async () => {
-    const agentsWithEmail = matchedAgents.filter(a => a.email)
+    const agentsWithEmail = matchedAgents.filter(a => a.email && selectedAgentIds.includes(a.id))
     setNotifying(true)
     try {
       const results = await Promise.all(agentsWithEmail.map(agent =>
@@ -766,22 +768,40 @@ export default function ScoreModal({ score, onClose }) {
           </div>
 
           <div className="px-5 py-4 flex flex-col gap-4">
-            {/* Recipients */}
+            {/* Recipients — click to toggle */}
             <div>
               <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Sending to</p>
               <div className="flex flex-col gap-1.5">
-                {matchedAgents.filter(a => a.email).map(a => (
-                  <div key={a.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: '#161616' }}>
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}>
-                      {a.name?.[0]?.toUpperCase() || '?'}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">{a.name}</p>
-                      <p className="text-xs" style={{ color: '#777' }}>{a.email}</p>
-                    </div>
-                  </div>
-                ))}
+                {matchedAgents.filter(a => a.email).map(a => {
+                  const selected = selectedAgentIds.includes(a.id)
+                  const toggle = () => setSelectedAgentIds(prev =>
+                    selected ? prev.filter(id => id !== a.id) : [...prev, a.id]
+                  )
+                  return (
+                    <button key={a.id} onClick={toggle}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl w-full text-left transition-all"
+                      style={{
+                        background: selected ? 'rgba(255,151,128,0.08)' : '#161616',
+                        border: `1px solid ${selected ? 'rgba(255,151,128,0.25)' : 'rgba(255,255,255,0.04)'}`,
+                        opacity: selected ? 1 : 0.45,
+                      }}>
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                        style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}>
+                        {a.name?.[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white">{a.name}</p>
+                        <p className="text-xs truncate" style={{ color: '#777' }}>{a.email}</p>
+                      </div>
+                      <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: selected ? '#FF9780' : 'rgba(255,255,255,0.08)' }}>
+                        {selected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                          <path d="M2 5l2.5 2.5L8 3" stroke="#070707" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -833,9 +853,9 @@ export default function ScoreModal({ score, onClose }) {
               className="text-sm px-4 py-2 rounded-xl g-btn-ghost">
               Cancel
             </button>
-            <button onClick={sendNotification} disabled={notifying}
+            <button onClick={sendNotification} disabled={notifying || selectedAgentIds.length === 0}
               className="g-btn-primary text-sm px-5 py-2 rounded-xl flex items-center gap-2"
-              style={{ opacity: notifying ? 0.6 : 1 }}>
+              style={{ opacity: notifying || selectedAgentIds.length === 0 ? 0.5 : 1 }}>
               {notifying
                 ? <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>Sending…</>
                 : 'Send DM'}
