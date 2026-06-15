@@ -15,10 +15,175 @@
   background: var(--bg);
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
   font-family: 'Space Grotesk', sans-serif;
   overflow: hidden;
+}
+
+/* ── Left panel (testimonials) ── */
+.login-left {
+  display: none;
+  position: relative;
+  background: rgba(255, 151, 128, 0.025);
+  border-right: 0.5px solid rgba(255, 151, 128, 0.10);
+  opacity: 0;
+  align-items: center;
+  justify-content: center;
+}
+.login-left.visible {
+  animation: lp-pageIn 0.55s ease 0.1s forwards;
+}
+.login-left-inner {
+  width: 100%;
+  max-width: 360px;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+.login-left-tagline {
+  color: rgba(255, 151, 128, 0.5);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.login-left-header { display: flex; flex-direction: column; gap: 2px; }
+
+@media (min-width: 860px) {
+  /* Switch to grid so columns are equal and explicit */
+  .login-page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+  .login-left {
+    display: flex;
+  }
+  /* Right panel: center content within its grid cell */
+  .login-container {
+    max-width: none;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 56px;
+    margin: 0;
+  }
+  .form-card {
+    width: 100%;
+    max-width: 380px;
+  }
+  .page-logo, .page-tagline, .page-footer {
+    width: 100%;
+    max-width: 380px;
+  }
+}
+
+/* ── Testimonial carousel ── */
+.tc-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.tc-card {
+  background: rgba(255, 151, 128, 0.04);
+  border: 0.5px solid rgba(255, 151, 128, 0.14);
+  border-radius: 16px;
+  padding: 28px;
+  overflow: hidden;
+  min-height: 190px;
+  display: flex;
+  align-items: flex-start;
+}
+.tc-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tc-slide-up {
+  animation: tc-slide-up 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.tc-slide-down {
+  animation: tc-slide-down 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.tc-stars {
+  display: flex;
+  gap: 3px;
+}
+.tc-quote {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0;
+  font-style: italic;
+}
+.tc-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tc-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 151, 128, 0.15);
+  color: #FF9780;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 151, 128, 0.2);
+}
+.tc-name {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+}
+.tc-role {
+  color: rgba(255, 151, 128, 0.6);
+  font-size: 11px;
+  margin-top: 2px;
+  letter-spacing: 0.06em;
+}
+
+/* ── Dot indicators ── */
+.tc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.tc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 151, 128, 0.25);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.25s, transform 0.25s, width 0.25s;
+}
+.tc-dot:hover {
+  background: rgba(255, 151, 128, 0.55);
+  transform: scale(1.2);
+}
+.tc-dot.active {
+  background: #FF9780;
+  width: 18px;
+  border-radius: 3px;
+}
+
+@keyframes tc-slide-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tc-slide-down {
+  from { opacity: 0; transform: translateY(-28px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Intro overlay ── */
@@ -133,6 +298,7 @@
   flex-direction: column;
   align-items: center;
   opacity: 0;
+  margin: 0 auto;
 }
 .login-container.visible {
   animation: lp-pageIn 0.45s ease 0.15s forwards;

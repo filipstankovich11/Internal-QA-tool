@@ -14,7 +14,7 @@ class GorgiasClient:
     def _get(self, path: str, params: dict = None, retries: int = 4) -> dict:
         url = f"{self.base_url}{path}"
         for attempt in range(retries):
-            response = requests.get(url, headers=self.headers, params=params)
+            response = requests.get(url, headers=self.headers, params=params, timeout=30)
             if response.status_code == 429:
                 wait = int(response.headers.get("Retry-After", 10)) + 2
                 print(f"  Rate limited — waiting {wait}s before retry...")
@@ -81,25 +81,3 @@ class GorgiasClient:
                 break
         return tickets[:max_tickets]
 
-    def get_tickets_with_messages(self, limit: int = 10, cursor: Optional[str] = None) -> tuple[list[dict], Optional[str]]:
-        """Fetch tickets and their messages. Returns (tickets_with_messages, next_cursor)."""
-        tickets_data = self.list_tickets(limit=limit, cursor=cursor)
-        tickets = tickets_data.get("data", [])
-        next_cursor = tickets_data.get("meta", {}).get("next_cursor")
-
-        result = []
-        for ticket in tickets:
-            ticket_id = ticket["id"]
-            messages = self.get_ticket_messages(ticket_id)
-
-            # Only include tickets that have agent responses
-            agent_messages = [m for m in messages if m.get("from_agent")]
-            if not agent_messages:
-                continue
-
-            result.append({
-                "ticket": ticket,
-                "messages": messages,
-            })
-
-        return result, next_cursor

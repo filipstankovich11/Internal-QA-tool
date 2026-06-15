@@ -17,7 +17,9 @@ from gorgias_client import GorgiasClient
 from scorer import score_ticket
 
 app = Flask(__name__)
-CORS(app)
+
+_cors_origins = [o.strip() for o in os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',') if o.strip()]
+CORS(app, origins=_cors_origins)
 
 
 def get_env():

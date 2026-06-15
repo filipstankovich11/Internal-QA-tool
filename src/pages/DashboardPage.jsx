@@ -100,8 +100,8 @@ function MiniBar({ value, max, color }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#1e1e1e' }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
       </div>
       <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#777' }}>{value}</span>
     </div>
@@ -165,15 +165,13 @@ const selectStyle = {
 
 export default function DashboardPage() {
   const { scoreHistory, agents, teams } = useApp()
-  const { role, profile, user } = useAuth()
+  const { role, profile } = useAuth()
 
-  // For agents: resolve their own agent record so we can filter by agent ID
-  const myAgentId = useMemo(
-    () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
-    [role, agents, user]
-  )
+  // myAgentId from context — used only for display; scoreHistory is already scoped
+  const { myAgentId } = useApp()
   const [activeScore, setActiveScore] = useState(null)
-  const [filters, setFilters] = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
+  const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
+  const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
 
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
@@ -189,8 +187,7 @@ export default function DashboardPage() {
   }, [teams, agents])
 
   const filteredScores = useMemo(() => scoreHistory.filter(s => {
-    // Agents only ever see their own tickets
-    if (myAgentId && !s.agentIds?.includes(myAgentId)) return false
+    // scoreHistory is already scoped to agent's own tickets via AppContext
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
     if (filters.team  && !s.agentIds?.some(id => teamAgentMap[filters.team]?.has(id))) return false
     if (filters.verdicts.length && !filters.verdicts.includes(s.effectiveVerdict)) return false
@@ -294,15 +291,21 @@ export default function DashboardPage() {
           </div>
           {leaderboard.length === 0 ? <p className="text-xs" style={{ color: '#555' }}>No agent scores yet</p> : (
             <div className="flex flex-col gap-1">
-              {leaderboard.slice(0, 8).map((a, i) => (
-                <div key={a.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg stagger-item"
-                  style={{ '--i': i, background: i === 0 ? 'rgba(255,151,128,0.04)' : 'transparent' }}>
-                  <span className="text-xs w-4 shrink-0 tabular-nums" style={{ color: '#666' }}>{i + 1}</span>
-                  <span className="text-sm text-white flex-1 truncate">{a.name}</span>
-                  <span className="text-xs" style={{ color: '#777' }}>{a.count} ticket{a.count !== 1 ? 's' : ''}</span>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: avgColor(a.avg) }}>{a.avg.toFixed(1)}</span>
-                </div>
-              ))}
+              {leaderboard.slice(0, 8).map((a, i) => {
+                const medals = ['🥇', '🥈', '🥉']
+                const rankBg = i === 0 ? 'rgba(255,215,0,0.05)' : i === 1 ? 'rgba(192,192,192,0.04)' : i === 2 ? 'rgba(205,127,50,0.04)' : 'transparent'
+                return (
+                  <div key={a.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg stagger-item"
+                    style={{ '--i': i, background: rankBg }}>
+                    <span className="w-5 shrink-0 text-center" style={{ fontSize: i < 3 ? 14 : 11, color: '#666', lineHeight: 1 }}>
+                      {i < 3 ? medals[i] : i + 1}
+                    </span>
+                    <span className="text-sm text-white flex-1 truncate">{a.name}</span>
+                    <span className="text-xs" style={{ color: '#777' }}>{a.count} ticket{a.count !== 1 ? 's' : ''}</span>
+                    <span className="text-sm font-bold tabular-nums" style={{ color: avgColor(a.avg) }}>{a.avg.toFixed(1)}</span>
+                  </div>
+                )
+              })}
               {(() => {
                 const reviewedIds = new Set(leaderboard.map(a => a.id))
                 const unreviewed = agents.filter(a => !reviewedIds.has(a.id))
@@ -338,12 +341,17 @@ export default function DashboardPage() {
         if (!teamStats.length) return null
         return (
           <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-            <p className="text-xs mb-4" style={{ color: '#777' }}>Team performance — 30-day trend</p>
+            <p className="g-label mb-4">Team performance — 30-day trend</p>
             <div className="flex flex-col gap-1">
-              {teamStats.map((t, i) => (
+              {teamStats.map((t, i) => {
+                const medals = ['🥇', '🥈', '🥉']
+                const rankBg = i === 0 ? 'rgba(255,215,0,0.05)' : i === 1 ? 'rgba(192,192,192,0.04)' : i === 2 ? 'rgba(205,127,50,0.04)' : 'transparent'
+                return (
                 <div key={t.id} className="flex items-center gap-3 py-2 px-2 rounded-lg stagger-item"
-                  style={{ '--i': i, background: i === 0 ? 'rgba(255,151,128,0.04)' : 'transparent' }}>
-                  <span className="text-xs w-4 shrink-0 tabular-nums" style={{ color: '#666' }}>{i + 1}</span>
+                  style={{ '--i': i, background: rankBg }}>
+                  <span className="w-5 shrink-0 text-center" style={{ fontSize: i < 3 ? 14 : 11, color: '#666', lineHeight: 1 }}>
+                    {i < 3 ? medals[i] : i + 1}
+                  </span>
                   <span className="text-sm text-white flex-1 truncate">{t.name}</span>
                   <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.agentCount} agent{t.agentCount !== 1 ? 's' : ''}</span>
                   <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.scores.length} ticket{t.scores.length !== 1 ? 's' : ''}</span>
@@ -352,7 +360,8 @@ export default function DashboardPage() {
                     {t.avg.toFixed(1)}
                   </span>
                 </div>
-              ))}
+                )}
+              )}
             </div>
           </div>
         )
@@ -437,20 +446,26 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs" style={{ color: '#777' }}>Quick range</label>
               <div className="flex gap-1.5">
-                {[['7d', 7], ['30d', 30], ['90d', 90]].map(([label, days]) => (
-                  <button key={label} onClick={() => {
-                    const to   = new Date()
-                    const from = new Date()
-                    from.setDate(from.getDate() - days)
-                    setFilters(f => ({ ...f, dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) }))
-                  }}
-                    className="text-xs px-3 py-2 rounded-xl border transition-all"
-                    style={{ color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}
-                    onMouseEnter={e => { e.currentTarget.style.color='#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
-                    onMouseLeave={e => { e.currentTarget.style.color='#555'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
-                    {label}
-                  </button>
-                ))}
+                {[['7d', 7], ['30d', 30], ['90d', 90]].map(([label, days]) => {
+                  const isActive = activeRange === label
+                  return (
+                    <button key={label} onClick={() => {
+                      const to   = new Date()
+                      const from = new Date()
+                      from.setDate(from.getDate() - days)
+                      setFilters(f => ({ ...f, dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) }))
+                      setActiveRange(label)
+                    }}
+                      className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
+                      style={isActive
+                        ? { color: '#FF9780', borderColor: 'rgba(255,151,128,0.4)', background: 'rgba(255,151,128,0.08)' }
+                        : { color: '#777', borderColor: 'rgba(255,255,255,0.07)', background: 'transparent' }}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color='#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color='#777'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' } }}>
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -473,7 +488,7 @@ export default function DashboardPage() {
             </div>
 
             {hasFilters && (
-              <button onClick={() => setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })}
+              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null) }}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
                 style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
@@ -490,7 +505,7 @@ export default function DashboardPage() {
             <p className="text-sm">{total === 0 ? 'No tickets scored yet.' : 'No tickets match your filters.'}</p>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
             <div className="grid px-4 py-3" style={{
               gridTemplateColumns: '100px 1fr 150px 80px 90px 80px',
               background: 'rgba(255,255,255,0.03)',

@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import urllib.request
 from functools import wraps
 
@@ -7,6 +8,8 @@ import jwt
 from flask import request, jsonify
 
 _jwks_cache = None
+_jwks_fetched_at = 0.0
+_JWKS_TTL = 3600  # re-fetch signing keys at most once per hour
 
 
 def _supabase_url():
@@ -17,14 +20,20 @@ def _supabase_url():
 
 
 def _get_jwks():
-    global _jwks_cache
-    if _jwks_cache is None:
-        base = _supabase_url()
-        if not base:
-            return None
+    global _jwks_cache, _jwks_fetched_at
+    if _jwks_cache is not None and (time.time() - _jwks_fetched_at) < _JWKS_TTL:
+        return _jwks_cache
+    base = _supabase_url()
+    if not base:
+        return None
+    try:
         url = f"{base}/auth/v1/.well-known/jwks.json"
         with urllib.request.urlopen(url, timeout=5) as resp:
             _jwks_cache = json.loads(resp.read())
+            _jwks_fetched_at = time.time()
+    except Exception:
+        # Return stale cache if available rather than failing all auth requests
+        pass
     return _jwks_cache
 
 
