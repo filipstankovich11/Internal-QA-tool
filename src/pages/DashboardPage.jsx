@@ -72,29 +72,6 @@ function buildTrendData(scores, days = 30) {
     .sort((a, b) => a.day - b.day)
 }
 
-function TeamSparkline({ scores }) {
-  const pts = buildTrendData(scores, 30)
-  if (pts.length < 2) return <span className="text-xs" style={{ color: '#555' }}>—</span>
-
-  const W = 80, H = 24, pad = 2
-  const vals = pts.map(p => p.avg)
-  const minV = Math.min(...vals), maxV = Math.max(...vals)
-  const range = maxV - minV || 10
-  const x = d => pad + (d / 29) * (W - pad * 2)
-  const y = v => H - pad - ((v - minV) / range) * (H - pad * 2)
-  const d = pts.map(({ day, avg }, i) => `${i === 0 ? 'M' : 'L'}${x(day).toFixed(1)},${y(avg).toFixed(1)}`).join(' ')
-  const last = pts[pts.length - 1], first = pts[0]
-  const color = last.avg > first.avg + 3 ? '#10b981' : last.avg < first.avg - 3 ? '#ef4444' : '#888'
-
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0">
-      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"
-        pathLength="1" strokeDasharray="1" strokeDashoffset="1"
-        style={{ animation: 'drawLine 0.7s cubic-bezier(0.16,1,0.3,1) forwards' }} />
-      <circle cx={x(last.day).toFixed(1)} cy={y(last.avg).toFixed(1)} r="2" fill={color} />
-    </svg>
-  )
-}
 
 function MiniBar({ value, max, color }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
@@ -217,23 +194,6 @@ export default function DashboardPage() {
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0)
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
 
-  const leaderboard = useMemo(() => {
-    const agentScoreMap = {}
-    filteredScores.forEach(s => {
-      s.agentIds?.forEach(id => {
-        if (!agentScoreMap[id]) agentScoreMap[id] = []
-        agentScoreMap[id].push(s)
-      })
-    })
-    return agents
-      .filter(a => agentScoreMap[a.id]?.length)
-      .map(a => {
-        const s = agentScoreMap[a.id]
-        return { ...a, count: s.length, avg: s.reduce((acc, x) => acc + x.effectiveScore, 0) / s.length }
-      })
-      .sort((a, b) => b.avg - a.avg)
-  }, [agents, filteredScores])
-
   return (
     <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
 
@@ -285,96 +245,6 @@ export default function DashboardPage() {
         </div>
         <ScoreTrend scores={filteredScores} />
       </div>
-
-      {/* Agent leaderboard — hidden for agents */}
-      {role !== 'agent' && (
-        <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="g-label">Agent leaderboard</p>
-            {agents.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full"
-                style={{ background: '#161616', color: leaderboard.length === agents.length ? '#10b981' : '#555' }}>
-                {leaderboard.length}/{agents.length} agents reviewed
-              </span>
-            )}
-          </div>
-          {leaderboard.length === 0 ? <p className="text-xs" style={{ color: '#555' }}>No agent scores yet</p> : (
-            <div className="flex flex-col gap-1">
-              {leaderboard.slice(0, 8).map((a, i) => {
-                const medals = ['🥇', '🥈', '🥉']
-                const rankBg = i === 0 ? 'rgba(255,215,0,0.05)' : i === 1 ? 'rgba(192,192,192,0.04)' : i === 2 ? 'rgba(205,127,50,0.04)' : 'transparent'
-                return (
-                  <div key={a.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg stagger-item"
-                    style={{ '--i': i, background: rankBg }}>
-                    <span className="w-5 shrink-0 text-center" style={{ fontSize: i < 3 ? 14 : 11, color: '#666', lineHeight: 1 }}>
-                      {i < 3 ? medals[i] : i + 1}
-                    </span>
-                    <span className="text-sm text-white flex-1 truncate">{a.name}</span>
-                    <span className="text-xs" style={{ color: '#777' }}>{a.count} ticket{a.count !== 1 ? 's' : ''}</span>
-                    <span className="text-sm font-bold tabular-nums" style={{ color: avgColor(a.avg) }}>{a.avg.toFixed(1)}</span>
-                  </div>
-                )
-              })}
-              {(() => {
-                const reviewedIds = new Set(leaderboard.map(a => a.id))
-                const unreviewed = agents.filter(a => !reviewedIds.has(a.id))
-                if (!unreviewed.length) return null
-                return (
-                  <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <p className="text-xs mb-1.5 px-2" style={{ color: '#555' }}>Not reviewed in this period</p>
-                    <div className="flex flex-wrap gap-1.5 px-2">
-                      {unreviewed.map(a => (
-                        <span key={a.id} className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: '#111', color: '#666', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          {a.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Team leaderboard — hidden for agents */}
-      {role !== 'agent' && teams.length > 0 && (() => {
-        const teamStats = teams.map(t => {
-          const agentIds = new Set(agents.filter(a => a.team_id === t.id).map(a => a.id))
-          const scores   = filteredScores.filter(s => s.agentIds?.some(id => agentIds.has(id)))
-          const avg      = scores.length ? scores.reduce((s, x) => s + x.effectiveScore, 0) / scores.length : null
-          return { ...t, scores, avg, agentCount: agentIds.size }
-        }).filter(t => t.scores.length > 0).sort((a, b) => b.avg - a.avg)
-
-        if (!teamStats.length) return null
-        return (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-            <p className="g-label mb-4">Team performance — 30-day trend</p>
-            <div className="flex flex-col gap-1">
-              {teamStats.map((t, i) => {
-                const medals = ['🥇', '🥈', '🥉']
-                const rankBg = i === 0 ? 'rgba(255,215,0,0.05)' : i === 1 ? 'rgba(192,192,192,0.04)' : i === 2 ? 'rgba(205,127,50,0.04)' : 'transparent'
-                return (
-                <div key={t.id} className="flex items-center gap-3 py-2 px-2 rounded-lg stagger-item"
-                  style={{ '--i': i, background: rankBg }}>
-                  <span className="w-5 shrink-0 text-center" style={{ fontSize: i < 3 ? 14 : 11, color: '#666', lineHeight: 1 }}>
-                    {i < 3 ? medals[i] : i + 1}
-                  </span>
-                  <span className="text-sm text-white flex-1 truncate">{t.name}</span>
-                  <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.agentCount} agent{t.agentCount !== 1 ? 's' : ''}</span>
-                  <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.scores.length} ticket{t.scores.length !== 1 ? 's' : ''}</span>
-                  <TeamSparkline scores={t.scores} />
-                  <span className="text-sm font-bold tabular-nums w-12 text-right shrink-0" style={{ color: avgColor(t.avg) }}>
-                    {t.avg.toFixed(1)}
-                  </span>
-                </div>
-                )}
-              )}
-            </div>
-          </div>
-        )
-      })()}
 
       {/* ── Ticket table with filters ── */}
       <div>
