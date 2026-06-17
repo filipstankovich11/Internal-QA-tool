@@ -41,11 +41,10 @@ function ModeToggle({ mode, setMode }) {
 
 function HistoryItem({ item, onClick }) {
   const color = VERDICT_COLOR[item.effectiveVerdict]
-  const bg    = VERDICT_BG[item.effectiveVerdict]
   return (
     <button onClick={onClick}
       className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left"
-      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)', boxShadow: color ? `inset 3px 0 0 ${color}` : 'none' }}
+      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}
       onMouseEnter={e => e.currentTarget.style.background = '#161616'}
       onMouseLeave={e => e.currentTarget.style.background = '#0f0f0f'}>
       <div className="flex items-center gap-3 min-w-0">
@@ -60,10 +59,13 @@ function HistoryItem({ item, onClick }) {
           {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
         </span>
       </div>
-      <div className="flex items-center gap-2 shrink-0 ml-4">
-        <span className="text-xs tabular-nums" style={{ color: '#777' }}>{item.effectiveScore?.toFixed(0)}/100</span>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>
-          {VERDICT_LABEL[item.effectiveVerdict]}
+      <div className="flex items-center gap-3 shrink-0 ml-4">
+        <span className="text-xs tabular-nums" style={{ color: '#666' }}>{item.effectiveScore?.toFixed(0)}/100</span>
+        <span className="flex items-center gap-1.5">
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8 }} />
+          <span className="text-xs font-medium" style={{ color: '#888', letterSpacing: '0.04em' }}>
+            {VERDICT_LABEL[item.effectiveVerdict]}
+          </span>
         </span>
       </div>
     </button>

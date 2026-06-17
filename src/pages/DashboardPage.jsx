@@ -593,16 +593,17 @@ export default function DashboardPage() {
                     : <span style={{ color: '#555' }}>—</span>}
                 </div>
 
-                <span className="text-sm font-bold tabular-nums text-right"
-                  style={{ color: avgColor(s.effectiveScore) }}>
+                <span className="text-sm tabular-nums text-right" style={{ color: '#999' }}>
                   {s.effectiveScore?.toFixed(0)}/100
-                  {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: '#818cf8' }}>*</span>}
+                  {s.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
                 </span>
 
                 <div className="flex justify-center">
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                    style={{ color: VERDICT_COLOR[s.effectiveVerdict], background: VERDICT_BG[s.effectiveVerdict] }}>
-                    {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
+                  <span className="flex items-center gap-1.5">
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[s.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
+                    <span className="text-xs font-medium" style={{ color: '#888', letterSpacing: '0.04em' }}>
+                      {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
+                    </span>
                   </span>
                 </div>
 
