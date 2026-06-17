@@ -67,7 +67,7 @@ function DimensionStrip({ dimensions }) {
         const pct   = (avg / 5) * 100
         return (
           <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
-            style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+            style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
               <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
@@ -90,7 +90,7 @@ function SubScoreRow({ label, data }) {
   const color = scoreColor(score)
 
   return (
-    <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+    <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
         <span className="shrink-0 transition-transform" style={{ color: '#666', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
         <span className="text-sm flex-1" style={{ color: '#ccc' }}>{label}</span>
@@ -106,7 +106,7 @@ function DimensionCard({ name, weight, average, rows }) {
   const avg = typeof average === 'number' ? average : Number(average) || 0
   const color = scoreColor(avg)
   return (
-    <div className="rounded-xl p-4 mb-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-xl p-4 mb-3" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>{name}</span>
         <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ function NotesSection({ scoreId, initialNote }) {
   const cancel = () => { setNote(initialNote || ''); setEditing(false) }
 
   return (
-    <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Reviewer Note</p>
         {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
@@ -213,7 +213,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
   const vc = VERDICT[overrideVerdict || verdict] || VERDICT.PASS
 
   return (
-    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#0f0f0f', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#1e1e20', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.10)'}` }}>
       {hasOverride ? (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
   return (
     <div className="rounded-xl p-4"
-      style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#0f0f0f', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+      style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#1e1e20', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.10)'}` }}>
       {disputed ? (
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#f59e0b' }}>
@@ -416,7 +416,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose, panel = false }) {
+export default function ScoreModal({ score, onClose, onExpand, panel = false }) {
   const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
@@ -516,7 +516,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
     <>
     {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
-          style={{ background: `rgba(7,7,7,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          style={{ background: `rgba(20,20,22,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
 
           {/* Row 1: Ticket ID (left) + Actions (right) */}
           <div className="flex items-center justify-between mb-4">
@@ -576,6 +576,18 @@ export default function ScoreModal({ score, onClose, panel = false }) {
                 </div>
               )}
               <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.08)' }} />
+              {panel && onExpand && (
+                <button onClick={onExpand} title="Expand to full view"
+                  className="text-sm leading-none transition-colors flex items-center justify-center"
+                  style={{ color: '#555', width: 24, height: 24 }}
+                  onMouseEnter={e => e.currentTarget.style.color='#fff'}
+                  onMouseLeave={e => e.currentTarget.style.color='#555'}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                  </svg>
+                </button>
+              )}
               <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#555' }}
                 onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#555'}>×</button>
             </div>
@@ -644,7 +656,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
           </div>
 
           {/* Summary */}
-          <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Summary</p>
             <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>
           </div>
@@ -659,7 +671,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
               <div className="flex flex-col gap-2">
                 {s.key_improvements.map((imp, i) => (
                   <div key={i} className="rounded-xl p-3.5 flex gap-3"
-                    style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
                       style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
                       {i + 1}
@@ -677,7 +689,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
           {/* Acknowledgment */}
           {s.scoreId && (
             <div className="rounded-xl px-4 py-3 flex items-center justify-between"
-              style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#0f0f0f', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
+              style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#1e1e20', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.10)'}` }}>
               {s.acknowledged ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs" style={{ color: '#10b981' }}>✓ Acknowledged</span>
@@ -743,11 +755,11 @@ export default function ScoreModal({ score, onClose, panel = false }) {
         style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
         onClick={() => !notifying && setShowNotifyPreview(false)}>
         <div className="rounded-2xl w-full max-w-md modal-enter"
-          style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}
           onClick={e => e.stopPropagation()}>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
               <h3 className="text-white font-semibold text-sm">Send Slack DM</h3>
@@ -771,7 +783,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
                       className="flex items-center gap-2.5 px-3 py-2 rounded-xl w-full text-left transition-all"
                       style={{
                         background: selected ? 'rgba(255,151,128,0.08)' : '#161616',
-                        border: `1px solid ${selected ? 'rgba(255,151,128,0.25)' : 'rgba(255,255,255,0.04)'}`,
+                        border: `1px solid ${selected ? 'rgba(255,151,128,0.25)' : 'rgba(255,255,255,0.07)'}`,
                         opacity: selected ? 1 : 0.45,
                       }}>
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
@@ -785,7 +797,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
                       <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
                         style={{ background: selected ? '#FF9780' : 'rgba(255,255,255,0.08)' }}>
                         {selected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2.5 2.5L8 3" stroke="#070707" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 5l2.5 2.5L8 3" stroke="#141416" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>}
                       </div>
                     </button>
@@ -797,7 +809,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
             {/* Message preview */}
             <div>
               <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Message preview</p>
-              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{{'PASS':'✅','NEEDS_REVIEW':'⚠️','FAIL':'❌'}[s.verdict] || '❓'}</span>
                   <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
@@ -827,7 +839,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
                   </div>
                 )}
                 {s.reviewerNote && (
-                  <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#777' }}>Reviewer Note</p>
                     <p className="text-xs leading-relaxed italic" style={{ color: '#888' }}>{s.reviewerNote}</p>
                   </div>
@@ -837,7 +849,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
             <button onClick={() => setShowNotifyPreview(false)} disabled={notifying}
               className="text-sm px-4 py-2 rounded-xl g-btn-ghost">
               Cancel
@@ -858,7 +870,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
     <>
     <div
       className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
-      style={{ width: 560, background: '#0a0a0a', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
+      style={{ width: 560, background: '#171719', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
     >
       {inner}
     </div>
@@ -875,7 +887,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
     >
       <div
         className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
-        style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
+        style={{ background: '#141416', border: '1px solid rgba(255,255,255,0.08)' }}
         onClick={e => e.stopPropagation()}
       >
         {inner}

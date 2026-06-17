@@ -10,7 +10,7 @@ const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,15
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
 const VERDICTS      = ['PASS', 'NEEDS_REVIEW', 'FAIL']
 
-const inputStyle = { background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.07)', color: '#ccc', outline: 'none' }
+const inputStyle = { background: '#1e1e20', border: '1px solid rgba(255,255,255,0.07)', color: '#ccc', outline: 'none' }
 const onFocus    = e => e.target.style.borderColor = '#FF9780'
 const onBlur     = e => e.target.style.borderColor = 'rgba(255,255,255,0.07)'
 
@@ -23,7 +23,7 @@ function ModeToggle({ mode, setMode }) {
     { id: 'view',   label: 'Gorgias View'  },
   ]
   return (
-    <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
       {modes.map(({ id, label }) => (
         <button key={id} onClick={() => setMode(id)}
           className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
@@ -44,9 +44,9 @@ function HistoryItem({ item, onClick }) {
   return (
     <button onClick={onClick}
       className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left"
-      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}
       onMouseEnter={e => e.currentTarget.style.background = '#161616'}
-      onMouseLeave={e => e.currentTarget.style.background = '#0f0f0f'}>
+      onMouseLeave={e => e.currentTarget.style.background = '#1e1e20'}>
       <div className="flex items-center gap-3 min-w-0">
         <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
           onClick={e => e.stopPropagation()}
@@ -177,7 +177,7 @@ function ViewPicker({ onTickets, disabled }) {
       </div>
       {err && <p className="text-xs" style={{ color: '#ef4444' }}>{err}</p>}
       {preview && (
-        <div className="rounded-xl p-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-xl p-3" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-2" style={{ color: '#10b981' }}>✓ {preview.length} tickets ready to run</p>
           <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
             {preview.map(t => (
@@ -211,7 +211,7 @@ function ResultRow({ result, onView }) {
     <button onClick={() => onView(result.fullScore)}
       className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all"
       style={{ border: '1px solid transparent' }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#0f0f0f'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#1e1e20'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}>
       <a href={gorgiasTicketUrl(result.ticketId)} target="_blank" rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
@@ -381,7 +381,7 @@ export default function ScorePage() {
               </div>
 
               <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
-                style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.05)' }}>
+                style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex flex-col gap-1.5 w-full">
                   <label className="text-xs" style={{ color: '#777' }}>Ticket URL or ID</label>
                   <div className="relative">
@@ -395,7 +395,7 @@ export default function ScorePage() {
                       placeholder="Paste ticket URL or ID…"
                       className="w-full rounded-xl pl-9 pr-8 py-2 text-sm outline-none transition-all"
                       style={{
-                        background: '#111',
+                        background: '#1c1c1e',
                         border: `1px solid ${filters.ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
                         color: '#ccc',
                       }}
@@ -403,9 +403,9 @@ export default function ScorePage() {
                     {filters.ticketSearch && (
                       <button onClick={() => setF('ticketSearch', '')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors"
-                        style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}
+                        style={{ color: '#666', background: 'rgba(255,255,255,0.10)' }}
                         onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
-                        onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+                        onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.10)' }}>
                         ×
                       </button>
                     )}

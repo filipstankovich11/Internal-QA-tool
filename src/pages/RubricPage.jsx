@@ -9,14 +9,14 @@ function weightColor(w) {
 function CriterionEditor({ crit, onChange }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.05)', background: '#111' }}>
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#1c1c1e' }}>
       <button onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-left">
         <span className="text-sm font-medium text-white">{crit.name || <span style={{ color: '#666' }}>Unnamed criterion</span>}</span>
         <span className="text-xs transition-transform shrink-0" style={{ color: '#666', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
       </button>
       {open && (
-        <div className="px-4 pb-4 flex flex-col gap-2.5 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+        <div className="px-4 pb-4 flex flex-col gap-2.5 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="pt-3">
             <label className="text-xs mb-1.5 block" style={{ color: '#777' }}>Criterion name</label>
             <input value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
@@ -38,7 +38,7 @@ function CriterionEditor({ crit, onChange }) {
 
 function DimensionEditor({ dim, onChange }) {
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="flex items-center gap-3 mb-4">
         <input value={dim.name} onChange={e => onChange({ ...dim, name: e.target.value })}
           className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold text-white g-input"
@@ -66,7 +66,7 @@ function AutoFailEditor({ conditions, onChange }) {
   const remove = (i) => onChange(conditions.filter((_, j) => j !== i))
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#ef4444' }}>Auto-Fail Conditions</p>
         <button onClick={add}
@@ -79,7 +79,7 @@ function AutoFailEditor({ conditions, onChange }) {
       </div>
       <div className="flex flex-col gap-3">
         {conditions.map((af, i) => (
-          <div key={af.id} className="rounded-xl p-3" style={{ background: '#111', border: '1px solid rgba(239,68,68,0.1)' }}>
+          <div key={af.id} className="rounded-xl p-3" style={{ background: '#1c1c1e', border: '1px solid rgba(239,68,68,0.1)' }}>
             <div className="flex items-center gap-2 mb-2">
               <input value={af.name} onChange={e => onChange(conditions.map((c, j) => j === i ? { ...c, name: e.target.value } : c))}
                 className="flex-1 rounded-lg px-3 py-1.5 text-sm font-medium text-white g-input"
@@ -177,7 +177,7 @@ export default function RubricPage() {
       {error && <p className="text-sm mb-4 text-center" style={{ color: '#ef4444' }}>{error}</p>}
 
       {/* Verdict thresholds */}
-      <div className="rounded-2xl p-5 mb-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="rounded-2xl p-5 mb-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
         <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#777' }}>Verdict Thresholds</p>
         <div className="flex items-center gap-6 flex-wrap">
           {[
@@ -211,7 +211,7 @@ export default function RubricPage() {
         onChange={updated => setDraft(d => ({ ...d, auto_fail_conditions: updated }))} />
 
       {/* Scoring Guidance */}
-      <div className="rounded-2xl p-5 mt-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="rounded-2xl p-5 mt-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
         <div className="mb-3">
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>Scoring Guidance</p>
           <p className="text-xs mt-1 leading-relaxed" style={{ color: '#666' }}>

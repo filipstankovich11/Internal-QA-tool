@@ -77,7 +77,7 @@ function MiniBar({ value, max, color }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
       </div>
       <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#777' }}>{value}</span>
@@ -134,7 +134,7 @@ function ScoreTrend({ scores }) {
 }
 
 const selectStyle = {
-  background: '#0f0f0f',
+  background: '#1e1e20',
   border: '1px solid rgba(255,255,255,0.07)',
   color: '#ccc',
   outline: 'none',
@@ -147,6 +147,7 @@ export default function DashboardPage() {
   // myAgentId from context — used only for display; scoreHistory is already scoped
   const { myAgentId } = useApp()
   const [panelScore, setPanelScore] = useState(null)
+  const [modalScore, setModalScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
@@ -298,7 +299,7 @@ export default function DashboardPage() {
               placeholder="Search by ticket URL or ID…"
               className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none transition-all"
               style={{
-                background: '#111',
+                background: '#1c1c1e',
                 border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
                 color: '#ccc',
                 boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.06)' : 'none',
@@ -307,9 +308,9 @@ export default function DashboardPage() {
             {ticketSearch && (
               <button onClick={() => setTicketSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors"
-                style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}
+                style={{ color: '#666', background: 'rgba(255,255,255,0.10)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.10)' }}>
                 ×
               </button>
             )}
@@ -436,8 +437,8 @@ export default function DashboardPage() {
 
             {filteredScores.map(s => (
               <div key={s.id} className="grid items-center px-4 py-3 transition-colors"
-                style={{ gridTemplateColumns: '100px 1fr 150px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#0f0f0f'}
+                style={{ gridTemplateColumns: '100px 1fr 150px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 
                 <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
@@ -487,7 +488,15 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {panelScore && <ScoreModal score={panelScore} onClose={() => setPanelScore(null)} panel />}
+      {panelScore && (
+        <ScoreModal
+          score={panelScore}
+          onClose={() => setPanelScore(null)}
+          onExpand={() => { setModalScore(panelScore); setPanelScore(null) }}
+          panel
+        />
+      )}
+      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
     </div>
   )

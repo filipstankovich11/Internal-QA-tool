@@ -55,7 +55,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 
   return (
     <div className="rounded-xl transition-all"
-      style={{ background: selected ? '#161616' : '#0f0f0f', border: `1px solid ${selected ? badge.hoverBorder : badge.border}`, boxShadow: `inset 3px 0 0 ${badge.color}` }}>
+      style={{ background: selected ? '#161616' : '#1e1e20', border: `1px solid ${selected ? badge.hoverBorder : badge.border}`, boxShadow: `inset 3px 0 0 ${badge.color}` }}>
 
       <div className="flex items-center gap-3 px-3 py-3.5">
         {/* Checkbox */}
@@ -315,28 +315,28 @@ export default function ReviewQueuePage() {
                 <button key={label} onClick={() => setStatusFilter(active ? null : filter)}
                   className="rounded-xl p-3 text-center transition-all"
                   style={{
-                    background: active ? `rgba(${color === '#f59e0b' ? '245,158,11' : color === '#fb923c' ? '251,146,60' : '239,68,68'},0.08)` : '#0f0f0f',
-                    border: `1px solid ${active ? color : 'rgba(255,255,255,0.06)'}`,
+                    background: active ? `rgba(${color === '#f59e0b' ? '245,158,11' : color === '#fb923c' ? '251,146,60' : '239,68,68'},0.08)` : '#1e1e20',
+                    border: `1px solid ${active ? color : 'rgba(255,255,255,0.10)'}`,
                     cursor: 'pointer',
                   }}
                   onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = `${color}66` }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
                   <p className="text-xl font-bold" style={{ color }}>{value}</p>
                   <p className="mt-0.5" style={{ color: active ? '#aaa' : '#666', fontSize: small ? '10px' : '12px' }}>{label}</p>
                 </button>
               )
             })}
             <div className="rounded-xl p-3 text-center"
-              style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+              style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
               <p className="text-xl font-bold" style={{ color: +avgWaitDays > 2 ? '#ef4444' : '#aaa' }}>{avgWaitDays ? `${avgWaitDays}d` : '—'}</p>
               <p className="mt-0.5 text-xs" style={{ color: '#666' }}>Avg wait</p>
             </div>
           </div>
 
           {/* Toolbar */}
-          <div className="flex items-center gap-2 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="flex items-center gap-2 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             {/* Sort */}
-            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
               {[{ id: 'priority', label: 'Priority' }, { id: 'oldest', label: 'Oldest' }, { id: 'newest', label: 'Newest' }].map(o => (
                 <button key={o.id} onClick={() => setSortOrder(o.id)}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -352,7 +352,7 @@ export default function ReviewQueuePage() {
             {queueAgents.length > 0 && (
               <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
                 className="rounded-xl px-3 py-2 text-xs"
-                style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)', color: agentFilter ? '#fff' : '#aaa', outline: 'none' }}>
+                style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)', color: agentFilter ? '#fff' : '#aaa', outline: 'none' }}>
                 <option value="">All agents</option>
                 {queueAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>

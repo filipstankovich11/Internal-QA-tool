@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --g-black:  #161616;
-    --g-900:    #1e1e1e;
-    --g-800:    #242424;
-    --g-700:    #2c2c2c;
-    --g-border: rgba(255,255,255,0.14);
+    --g-black:  #1c1c1e;
+    --g-900:    #242426;
+    --g-800:    #2c2c2e;
+    --g-700:    #343436;
+    --g-border: rgba(255,255,255,0.16);
     --g-coral:  #FF9780;
     --g-coral-h:#ff8066;
   }
@@ -91,7 +91,7 @@
 .g-input:focus { border-color: var(--g-coral); box-shadow: 0 0 0 3px rgba(255,151,128,0.12); }
 .g-btn-primary {
   background: linear-gradient(135deg, #ffb39a 0%, var(--g-coral) 50%, #ff7a5c 100%);
-  color: #070707;
+  color: #141416;
   font-weight: 600;
   transition: filter 0.15s, opacity 0.15s;
 }

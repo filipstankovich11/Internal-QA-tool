@@ -68,11 +68,11 @@ function DisputeModal({ s, onDispute, onClose }) {
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="w-full max-w-lg rounded-2xl overflow-hidden"
-        style={{ background: '#0f0f0f', border: '1px solid rgba(239,68,68,0.2)', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(239,68,68,0.2)', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
 
         {/* Header */}
         <div className="px-6 py-5 flex items-start justify-between"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div>
             <h2 className="text-white font-semibold text-base">Dispute Score</h2>
             <p className="text-xs mt-1" style={{ color: '#666' }}>
@@ -86,7 +86,7 @@ function DisputeModal({ s, onDispute, onClose }) {
 
         {/* Ticket context */}
         <div className="px-6 py-4 flex items-center gap-4"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}>
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.01)' }}>
           <span className="font-mono text-sm font-medium" style={{ color: '#FF9780' }}>#{s.ticketId}</span>
           <span className="text-sm truncate flex-1" style={{ color: '#aaa' }}>{s.fullScore?.ticket_subject || '—'}</span>
           <span className="text-xs font-medium px-2.5 py-1 rounded-full border shrink-0"
@@ -108,9 +108,9 @@ function DisputeModal({ s, onDispute, onClose }) {
                 <button key={c} onClick={() => setCategory(c)}
                   className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
                   style={{
-                    background: category === c ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.04)',
+                    background: category === c ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.07)',
                     color:      category === c ? '#ef4444' : '#666',
-                    border:     category === c ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                    border:     category === c ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.10)',
                   }}>
                   {c}
                 </button>
@@ -139,7 +139,7 @@ function DisputeModal({ s, onDispute, onClose }) {
 
         {/* Footer */}
         <div className="px-6 py-4 flex items-center justify-end gap-3"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          style={{ borderTop: '1px solid rgba(255,255,255,0.10)' }}>
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl" style={{ color: '#777' }}
             onMouseEnter={e => e.target.style.color = '#ccc'}
             onMouseLeave={e => e.target.style.color = '#777'}>
@@ -178,14 +178,14 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
     <>
     <div className="rounded-2xl overflow-hidden transition-all"
       style={{
-        background: isNew ? 'rgba(255,151,128,0.03)' : '#0a0a0a',
-        border: isNew ? '1px solid rgba(255,151,128,0.15)' : '1px solid rgba(255,255,255,0.06)',
+        background: isNew ? 'rgba(255,151,128,0.03)' : '#171719',
+        border: isNew ? '1px solid rgba(255,151,128,0.15)' : '1px solid rgba(255,255,255,0.10)',
         boxShadow: `inset 3px 0 0 ${vc}`,
       }}>
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: `1px solid ${isNew ? 'rgba(255,151,128,0.1)' : 'rgba(255,255,255,0.05)'}` }}>
+        style={{ borderBottom: `1px solid ${isNew ? 'rgba(255,151,128,0.1)' : 'rgba(255,255,255,0.08)'}` }}>
         <div className="flex items-center gap-3">
           {isNew && <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#FF9780' }} />}
           <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
@@ -214,7 +214,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
       {/* Score + dimensions */}
       <div className="px-5 py-4 flex items-center gap-6 flex-wrap"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex items-center gap-3">
           <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
             style={{ color: vc, background: vb, borderColor: vborder }}>
@@ -232,7 +232,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
       {/* Reviewer note */}
       {s.notes && (
-        <div className="px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.01)' }}>
+        <div className="px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.01)' }}>
           <p className="text-xs mb-1" style={{ color: '#777' }}>Reviewer note</p>
           <p className="text-sm leading-relaxed" style={{ color: '#aaa' }}>{s.notes}</p>
         </div>

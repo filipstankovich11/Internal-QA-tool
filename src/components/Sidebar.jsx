@@ -34,7 +34,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
                : hovered ? '#f0f0f0'
                : '#b0b0b0'
   const bg     = active  ? 'rgba(255,151,128,0.10)'
-               : hovered ? 'rgba(255,255,255,0.05)'
+               : hovered ? 'rgba(255,255,255,0.08)'
                : 'transparent'
 
   return (
@@ -94,7 +94,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
 }
 
 function SectionLabel({ label, collapsed }) {
-  if (collapsed) return <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '8px 10px' }} />
+  if (collapsed) return <div style={{ height: 1, background: 'rgba(255,255,255,0.10)', margin: '8px 10px' }} />
   return (
     <p style={{
       fontSize: 10, fontWeight: 600, letterSpacing: '0.10em',
@@ -150,7 +150,7 @@ export default function Sidebar({ page, setPage }) {
     <aside style={{
       width: collapsed ? 56 : 232,
       flexShrink: 0,
-      background: '#0f0f0f',
+      background: '#141416',
       borderRight: '1px solid rgba(255,255,255,0.07)',
       transition: 'width 220ms cubic-bezier(0.16, 1, 0.3, 1)',
       overflow: 'hidden',
@@ -256,7 +256,7 @@ export default function Sidebar({ page, setPage }) {
       {profile && (
         <div style={{
           padding: '10px 8px 12px',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid rgba(255,255,255,0.10)',
           flexShrink: 0,
         }}>
           <div style={{
