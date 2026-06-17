@@ -480,6 +480,7 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
   const [selected,     setSelected]     = useState(new Set())
   const [teamId,       setTeamId]       = useState('')
   const [importing,    setImporting]    = useState(false)
+  const [agentSearch,  setAgentSearch]  = useState('')
 
   useEffect(() => {
     authFetch(`${API_BASE}/api/gorgias-users`)
@@ -523,6 +524,30 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
           <button onClick={onClose} className="text-xs g-btn-ghost px-3 py-1.5">Cancel</button>
         </div>
 
+        {/* Search */}
+        {!loading && !error && gorgiasUsers.length > 0 && (
+          <div className="px-4 pt-3 pb-1 relative">
+            <svg className="absolute left-7 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#555' }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              value={agentSearch}
+              onChange={e => setAgentSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              className="w-full rounded-xl pl-8 pr-8 py-2 text-sm outline-none"
+              style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc' }}
+              autoFocus
+            />
+            {agentSearch && (
+              <button onClick={() => setAgentSearch('')} className="absolute right-7 top-1/2 -translate-y-1/2 text-lg leading-none" style={{ color: '#555' }}
+                onMouseEnter={e => e.currentTarget.style.color='#ccc'} onMouseLeave={e => e.currentTarget.style.color='#555'}>
+                ×
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-4 py-3">
           {loading && <p className="text-sm text-center py-8" style={{ color: '#777' }}>Loading Gorgias users…</p>}
@@ -530,24 +555,33 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
           {!loading && !error && gorgiasUsers.length === 0 && (
             <p className="text-sm text-center py-8" style={{ color: '#777' }}>All Gorgias agents are already imported.</p>
           )}
-          {!loading && !error && gorgiasUsers.map(u => {
-            const checked = selected.has(u.gorgias_user_id)
-            return (
-              <button key={u.gorgias_user_id} onClick={() => toggle(u.gorgias_user_id)}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all mb-0.5"
-                style={{ background: checked ? 'rgba(255,151,128,0.06)' : 'transparent', border: `1px solid ${checked ? 'rgba(255,151,128,0.2)' : 'transparent'}` }}>
-                <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
-                  style={{ border: `1.5px solid ${checked ? '#FF9780' : '#333'}`, background: checked ? '#FF9780' : 'transparent' }}>
-                  {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#000" strokeWidth="1.5" strokeLinecap="round"/></svg>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{u.name}</p>
-                  <p className="text-xs truncate" style={{ color: '#777' }}>{u.email}</p>
-                </div>
-                <span className="text-xs shrink-0" style={{ color: '#555' }}>ID: {u.gorgias_user_id}</span>
-              </button>
-            )
-          })}
+          {!loading && !error && gorgiasUsers.length > 0 && (() => {
+            const q = agentSearch.trim().toLowerCase()
+            const visible = q
+              ? gorgiasUsers.filter(u => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+              : gorgiasUsers
+            if (q && visible.length === 0) {
+              return <p className="text-sm text-center py-8" style={{ color: '#777' }}>No agents match "{agentSearch}"</p>
+            }
+            return visible.map(u => {
+              const checked = selected.has(u.gorgias_user_id)
+              return (
+                <button key={u.gorgias_user_id} onClick={() => toggle(u.gorgias_user_id)}
+                  className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all mb-0.5"
+                  style={{ background: checked ? 'rgba(255,151,128,0.06)' : 'transparent', border: `1px solid ${checked ? 'rgba(255,151,128,0.2)' : 'transparent'}` }}>
+                  <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
+                    style={{ border: `1.5px solid ${checked ? '#FF9780' : '#333'}`, background: checked ? '#FF9780' : 'transparent' }}>
+                    {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#000" strokeWidth="1.5" strokeLinecap="round"/></svg>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{u.name}</p>
+                    <p className="text-xs truncate" style={{ color: '#777' }}>{u.email}</p>
+                  </div>
+                  <span className="text-xs shrink-0" style={{ color: '#555' }}>ID: {u.gorgias_user_id}</span>
+                </button>
+              )
+            })
+          })()}
         </div>
 
         {/* Footer */}

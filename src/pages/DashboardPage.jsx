@@ -172,6 +172,7 @@ export default function DashboardPage() {
   const [activeScore, setActiveScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
+  const [ticketSearch, setTicketSearch] = useState('')
 
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
@@ -186,17 +187,25 @@ export default function DashboardPage() {
     return map
   }, [teams, agents])
 
+  const searchTicketId = useMemo(() => {
+    const raw = ticketSearch.trim()
+    if (!raw) return null
+    const match = raw.match(/\/(?:tickets?|views\/\d+)\/(\d+)/) || raw.match(/^(\d+)$/)
+    return match ? match[1] : raw
+  }, [ticketSearch])
+
   const filteredScores = useMemo(() => scoreHistory.filter(s => {
     // scoreHistory is already scoped to agent's own tickets via AppContext
+    if (searchTicketId && String(s.ticketId) !== searchTicketId) return false
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
     if (filters.team  && !s.agentIds?.some(id => teamAgentMap[filters.team]?.has(id))) return false
     if (filters.verdicts.length && !filters.verdicts.includes(s.effectiveVerdict)) return false
     if (filters.dateFrom && s.scoredAt < new Date(filters.dateFrom).setHours(0,0,0,0)) return false
     if (filters.dateTo   && s.scoredAt > new Date(filters.dateTo).setHours(23,59,59,999)) return false
     return true
-  }), [scoreHistory, filters, teamAgentMap, myAgentId])
+  }), [scoreHistory, filters, teamAgentMap, searchTicketId])
 
-  const hasFilters = (role !== 'agent' && (filters.agent || filters.team)) || filters.verdicts.length || filters.dateFrom || filters.dateTo
+  const hasFilters = (role !== 'agent' && (filters.agent || filters.team)) || filters.verdicts.length || filters.dateFrom || filters.dateTo || ticketSearch
 
   // All stats use effective values (override when present, AI otherwise)
   const total    = filteredScores.length
@@ -369,9 +378,29 @@ export default function DashboardPage() {
 
       {/* ── Ticket table with filters ── */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-4 gap-4">
+          <h2 className="text-white font-semibold shrink-0">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
+          {/* Ticket URL / ID search */}
+          <div className="flex-1 max-w-xs relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#555' }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              value={ticketSearch}
+              onChange={e => setTicketSearch(e.target.value)}
+              placeholder="Paste ticket URL or ID…"
+              className="w-full rounded-xl pl-8 pr-8 py-1.5 text-xs outline-none transition-colors"
+              style={{ background: '#111', border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`, color: '#ccc' }}
+            />
+            {ticketSearch && (
+              <button onClick={() => setTicketSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: '#555', lineHeight: 1 }}
+                onMouseEnter={e => e.currentTarget.style.color='#ccc'} onMouseLeave={e => e.currentTarget.style.color='#555'}>
+                ×
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
             <span className="text-xs" style={{ color: '#666' }}>{filteredScores.length} / {total}</span>
             {filteredScores.length > 0 && (
               <button
@@ -488,7 +517,7 @@ export default function DashboardPage() {
             </div>
 
             {hasFilters && (
-              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null) }}
+              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch('') }}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
                 style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
