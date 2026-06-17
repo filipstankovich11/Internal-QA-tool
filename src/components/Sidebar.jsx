@@ -29,10 +29,10 @@ const ChevronRight = () => <svg width="13" height="13" viewBox="0 0 24 24" fill=
 function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
   const [hovered, setHovered] = useState(false)
   const active = isActive
-  const color  = danger ? (hovered ? '#ef4444' : '#666')
+  const color  = danger ? (hovered ? '#ef4444' : '#888')
                : active  ? '#FF9780'
-               : hovered ? '#e0e0e0'
-               : '#777'
+               : hovered ? '#f0f0f0'
+               : '#b0b0b0'
   const bg     = active  ? 'rgba(255,151,128,0.10)'
                : hovered ? 'rgba(255,255,255,0.05)'
                : 'transparent'
@@ -54,8 +54,8 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
         background: bg,
         border: 'none',
         transition: 'color 140ms, background 140ms',
-        fontSize: 13,
-        fontWeight: active ? 600 : 500,
+        fontSize: 14,
+        fontWeight: active ? 600 : 400,
         whiteSpace: 'nowrap',
         cursor: 'pointer',
         width: '100%',
@@ -63,7 +63,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
         position: 'relative',
       }}
     >
-      <span style={{ flexShrink: 0, display: 'flex', opacity: active ? 1 : 0.75 }}>{icon}</span>
+      <span style={{ flexShrink: 0, display: 'flex', opacity: active ? 1 : 0.9 }}>{icon}</span>
 
       {!collapsed && (
         <span style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0 }}>
@@ -98,7 +98,7 @@ function SectionLabel({ label, collapsed }) {
   return (
     <p style={{
       fontSize: 10, fontWeight: 600, letterSpacing: '0.10em',
-      textTransform: 'uppercase', color: '#444',
+      textTransform: 'uppercase', color: '#666',
       padding: '4px 12px 6px', margin: 0,
     }}>
       {label}
@@ -277,7 +277,7 @@ export default function Sidebar({ page, setPage }) {
             </div>
             {!collapsed && (
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#ccc', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: '#e0e0e0', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.name}
                 </div>
                 <div style={{ color: ROLE_COLOR[role] || '#888', fontSize: 11, textTransform: 'capitalize', marginTop: 1 }}>
