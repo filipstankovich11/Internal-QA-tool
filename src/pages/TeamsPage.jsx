@@ -98,7 +98,7 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
   )
 
   return (
-    <div className="border-t px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.05)', background: '#0a0a0a' }}>
+    <div className="border-t px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.18)' }}>
       <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#777' }}>Manage Agents</p>
 
       {teamAgents.length > 0 && (
@@ -159,7 +159,8 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
 
 // ── Team card ──────────────────────────────────────────────────────────────────
 
-const BORDER = '0.5px solid rgba(255,255,255,0.10)'
+const BORDER     = '1px solid rgba(255,255,255,0.08)'
+const BORDER_DIM = '1px solid rgba(255,255,255,0.05)'
 
 function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelete, canEdit, getAgentScores, avgScore, onAssign, onUnassign }) {
   const [editing,       setEditing]       = useState(false)
@@ -185,7 +186,7 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
 
   const save = () => { if (name.trim()) onEdit(team.id, name.trim()); setEditing(false) }
 
-  const cellStyle = { padding: '14px 20px', borderRight: BORDER }
+  const cellStyle = { padding: '14px 20px', borderRight: BORDER_DIM }
 
   const btn = {
     fontSize: 12, padding: '4px 12px', background: 'transparent',
@@ -194,10 +195,10 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
   }
 
   return (
-    <div style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", background: '#111', border: BORDER, borderRadius: 12, overflow: 'hidden', color: '#f2f2f2' }}>
+    <div style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", background: 'linear-gradient(180deg, #1e1e1e 0%, #161616 100%)', border: BORDER, borderRadius: 16, overflow: 'hidden', color: '#f2f2f2', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: BORDER }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: BORDER_DIM }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 4, height: 28, background: '#FF9780', borderRadius: 2, flexShrink: 0 }} />
           <div>
@@ -251,7 +252,7 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
       </div>
 
       {/* Metric strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderBottom: BORDER }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderBottom: BORDER_DIM, background: 'rgba(0,0,0,0.15)' }}>
         {[
           { label: 'Score',     value: avg !== null ? `${avg}` : '—',          sub: '/100',  color: '#FF9780' },
           { label: 'Pass rate', value: passRate !== null ? `${passRate}%` : '—', color: '#10b981' },
@@ -271,7 +272,7 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
       </div>
 
       {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', background: 'rgba(255,255,255,0.02)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', background: 'rgba(0,0,0,0.12)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {top && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#888' }}>
@@ -309,7 +310,7 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
 
       {/* Expanded agent list */}
       {expanded && !managing && agents.length > 0 && (
-        <div style={{ borderTop: BORDER }}>
+        <div style={{ borderTop: BORDER_DIM }}>
           {agents.map((agent, idx) => {
             const aScores  = getAgentScores(agent.id)
             const aAvg     = avgScore(aScores)
