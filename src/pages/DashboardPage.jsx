@@ -195,7 +195,7 @@ export default function DashboardPage() {
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
 
   return (
-    <div style={{ paddingRight: panelScore ? 460 : 0, transition: 'padding-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
+    <div style={{ paddingRight: panelScore ? 560 : 0, transition: 'padding-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
     <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
 
       {/* Header */}

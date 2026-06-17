@@ -858,7 +858,7 @@ export default function ScoreModal({ score, onClose, panel = false }) {
     <>
     <div
       className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
-      style={{ width: 460, background: '#0a0a0a', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
+      style={{ width: 560, background: '#0a0a0a', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
     >
       {inner}
     </div>
