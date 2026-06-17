@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import { useNavigate } from '../context/NavigationContext'
 import { useToast } from './Toast'
 import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -419,6 +420,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 export default function ScoreModal({ score, onClose, onExpand, panel = false }) {
   const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
   const { isAdmin } = useAuth()
+  const navigateTo = useNavigate()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
   const [rescoring,       setRescoring]       = useState(false)
@@ -527,81 +529,102 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
               onMouseLeave={e => e.currentTarget.style.color='#777'}>
               Ticket #{s.ticket_id}
             </a>
-            <div className="flex items-center gap-4 shrink-0 pl-8">
+            <div className="flex items-center gap-2 shrink-0 pl-6">
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={openNotifyPreview} disabled={notifying}
-                  className="flex items-center gap-1.5 text-xs transition-colors"
-                  style={{ color: notifying ? '#555' : '#666' }}
-                  onMouseEnter={e => { if (!notifying) e.currentTarget.style.color = '#ccc' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#666' }}
+                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: notifying ? '#555' : '#ccc', cursor: notifying ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!notifying) { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)' }}
                   title="Send score summary to agent via Slack DM">
                   {notifying
-                    ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                    ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                    : <svg width="11" height="11" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
                   }
                   {notifying ? 'Sending…' : 'Notify'}
                 </button>
               )}
               {s.scoreId && !confirmDelete && (
                 <button onClick={rescore} disabled={rescoring}
-                  className="flex items-center gap-1.5 text-xs transition-colors"
-                  style={{ color: rescoring ? '#333' : '#555' }}
-                  onMouseEnter={e => { if (!rescoring) e.currentTarget.style.color='#FF9780' }}
-                  onMouseLeave={e => { if (!rescoring) e.currentTarget.style.color='#555' }}
+                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: rescoring ? '#555' : '#ccc', cursor: rescoring ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!rescoring) { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#FF9780'; e.currentTarget.style.borderColor='rgba(255,151,128,0.3)' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color=rescoring?'#555':'#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)' }}
                   title="Re-run AI scoring on this ticket">
-                  {rescoring
-                    ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <RefreshIcon />}
+                  {rescoring ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> : <RefreshIcon />}
                   {rescoring ? 'Rescoring…' : 'Re-score'}
                 </button>
               )}
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={() => setConfirmDelete(true)}
-                  className="text-xs transition-colors" style={{ color: '#555' }}
-                  onMouseEnter={e => e.target.style.color='#ef4444'}
-                  onMouseLeave={e => e.target.style.color='#555'}>
+                  className="text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.15)' }}>
                   Delete
                 </button>
               )}
               {confirmDelete && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete score?</span>
+                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete?</span>
                   <button onClick={async () => {
                     const ok = await deleteScore(s.scoreId)
                     if (ok) { toast.success('Score deleted'); onClose() }
                     else { toast.error('Failed to delete'); setConfirmDelete(false) }
-                  }} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
-                  <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
+                  }} className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>Yes</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: '#aaa', border: '1px solid rgba(255,255,255,0.12)' }}>Cancel</button>
                 </div>
               )}
-              <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.10)', margin: '0 2px' }} />
               {panel && onExpand && (
                 <button onClick={onExpand} title="Expand to full view"
-                  className="text-sm leading-none transition-colors flex items-center justify-center"
-                  style={{ color: '#555', width: 24, height: 24 }}
-                  onMouseEnter={e => e.currentTarget.style.color='#fff'}
-                  onMouseLeave={e => e.currentTarget.style.color='#555'}>
+                  className="flex items-center justify-center rounded-lg transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', width: 30, height: 30 }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
                     <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
                   </svg>
                 </button>
               )}
-              <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#555' }}
-                onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#555'}>×</button>
+              <button onClick={onClose} title="Close"
+                className="flex items-center justify-center rounded-lg transition-all"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', width: 30, height: 30, fontSize: 18, lineHeight: 1 }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>×</button>
             </div>
           </div>
 
-          {/* Row 2: Agent names — max 3 columns, capped at 75% width */}
-          {agentNames.length > 0 && (
-            <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: 'repeat(3, auto)', justifyContent: 'start', maxWidth: '75%' }}>
-              {agentNames.map((name, i) => (
-                <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full text-center"
-                  style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)' }}>
-                  {name}
-                </span>
+          {/* Row 2: Agent names — clickable, navigate to agents page */}
+          {matchedAgents.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {matchedAgents.map((agent, i) => (
+                <button key={i}
+                  onClick={() => { navigateTo('agents'); onClose() }}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
+                  style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)', cursor: 'pointer' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(255,151,128,0.15)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.35)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,151,128,0.08)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.15)' }}
+                  title={`View ${agent.name}`}>
+                  {agent.name}
+                </button>
               ))}
+              {/* names for senders not matched to an agent record */}
+              {(s.agent_senders || [])
+                .filter(a => !agents.find(ag =>
+                  (a.gorgias_user_id && ag.gorgias_user_id === a.gorgias_user_id) ||
+                  (a.email && ag.email?.toLowerCase() === a.email?.toLowerCase())
+                ))
+                .map((a, i) => (
+                  <span key={`unmatched-${i}`} className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ color: '#999', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                    {a.name}
+                  </span>
+                ))
+              }
             </div>
           )}
 
