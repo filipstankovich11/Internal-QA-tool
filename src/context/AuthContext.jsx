@@ -29,6 +29,14 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null
+
+      // Enforce @gorgias.com domain for OAuth logins
+      if (u && event === 'SIGNED_IN' && !u.email?.endsWith('@gorgias.com')) {
+        supabase.auth.signOut()
+        setUser(null); setProfile(null); setLoading(false)
+        return
+      }
+
       setUser(u)
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordReset(true)
@@ -48,6 +56,15 @@ export function AuthProvider({ children }) {
 
   const signIn = (email, password) =>
     supabase.auth.signInWithPassword({ email, password })
+
+  const signInWithGoogle = () =>
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: { hd: 'gorgias.com' }, // hint: show only gorgias.com accounts
+      },
+    })
 
   const signOut = () => supabase.auth.signOut()
 
@@ -72,7 +89,7 @@ export function AuthProvider({ children }) {
   const canScore = isAdmin || isLead
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, role, isAdmin, isLead, canEdit, canScore, signIn, signOut, updatePassword, updateProfile, sendPasswordReset, isPasswordReset, setIsPasswordReset }}>
+    <AuthContext.Provider value={{ user, profile, loading, role, isAdmin, isLead, canEdit, canScore, signIn, signInWithGoogle, signOut, updatePassword, updateProfile, sendPasswordReset, isPasswordReset, setIsPasswordReset }}>
       {children}
     </AuthContext.Provider>
   )
