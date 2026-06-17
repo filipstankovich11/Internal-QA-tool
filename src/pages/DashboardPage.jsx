@@ -378,29 +378,9 @@ export default function DashboardPage() {
 
       {/* ── Ticket table with filters ── */}
       <div>
-        <div className="flex items-center justify-between mb-4 gap-4">
-          <h2 className="text-white font-semibold shrink-0">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
-          {/* Ticket URL / ID search */}
-          <div className="flex-1 max-w-xs relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#555' }}>
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              type="text"
-              value={ticketSearch}
-              onChange={e => setTicketSearch(e.target.value)}
-              placeholder="Paste ticket URL or ID…"
-              className="w-full rounded-xl pl-8 pr-8 py-1.5 text-xs outline-none transition-colors"
-              style={{ background: '#111', border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`, color: '#ccc' }}
-            />
-            {ticketSearch && (
-              <button onClick={() => setTicketSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: '#555', lineHeight: 1 }}
-                onMouseEnter={e => e.currentTarget.style.color='#ccc'} onMouseLeave={e => e.currentTarget.style.color='#555'}>
-                ×
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
+          <div className="flex items-center gap-3">
             <span className="text-xs" style={{ color: '#666' }}>{filteredScores.length} / {total}</span>
             {filteredScores.length > 0 && (
               <button
@@ -433,6 +413,43 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Ticket search — admin/lead only */}
+        {role !== 'agent' && (
+          <div className="relative mb-3">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: ticketSearch ? '#FF9780' : '#444' }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              value={ticketSearch}
+              onChange={e => setTicketSearch(e.target.value)}
+              placeholder="Search by ticket URL or ID…"
+              className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none transition-all"
+              style={{
+                background: '#111',
+                border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                color: '#ccc',
+                boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.06)' : 'none',
+              }}
+            />
+            {ticketSearch && (
+              <button onClick={() => setTicketSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors"
+                style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}
+                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
+                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+                ×
+              </button>
+            )}
+            {ticketSearch && searchTicketId && (
+              <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
+                style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>
+                #{searchTicketId}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Filters */}
         <div className="rounded-2xl p-4 mb-4" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>

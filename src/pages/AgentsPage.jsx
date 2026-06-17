@@ -643,7 +643,7 @@ export default function AgentsPage() {
               style={{ color: '#999' }}
               onMouseEnter={e => e.currentTarget.style.color = '#fff'}
               onMouseLeave={e => e.currentTarget.style.color = '#999'}>
-              Import Gorgias
+              Import from Gorgias
             </button>
             <button onClick={() => setShowAssignModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
