@@ -146,7 +146,7 @@ export default function DashboardPage() {
 
   // myAgentId from context — used only for display; scoreHistory is already scoped
   const { myAgentId } = useApp()
-  const [activeScore, setActiveScore] = useState(null)
+  const [panelScore, setPanelScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
@@ -195,7 +195,8 @@ export default function DashboardPage() {
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
 
   return (
-    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
+    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16"
+      style={{ marginRight: panelScore ? 460 : 0, transition: 'margin-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
 
       {/* Header */}
       <div className="mb-8">
@@ -446,7 +447,7 @@ export default function DashboardPage() {
                   #{s.ticketId}
                 </a>
 
-                <button onClick={() => setActiveScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
+                <button onClick={() => setPanelScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
                   className="text-sm text-left truncate pr-3 transition-colors"
                   style={{ color: '#ccc' }}
                   onMouseEnter={e => e.target.style.color='#fff'}
@@ -486,7 +487,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
+      {panelScore && <ScoreModal score={panelScore} onClose={() => setPanelScore(null)} panel />}
     </div>
   )
 }
