@@ -416,7 +416,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose }) {
+export default function ScoreModal({ score, onClose, panel = false }) {
   const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
@@ -508,23 +508,13 @@ export default function ScoreModal({ score, onClose }) {
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
+    if (!panel) document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
-  }, [onClose])
+  }, [onClose, panel])
 
-  return (
+  const inner = (
     <>
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
-        style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Sticky header — colour-washed by verdict */}
+    {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
           style={{ background: `rgba(7,7,7,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
 
@@ -744,12 +734,11 @@ export default function ScoreModal({ score, onClose }) {
             overrideNote={s.overrideNote}
             overrideAt={s.overrideAt}
           />
-        </div>
-      </div>
     </div>
+    </>
+  )
 
-    {/* Slack notify preview */}
-    {showNotifyPreview && (
+  const notifyEl = showNotifyPreview ? (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
         style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
         onClick={() => !notifying && setShowNotifyPreview(false)}>
@@ -863,7 +852,36 @@ export default function ScoreModal({ score, onClose }) {
           </div>
         </div>
       </div>
-    )}
+  ) : null
+
+  if (panel) return (
+    <>
+    <div
+      className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
+      style={{ width: 460, background: '#0a0a0a', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
+    >
+      {inner}
+    </div>
+    {notifyEl}
+    </>
+  )
+
+  return (
+    <>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
+        style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {inner}
+      </div>
+    </div>
+    {notifyEl}
     </>
   )
 }
