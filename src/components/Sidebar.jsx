@@ -200,7 +200,7 @@ export default function Sidebar({ page, setPage }) {
       {/* ── Nav ── */}
       <nav style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        padding: '8px 8px 0', overflowY: 'auto', overflowX: 'hidden', gap: 1,
+        padding: '8px 8px 8px', overflowY: 'auto', overflowX: 'hidden', gap: 1,
       }}>
 
         {/* MENU section */}
@@ -221,8 +221,8 @@ export default function Sidebar({ page, setPage }) {
           />
         ))}
 
-        {/* GENERAL section */}
-        <div style={{ marginTop: 16 }}>
+        {/* GENERAL section — pinned to bottom of nav */}
+        <div style={{ marginTop: 'auto', paddingTop: 8 }}>
           <SectionLabel label="General" collapsed={collapsed} />
           <NavItem
             icon={<BellIcon />}
