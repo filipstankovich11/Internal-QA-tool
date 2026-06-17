@@ -195,8 +195,8 @@ export default function DashboardPage() {
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
 
   return (
-    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16"
-      style={{ marginRight: panelScore ? 460 : 0, transition: 'margin-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
+    <div style={{ paddingRight: panelScore ? 460 : 0, transition: 'padding-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
+    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
 
       {/* Header */}
       <div className="mb-8">
@@ -488,6 +488,7 @@ export default function DashboardPage() {
       </div>
 
       {panelScore && <ScoreModal score={panelScore} onClose={() => setPanelScore(null)} panel />}
+    </div>
     </div>
   )
 }
