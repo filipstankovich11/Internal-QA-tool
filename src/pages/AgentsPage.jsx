@@ -216,7 +216,6 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
 
   const avg = scores.length ? (scores.reduce((s,x) => s + (x.effectiveScore ?? x.weightedScore), 0) / scores.length) : null
   const avgColor = avg != null ? (avg >= 80 ? '#10b981' : avg >= 60 ? '#f59e0b' : '#ef4444') : null
-  const unacknowledged = scores.filter(s => !s.acknowledged).length
 
   const save = () => {
     if (form.name.trim()) onEdit(agent.id, {
@@ -265,54 +264,54 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
           </div>
         </div>
       ) : (
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="min-w-0">
+        <div className="mb-6">
+          {/* Row 1: account-linked label (left) · edit/delete (right) */}
+          <div className="flex items-center justify-between gap-3 mb-2" style={{ minHeight: 20 }}>
+            <span style={{ fontSize: 11, color: agent.user_id ? '#10b981' : '#ef4444' }}>
+              {agent.user_id ? '● Account linked' : '● No account linked'}
+            </span>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {canEdit && !confirmDelete && <button onClick={openEdit} className="g-btn-ghost text-xs">Edit</button>}
+              {canEdit && !confirmDelete && (
+                <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#ef4444' }}
+                  onMouseEnter={e=>e.target.style.color='#f87171'} onMouseLeave={e=>e.target.style.color='#ef4444'}>Delete</button>
+              )}
+              {confirmDelete && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete agent?</span>
+                  <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: name (left) · ticket count + total score (right) */}
+          <div className="flex items-center justify-between gap-3">
             <button onClick={onViewAll}
-              className="text-left transition-colors max-w-full"
+              className="text-left transition-colors min-w-0"
               onMouseEnter={e=>e.currentTarget.querySelector('h3').style.color='#FF9780'}
               onMouseLeave={e=>e.currentTarget.querySelector('h3').style.color='#fff'}>
-              <div className="flex items-center gap-2 min-w-0">
-                <h3 className="text-white font-semibold transition-colors break-words">{agent.name}</h3>
-                {unacknowledged > 0 && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', lineHeight: 1 }}>
-                    {unacknowledged}
-                  </span>
-                )}
-              </div>
+              <h3 className="text-white font-semibold transition-colors break-words">{agent.name}</h3>
             </button>
-            {agent.email && <p className="text-xs mt-0.5 truncate" style={{ color: '#777' }}>{agent.email}</p>}
-            {agent.gorgias_user_id && <p className="text-xs mt-0.5 truncate" style={{ color: '#666' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
-            <p className="text-xs mt-0.5" style={{ color: agent.user_id ? '#10b981' : '#ef4444' }}>
-              {agent.user_id ? '● Account linked' : '● No account linked'}
-            </p>
-            {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
+            </div>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <TrendLine scores={scores} />
-            {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
-            {canEdit && !confirmDelete && <button onClick={openEdit} className="g-btn-ghost text-xs">Edit</button>}
-            {canEdit && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#777' }}
-                onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#555'}>Delete</button>
-            )}
-            {confirmDelete && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#ef4444' }}>Delete agent?</span>
-                <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
-              </div>
-            )}
-          </div>
+
+          {/* Row 3: email */}
+          {agent.email && <p className="text-xs mt-1 truncate" style={{ color: '#777' }}>{agent.email}</p>}
+
+          {/* Row 4: team */}
+          {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
         </div>
       )}
 
       {scores.length > 0 ? (
         <>
           <div className="mb-3">
-            <div className="flex items-center justify-between mb-1.5 text-xs">
-              <span style={{ color: '#777' }}>{scores.length} tickets scored</span>
+            <div className="flex items-center justify-end mb-1.5 text-xs">
               <div className="flex gap-3">
                 <span style={{ color: '#10b981' }}>{scores.filter(s=>s.verdict==='PASS').length} pass</span>
                 <span style={{ color: '#f59e0b' }}>{scores.filter(s=>s.verdict==='NEEDS_REVIEW').length} review</span>
