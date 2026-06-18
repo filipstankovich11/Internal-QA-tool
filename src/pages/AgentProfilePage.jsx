@@ -105,9 +105,9 @@ function ScoreRow({ s, onView, onAcknowledge }) {
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer"
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
       onClick={() => onView(s)}
-      onMouseEnter={e => e.currentTarget.style.background = '#0f0f0f'}
+      onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       {/* Unread dot */}
@@ -275,21 +275,21 @@ export default function AgentProfilePage() {
       {/* ── Key metrics ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {/* Avg Score */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-2" style={{ color: '#777' }}>Avg Score</p>
           <p className="text-3xl font-bold" style={{ color: avg != null ? scoreColor(avg) : '#555' }}>{avg != null ? avg.toFixed(1) : '—'}</p>
           <p className="text-xs mt-1" style={{ color: '#666' }}>out of 100</p>
         </div>
 
         {/* Pass Rate */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 1, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 1, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-2" style={{ color: '#777' }}>Pass Rate</p>
           <p className="text-3xl font-bold" style={{ color: '#10b981' }}>{passRate != null ? `${passRate}%` : '—'}</p>
           <p className="text-xs mt-1" style={{ color: '#666' }}>{pass} of {total}</p>
         </div>
 
         {/* This Month — with MoM delta */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 2, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 2, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-2" style={{ color: '#777' }}>This Month</p>
           <div className="flex items-end gap-2">
             <p className="text-3xl font-bold text-white">{thisMonth}</p>
@@ -309,7 +309,7 @@ export default function AgentProfilePage() {
         </div>
 
         {/* Unread */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 3, background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 3, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-2" style={{ color: '#777' }}>New Scores</p>
           <p className="text-3xl font-bold" style={{ color: unread > 0 ? '#f59e0b' : '#555' }}>{unread}</p>
           <p className="text-xs mt-1" style={{ color: '#666' }}>to acknowledge</p>
@@ -323,7 +323,7 @@ export default function AgentProfilePage() {
         const close   = !reached && avg >= agent.goal_score - 8
         const color   = reached ? '#10b981' : close ? '#f59e0b' : '#ef4444'
         return (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl p-5 mb-6" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs" style={{ color: '#777' }}>Score goal</p>
               <span className="text-sm font-bold tabular-nums" style={{ color }}>
@@ -348,7 +348,7 @@ export default function AgentProfilePage() {
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
 
         {/* Dimension breakdown */}
-        <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-5" style={{ color: '#777' }}>Performance by area</p>
           {total === 0 ? (
             <p className="text-xs" style={{ color: '#555' }}>No scores yet</p>
@@ -362,7 +362,7 @@ export default function AgentProfilePage() {
         </div>
 
         {/* 30-day trend */}
-        <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-4" style={{ color: '#777' }}>Score trend — last 30 days</p>
           <TrendChart scores={scores} />
         </div>
@@ -380,10 +380,10 @@ export default function AgentProfilePage() {
             <p className="text-sm">No tickets scored yet.</p>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
             {/* Header row */}
             <div className="grid text-xs px-4 py-2.5"
-              style={{ background: '#0a0a0a', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.05)',
+              style={{ background: '#171719', color: '#666', borderBottom: '1px solid rgba(255,255,255,0.08)',
                 gridTemplateColumns: '10px 80px 1fr auto 80px 70px 70px' }}>
               <span />
               <span>Ticket</span>

@@ -31,7 +31,7 @@ export function ToastProvider({ children }) {
           const s = STYLES[t.type] || STYLES.info
           return (
             <div key={t.id} className="toast-enter"
-              style={{ background: '#111', border: `1px solid ${s.border}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 220, maxWidth: 340 }}>
+              style={{ background: '#1c1c1e', border: `1px solid ${s.border}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 220, maxWidth: 340 }}>
               <span style={{ color: s.color, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{s.icon}</span>
               <span style={{ color: '#ccc', fontSize: 13, lineHeight: 1.4 }}>{t.message}</span>
             </div>

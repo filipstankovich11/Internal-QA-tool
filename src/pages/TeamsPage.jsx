@@ -59,7 +59,7 @@ function ComparisonView({ teams, agents, getTeamScores, avgScore, period }) {
   }).sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1))
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: '#666' }}>Team Comparison</p>
       <div className="flex flex-col gap-4">
         {rows.map(({ team, avg, agentCount, tickets, passRate }) => (
@@ -98,7 +98,7 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
   )
 
   return (
-    <div className="border-t px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.18)' }}>
+    <div className="border-t px-5 py-4" style={{ borderColor: 'rgba(255,255,255,0.10)', background: 'rgba(0,0,0,0.18)' }}>
       <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#777' }}>Manage Agents</p>
 
       {teamAgents.length > 0 && (
@@ -106,7 +106,7 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
           <p className="text-xs mb-2" style={{ color: '#666' }}>In this team</p>
           <div className="flex flex-col gap-1">
             {teamAgents.map(a => (
-              <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#111' }}>
+              <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#1c1c1e' }}>
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                     style={{ background: '#1e1e1e', color: '#FF9780' }}>
@@ -134,7 +134,7 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
           : (
             <div className="flex flex-col gap-1 max-h-36 overflow-y-auto">
               {unassigned.map(a => (
-                <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#111' }}>
+                <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#1c1c1e' }}>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ background: '#1e1e1e', color: '#777' }}>
@@ -160,7 +160,7 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
 // ── Team card ──────────────────────────────────────────────────────────────────
 
 const BORDER     = '1px solid rgba(255,255,255,0.08)'
-const BORDER_DIM = '1px solid rgba(255,255,255,0.05)'
+const BORDER_DIM = '1px solid rgba(255,255,255,0.08)'
 
 function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelete, canEdit, getAgentScores, avgScore, onAssign, onUnassign }) {
   const [editing,       setEditing]       = useState(false)
@@ -444,9 +444,9 @@ export default function TeamsPage() {
 
       {/* Toolbar */}
       {teams.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap mb-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="flex items-center gap-2 flex-wrap mb-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           {/* Period */}
-          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
             {PERIOD_OPTIONS.map(o => (
               <button key={o.id} onClick={() => setPeriod(o.id)}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -462,7 +462,7 @@ export default function TeamsPage() {
 
           {/* Cards / Compare */}
           {teams.length > 1 && (
-            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
               {['cards', 'compare'].map(v => (
                 <button key={v} onClick={() => setView(v)}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
@@ -479,7 +479,7 @@ export default function TeamsPage() {
           {view === 'cards' && teams.length > 1 && (
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: '#666' }}>Sort by</span>
-              <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
                 {SORT_OPTIONS.map(o => (
                   <button key={o.id} onClick={() => setSort(o.id)}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -508,7 +508,7 @@ export default function TeamsPage() {
 
       {/* Add team form */}
       {adding && (
-        <div className="rounded-2xl p-5 mb-4 flex items-center gap-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,147,128,0.3)' }}>
+        <div className="rounded-2xl p-5 mb-4 flex items-center gap-3" style={{ background: '#1e1e20', border: '1px solid rgba(255,147,128,0.3)' }}>
           <input autoFocus placeholder="Team name..."
             value={newName} onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false) }}

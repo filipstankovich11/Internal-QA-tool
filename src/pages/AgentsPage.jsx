@@ -105,7 +105,7 @@ function GoalProgress({ avg, goal }) {
   const color   = reached ? '#10b981' : close ? '#f59e0b' : '#ef4444'
 
   return (
-    <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+    <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs" style={{ color: '#777' }}>Score goal</span>
         <span className="text-xs font-semibold tabular-nums" style={{ color }}>
@@ -145,9 +145,9 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
       <div className="rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col modal-enter" onClick={e=>e.stopPropagation()}
-        style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
           <div>
             <h2 className="text-white font-semibold">{agent.name}</h2>
             <div className="flex items-center gap-2 mt-0.5">
@@ -155,7 +155,7 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
               {avg != null && <span className="text-xs font-bold" style={{ color: avgColor }}>{avg.toFixed(1)} avg</span>}
               {agent.goal_score && avg != null && (
                 <span className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: avg >= agent.goal_score ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.04)', color: avg >= agent.goal_score ? '#10b981' : '#555' }}>
+                  style={{ background: avg >= agent.goal_score ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.07)', color: avg >= agent.goal_score ? '#10b981' : '#555' }}>
                   Goal: {agent.goal_score}
                 </span>
               )}
@@ -166,7 +166,7 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
 
         {/* 30-day trend */}
         {scores.length >= 2 && (
-          <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+          <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
             <p className="text-xs mb-3" style={{ color: '#666' }}>30-day score trend</p>
             <TrendChart scores={scores} />
           </div>
@@ -177,7 +177,7 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
             <button key={s.id} onClick={() => onViewScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
               className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all"
               style={{ border: '1px solid transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.background='#161616'; e.currentTarget.style.borderColor='rgba(255,255,255,0.06)' }}
+              onMouseEnter={e => { e.currentTarget.style.background='#161616'; e.currentTarget.style.borderColor='rgba(255,255,255,0.10)' }}
               onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor='transparent' }}>
               <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
@@ -230,7 +230,7 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
   }
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       {editing ? (
         <div className="flex flex-col gap-2.5 mb-4">
           <input autoFocus placeholder="Agent name" value={form.name}
@@ -239,9 +239,12 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
           <input placeholder="Email" value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
             className="rounded-xl px-3 py-2 text-sm g-input" />
-          <input placeholder="Gorgias user ID" value={form.gorgiasUserId}
-            onChange={e => setForm(f => ({ ...f, gorgiasUserId: e.target.value.replace(/\D/,'') }))}
-            className="rounded-xl px-3 py-2 text-sm g-input" />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs" style={{ color: '#666' }}>Gorgias ID <span style={{ color: '#555' }}>(read-only — set via import)</span></label>
+            <input readOnly value={form.gorgiasUserId || '—'}
+              className="rounded-xl px-3 py-2 text-sm"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#555', cursor: 'default', outline: 'none' }} />
+          </div>
           <input placeholder="Score goal (e.g. 85)" value={form.goalScore}
             onChange={e => setForm(f => ({ ...f, goalScore: e.target.value.replace(/\D/,'') }))}
             className="rounded-xl px-3 py-2 text-sm g-input" />
@@ -249,7 +252,7 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
             <label className="text-xs" style={{ color: '#666' }}>Linked account</label>
             <select value={form.userId} onChange={e => setForm(f => ({ ...f, userId: e.target.value }))}
               className="rounded-xl px-3 py-2 text-sm"
-              style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.1)', color: form.userId ? '#ccc' : '#555', outline: 'none' }}>
+              style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.1)', color: form.userId ? '#ccc' : '#555', outline: 'none' }}>
               <option value="">— Not linked —</option>
               {profiles.map(p => (
                 <option key={p.id} value={p.id}>{p.name || p.id} — {p.role}</option>
@@ -360,7 +363,7 @@ function AddAgentModal({ teams, onSave, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
       <div className="rounded-2xl p-6 w-full max-w-sm modal-enter" onClick={e=>e.stopPropagation()}
-        style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}>
         <h2 className="text-white font-semibold mb-5">Add Agent</h2>
         <div className="flex flex-col gap-3">
           <input autoFocus placeholder="Full name *" value={form.name}
@@ -415,10 +418,10 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
       <div className="rounded-2xl w-full max-w-md max-h-[82vh] flex flex-col modal-enter" onClick={e => e.stopPropagation()}
-        style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
           <div>
             <h2 className="text-white font-semibold">Assign Teams</h2>
             <p className="text-xs mt-0.5" style={{ color: '#777' }}>Set or change each agent's team</p>
@@ -433,7 +436,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
           )}
           {agents.map(a => (
             <div key={a.id} className="flex items-center gap-3 py-2 px-3 rounded-xl"
-              style={{ background: '#111' }}>
+              style={{ background: '#1c1c1e' }}>
               {/* Avatar */}
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                 style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
@@ -458,7 +461,7 @@ function AssignTeamsModal({ agents, teams, onSave, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="px-5 py-4 border-t flex items-center justify-between gap-4" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
           <p className="text-xs" style={{ color: '#666' }}>
             {assigned.length}/{agents.length} assigned · {unassigned.length} unassigned
           </p>
@@ -514,9 +517,9 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
       <div className="rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col modal-enter" onClick={e=>e.stopPropagation()}
-        style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
           <div>
             <h2 className="text-white font-semibold">Import from Gorgias</h2>
             <p className="text-xs mt-0.5" style={{ color: '#777' }}>Select agents to add — already-imported users are hidden</p>
@@ -586,7 +589,7 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
 
         {/* Footer */}
         {!loading && !error && gorgiasUsers.length > 0 && (
-          <div className="px-4 py-4 border-t flex items-center gap-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="px-4 py-4 border-t flex items-center gap-3" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
             <select value={teamId} onChange={e => setTeamId(e.target.value)}
               className="flex-1 rounded-xl px-3 py-2 text-sm text-white g-input">
               <option value="">No team</option>

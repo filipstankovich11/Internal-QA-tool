@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import { useNavigate } from '../context/NavigationContext'
 import { useToast } from './Toast'
 import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -67,7 +68,7 @@ function DimensionStrip({ dimensions }) {
         const pct   = (avg / 5) * 100
         return (
           <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
-            style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+            style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
               <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
@@ -90,7 +91,7 @@ function SubScoreRow({ label, data }) {
   const color = scoreColor(score)
 
   return (
-    <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+    <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
         <span className="shrink-0 transition-transform" style={{ color: '#666', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
         <span className="text-sm flex-1" style={{ color: '#ccc' }}>{label}</span>
@@ -102,19 +103,70 @@ function SubScoreRow({ label, data }) {
   )
 }
 
-function DimensionCard({ name, weight, average, rows }) {
+function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
   const avg = typeof average === 'number' ? average : Number(average) || 0
   const color = scoreColor(avg)
+
   return (
-    <div className="rounded-xl p-4 mb-3" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>{name}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}/5</span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
+    <div className="rounded-xl mb-2 overflow-hidden"
+      style={{ background: '#1e1e20', border: `1px solid ${isOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.10)'}`, transition: 'border-color 250ms' }}>
+
+      {/* Header — always visible, click to toggle */}
+      <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3.5"
+        style={{ cursor: 'pointer', background: 'transparent', border: 'none', textAlign: 'left' }}>
+        <div className="flex items-center gap-2.5">
+          {/* Rotating chevron */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{ color: isOpen ? '#FF9780' : '#555', transition: 'transform 300ms cubic-bezier(0.4,0,0.2,1), color 200ms', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <span className="text-sm font-semibold" style={{ color: isOpen ? '#e0e0e0' : '#aaa', transition: 'color 200ms' }}>{name}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: '#555', fontWeight: 400 }}>/5</span></span>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}>{weight}</span>
+        </div>
+      </button>
+
+      {/* Animated body — 900px ceiling gives room for expanded SubScoreRows */}
+      <div style={{
+        maxHeight: isOpen ? '900px' : '0px',
+        opacity: isOpen ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'max-height 420ms cubic-bezier(0.4,0,0.2,1), opacity 250ms cubic-bezier(0.4,0,0.2,1)',
+      }}>
+        <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ paddingTop: 4 }}>
+            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}
+          </div>
         </div>
       </div>
-      <div>{rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}</div>
+    </div>
+  )
+}
+
+function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception }) {
+  const [openDim, setOpenDim] = useState(0)
+  const toggle = i => setOpenDim(prev => prev === i ? -1 : i)
+  return (
+    <div>
+      <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
+        isOpen={openDim === 0} onToggle={() => toggle(0)}
+        rows={[
+          { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
+          { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
+          { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
+        ]} />
+      <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
+        isOpen={openDim === 1} onToggle={() => toggle(1)}
+        rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
+      <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
+        isOpen={openDim === 2} onToggle={() => toggle(2)}
+        rows={[
+          { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
+          { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
+        ]} />
     </div>
   )
 }
@@ -147,7 +199,7 @@ function NotesSection({ scoreId, initialNote }) {
   const cancel = () => { setNote(initialNote || ''); setEditing(false) }
 
   return (
-    <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Reviewer Note</p>
         {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
@@ -213,7 +265,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
   const vc = VERDICT[overrideVerdict || verdict] || VERDICT.PASS
 
   return (
-    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#0f0f0f', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#1e1e20', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.10)'}` }}>
       {hasOverride ? (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -363,7 +415,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
   return (
     <div className="rounded-xl p-4"
-      style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#0f0f0f', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+      style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#1e1e20', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.10)'}` }}>
       {disputed ? (
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#f59e0b' }}>
@@ -416,9 +468,10 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose }) {
+export default function ScoreModal({ score, onClose, onExpand, panel = false }) {
   const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
   const { isAdmin } = useAuth()
+  const navigateTo = useNavigate()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
   const [rescoring,       setRescoring]       = useState(false)
@@ -508,25 +561,15 @@ export default function ScoreModal({ score, onClose }) {
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
+    if (!panel) document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
-  }, [onClose])
+  }, [onClose, panel])
 
-  return (
+  const inner = (
     <>
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
-        style={{ background: '#070707', border: '1px solid rgba(255,255,255,0.08)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Sticky header — colour-washed by verdict */}
+    {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
-          style={{ background: `rgba(7,7,7,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          style={{ background: `rgba(20,20,22,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
 
           {/* Row 1: Ticket ID (left) + Actions (right) */}
           <div className="flex items-center justify-between mb-4">
@@ -537,68 +580,88 @@ export default function ScoreModal({ score, onClose }) {
               onMouseLeave={e => e.currentTarget.style.color='#777'}>
               Ticket #{s.ticket_id}
             </a>
-            <div className="flex items-center gap-4 shrink-0 pl-8">
+            <div className="flex items-center gap-2 shrink-0 pl-6">
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={openNotifyPreview} disabled={notifying}
-                  className="flex items-center gap-1.5 text-xs transition-colors"
-                  style={{ color: notifying ? '#555' : '#666' }}
-                  onMouseEnter={e => { if (!notifying) e.currentTarget.style.color = '#ccc' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#666' }}
+                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: notifying ? '#555' : '#ccc', cursor: notifying ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!notifying) { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)' }}
                   title="Send score summary to agent via Slack DM">
                   {notifying
-                    ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                    ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                    : <svg width="11" height="11" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
                   }
                   {notifying ? 'Sending…' : 'Notify'}
                 </button>
               )}
               {s.scoreId && !confirmDelete && (
                 <button onClick={rescore} disabled={rescoring}
-                  className="flex items-center gap-1.5 text-xs transition-colors"
-                  style={{ color: rescoring ? '#333' : '#555' }}
-                  onMouseEnter={e => { if (!rescoring) e.currentTarget.style.color='#FF9780' }}
-                  onMouseLeave={e => { if (!rescoring) e.currentTarget.style.color='#555' }}
+                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: rescoring ? '#555' : '#ccc', cursor: rescoring ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!rescoring) { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#FF9780'; e.currentTarget.style.borderColor='rgba(255,151,128,0.3)' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color=rescoring?'#555':'#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)' }}
                   title="Re-run AI scoring on this ticket">
-                  {rescoring
-                    ? <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <RefreshIcon />}
+                  {rescoring ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> : <RefreshIcon />}
                   {rescoring ? 'Rescoring…' : 'Re-score'}
                 </button>
               )}
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={() => setConfirmDelete(true)}
-                  className="text-xs transition-colors" style={{ color: '#555' }}
-                  onMouseEnter={e => e.target.style.color='#ef4444'}
-                  onMouseLeave={e => e.target.style.color='#555'}>
+                  className="text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.15)' }}>
                   Delete
                 </button>
               )}
               {confirmDelete && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete score?</span>
+                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete?</span>
                   <button onClick={async () => {
                     const ok = await deleteScore(s.scoreId)
                     if (ok) { toast.success('Score deleted'); onClose() }
                     else { toast.error('Failed to delete'); setConfirmDelete(false) }
-                  }} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
-                  <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
+                  }} className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>Yes</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: '#aaa', border: '1px solid rgba(255,255,255,0.12)' }}>Cancel</button>
                 </div>
               )}
-              <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.08)' }} />
-              <button onClick={onClose} className="text-2xl leading-none transition-colors" style={{ color: '#555' }}
-                onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#555'}>×</button>
+              <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.10)', margin: '0 2px' }} />
+              {panel && onExpand && (
+                <button onClick={onExpand} title="Expand to full view"
+                  className="flex items-center justify-center rounded-lg transition-all"
+                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', width: 30, height: 30 }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+                  </svg>
+                </button>
+              )}
+              <button onClick={onClose} title="Close"
+                className="flex items-center justify-center rounded-lg transition-all"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', width: 30, height: 30, fontSize: 18, lineHeight: 1 }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>×</button>
             </div>
           </div>
 
-          {/* Row 2: Agent names — max 3 columns, capped at 75% width */}
+          {/* Row 2: Agent names — all clickable, navigate to Agents page */}
           {agentNames.length > 0 && (
-            <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: 'repeat(3, auto)', justifyContent: 'start', maxWidth: '75%' }}>
+            <div className="flex flex-wrap gap-2 mb-4">
               {agentNames.map((name, i) => (
-                <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full text-center"
-                  style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)' }}>
+                <button key={i}
+                  onClick={() => { navigateTo('agents'); onClose() }}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
+                  style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)', cursor: 'pointer' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(255,151,128,0.15)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.35)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,151,128,0.08)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.15)' }}
+                  title={`Go to ${name}`}>
                   {name}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -636,25 +699,15 @@ export default function ScoreModal({ score, onClose }) {
             { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average },
           ]} />
 
-          {/* Criteria detail */}
-          <div>
-            <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
-              rows={[
-                { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
-                { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
-                { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
-              ]} />
-            <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
-              rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
-            <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
-              rows={[
-                { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
-                { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
-              ]} />
-          </div>
+          {/* Criteria detail — accordion, one open at a time */}
+          <DimensionAccordion
+            inquiry_resolution={inquiry_resolution}
+            internal_processes={internal_processes}
+            customer_perception={customer_perception}
+          />
 
           {/* Summary */}
-          <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Summary</p>
             <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>
           </div>
@@ -669,7 +722,7 @@ export default function ScoreModal({ score, onClose }) {
               <div className="flex flex-col gap-2">
                 {s.key_improvements.map((imp, i) => (
                   <div key={i} className="rounded-xl p-3.5 flex gap-3"
-                    style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
                       style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
                       {i + 1}
@@ -684,10 +737,10 @@ export default function ScoreModal({ score, onClose }) {
           {/* Reviewer note — key forces remount on re-score so note state resets */}
           <NotesSection key={s.scoreId} scoreId={s.scoreId} initialNote={s.reviewerNote} />
 
-          {/* Acknowledgment */}
-          {s.scoreId && (
+          {/* Acknowledgment — only agents can mark as seen */}
+          {s.scoreId && !isAdmin && (
             <div className="rounded-xl px-4 py-3 flex items-center justify-between"
-              style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#0f0f0f', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'}` }}>
+              style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#1e1e20', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.10)'}` }}>
               {s.acknowledged ? (
                 <div className="flex items-center gap-2">
                   <span className="text-xs" style={{ color: '#10b981' }}>✓ Acknowledged</span>
@@ -744,21 +797,20 @@ export default function ScoreModal({ score, onClose }) {
             overrideNote={s.overrideNote}
             overrideAt={s.overrideAt}
           />
-        </div>
-      </div>
     </div>
+    </>
+  )
 
-    {/* Slack notify preview */}
-    {showNotifyPreview && (
+  const notifyEl = showNotifyPreview ? (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
         style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
         onClick={() => !notifying && setShowNotifyPreview(false)}>
         <div className="rounded-2xl w-full max-w-md modal-enter"
-          style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}
           onClick={e => e.stopPropagation()}>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
               <h3 className="text-white font-semibold text-sm">Send Slack DM</h3>
@@ -782,7 +834,7 @@ export default function ScoreModal({ score, onClose }) {
                       className="flex items-center gap-2.5 px-3 py-2 rounded-xl w-full text-left transition-all"
                       style={{
                         background: selected ? 'rgba(255,151,128,0.08)' : '#161616',
-                        border: `1px solid ${selected ? 'rgba(255,151,128,0.25)' : 'rgba(255,255,255,0.04)'}`,
+                        border: `1px solid ${selected ? 'rgba(255,151,128,0.25)' : 'rgba(255,255,255,0.07)'}`,
                         opacity: selected ? 1 : 0.45,
                       }}>
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
@@ -796,7 +848,7 @@ export default function ScoreModal({ score, onClose }) {
                       <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
                         style={{ background: selected ? '#FF9780' : 'rgba(255,255,255,0.08)' }}>
                         {selected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2.5 2.5L8 3" stroke="#070707" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 5l2.5 2.5L8 3" stroke="#141416" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>}
                       </div>
                     </button>
@@ -808,7 +860,7 @@ export default function ScoreModal({ score, onClose }) {
             {/* Message preview */}
             <div>
               <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Message preview</p>
-              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{{'PASS':'✅','NEEDS_REVIEW':'⚠️','FAIL':'❌'}[s.verdict] || '❓'}</span>
                   <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
@@ -838,7 +890,7 @@ export default function ScoreModal({ score, onClose }) {
                   </div>
                 )}
                 {s.reviewerNote && (
-                  <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <p className="text-xs font-medium mb-1" style={{ color: '#777' }}>Reviewer Note</p>
                     <p className="text-xs leading-relaxed italic" style={{ color: '#888' }}>{s.reviewerNote}</p>
                   </div>
@@ -848,7 +900,7 @@ export default function ScoreModal({ score, onClose }) {
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
             <button onClick={() => setShowNotifyPreview(false)} disabled={notifying}
               className="text-sm px-4 py-2 rounded-xl g-btn-ghost">
               Cancel
@@ -863,7 +915,38 @@ export default function ScoreModal({ score, onClose }) {
           </div>
         </div>
       </div>
-    )}
+  ) : null
+
+  if (panel) return (
+    <>
+    {/* Transparent backdrop — click outside panel to close */}
+    <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={onClose} />
+    <div
+      className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
+      style={{ width: 560, background: '#171719', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
+    >
+      {inner}
+    </div>
+    {notifyEl}
+    </>
+  )
+
+  return (
+    <>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
+        style={{ background: '#141416', border: '1px solid rgba(255,255,255,0.08)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {inner}
+      </div>
+    </div>
+    {notifyEl}
     </>
   )
 }

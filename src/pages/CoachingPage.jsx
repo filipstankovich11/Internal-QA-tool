@@ -33,7 +33,7 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
 
   return (
     <div className="rounded-2xl overflow-hidden"
-      style={{ background: isWeak ? scoreBg(avg) : '#0f0f0f', border: `1px solid ${isWeak ? scoreBorder(avg) : 'rgba(255,255,255,0.06)'}` }}>
+      style={{ background: isWeak ? scoreBg(avg) : '#1e1e20', border: `1px solid ${isWeak ? scoreBorder(avg) : 'rgba(255,255,255,0.10)'}` }}>
       <button
         className="w-full flex items-center gap-4 px-5 py-4 text-left"
         onClick={() => notes.length > 0 && setExpanded(v => !v)}>
@@ -58,7 +58,7 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
 
       {expanded && notes.length > 0 && (
         <div className="px-5 pb-4 flex flex-col gap-2.5"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <p className="text-xs pt-3" style={{ color: '#666' }}>Recent AI feedback on this area:</p>
           {notes.slice(0, 4).map((note, i) => (
             <div key={i} className="flex gap-2.5">
@@ -75,7 +75,7 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
 function ImprovementCard({ text, index }) {
   return (
     <div className="flex gap-3 rounded-2xl px-5 py-4"
-      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
         style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
         {index + 1}
@@ -205,7 +205,7 @@ export default function CoachingPage() {
           <div className="flex flex-col gap-3">
             {reviewerNotes.map(s => (
               <div key={s.id} className="rounded-2xl px-5 py-4"
-                style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+                style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
                 <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.notes}</p>
                 <p className="text-xs mt-2" style={{ color: '#666' }}>
                   Ticket #{s.ticketId} · {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

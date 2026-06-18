@@ -109,7 +109,7 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="text-white font-semibold text-sm">Notifications</span>
             {unreadCount > 0 && (
-              <span style={{ background: '#FF9780', color: '#070707', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999 }}>
+              <span style={{ background: '#FF9780', color: '#141416', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999 }}>
                 {unreadCount}
               </span>
             )}
@@ -158,13 +158,13 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
                     alignItems: 'flex-start',
                     gap: 12,
                     padding: '14px 16px',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    borderBottom: '1px solid rgba(255,255,255,0.07)',
                     background: n.read ? 'transparent' : 'rgba(255,151,128,0.04)',
                     textAlign: 'left',
                     transition: 'background 150ms',
                     cursor: 'default',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
                   onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(255,151,128,0.04)'}
                 >
                   {/* Type icon */}

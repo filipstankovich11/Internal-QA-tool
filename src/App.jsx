@@ -2,6 +2,7 @@ import { useState, lazy, Suspense, Component } from 'react'
 import { AppProvider }    from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
+import NavigationContext from './context/NavigationContext'
 import Sidebar           from './components/Sidebar'
 import LoginPage         from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -70,6 +71,7 @@ function AppShell() {
   if (!user) return <LoginPage />
 
   return (
+    <NavigationContext.Provider value={setPage}>
     <AppProvider>
       <ToastProvider>
         <div className="flex min-h-screen">
@@ -86,6 +88,7 @@ function AppShell() {
         </div>
       </ToastProvider>
     </AppProvider>
+    </NavigationContext.Provider>
   )
 }
 

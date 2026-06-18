@@ -72,35 +72,12 @@ function buildTrendData(scores, days = 30) {
     .sort((a, b) => a.day - b.day)
 }
 
-function TeamSparkline({ scores }) {
-  const pts = buildTrendData(scores, 30)
-  if (pts.length < 2) return <span className="text-xs" style={{ color: '#555' }}>—</span>
-
-  const W = 80, H = 24, pad = 2
-  const vals = pts.map(p => p.avg)
-  const minV = Math.min(...vals), maxV = Math.max(...vals)
-  const range = maxV - minV || 10
-  const x = d => pad + (d / 29) * (W - pad * 2)
-  const y = v => H - pad - ((v - minV) / range) * (H - pad * 2)
-  const d = pts.map(({ day, avg }, i) => `${i === 0 ? 'M' : 'L'}${x(day).toFixed(1)},${y(avg).toFixed(1)}`).join(' ')
-  const last = pts[pts.length - 1], first = pts[0]
-  const color = last.avg > first.avg + 3 ? '#10b981' : last.avg < first.avg - 3 ? '#ef4444' : '#888'
-
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0">
-      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"
-        pathLength="1" strokeDasharray="1" strokeDashoffset="1"
-        style={{ animation: 'drawLine 0.7s cubic-bezier(0.16,1,0.3,1) forwards' }} />
-      <circle cx={x(last.day).toFixed(1)} cy={y(last.avg).toFixed(1)} r="2" fill={color} />
-    </svg>
-  )
-}
 
 function MiniBar({ value, max, color }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
       </div>
       <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#777' }}>{value}</span>
@@ -108,56 +85,101 @@ function MiniBar({ value, max, color }) {
   )
 }
 
-function ScoreTrend({ scores }) {
+function ScoreTrend({ scores, onDayClick, selectedDay }) {
+  const [hoveredBar, setHoveredBar] = useState(null)
+
   const days = useMemo(() => {
     const result = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const label = d.toLocaleDateString('en-US', { weekday: 'short' })
-      const start = new Date(d.setHours(0, 0, 0, 0)).getTime()
-      const end   = start + 86400000
-      const day   = scores.filter(s => s.scoredAt >= start && s.scoredAt < end)
-      result.push({ label, count: day.length })
+      const dateStr = d.toISOString().slice(0, 10)
+      const label   = d.toLocaleDateString('en-US', { weekday: 'short' })
+      const start   = new Date(d.setHours(0, 0, 0, 0)).getTime()
+      const end     = start + 86400000
+      const count   = scores.filter(s => s.scoredAt >= start && s.scoredAt < end).length
+      result.push({ label, count, dateStr })
     }
     return result
   }, [scores])
 
-  const maxCount = Math.max(...days.map(d => d.count), 1)
+  const maxCount    = Math.max(...days.map(d => d.count), 1)
+  const hasSelection = !!selectedDay
+  const selectedLabel = hasSelection
+    ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : null
 
   return (
     <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-      <p className="g-label mb-4">Tickets scored — last 7 days</p>
+
+      {/* Header — shows back pill when a day is selected */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="g-label">Tickets scored — last 7 days</p>
+        {hasSelection && (
+          <button
+            onClick={() => onDayClick(null)}
+            className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 transition-all"
+            style={{ color: '#aaa', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            {selectedLabel}
+          </button>
+        )}
+      </div>
+
       <div className="flex items-end gap-2 h-20 overflow-visible">
-        {days.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="relative w-full">
-              {d.count > 0 && (d.count / maxCount) <= 0.5 && (
-                <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                  style={{ color: '#FF9780' }}>
-                  {d.count}
-                </span>
-              )}
-              <div className="relative w-full rounded-t-sm transition-all"
-                style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: d.count > 0 ? '#FF9780' : '#1e1e1e' }}>
-                {d.count > 0 && (d.count / maxCount) > 0.5 && (
-                  <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                    style={{ color: 'rgba(0,0,0,0.6)' }}>
+        {days.map((d, i) => {
+          const isSelected = selectedDay === d.dateStr
+          const isHovered  = hoveredBar === i && d.count > 0
+          const isDimmed   = hasSelection && !isSelected
+          const barColor   = d.count === 0   ? '#242426'
+                           : isSelected      ? '#fff'
+                           : isHovered       ? '#ffb39a'
+                           : '#FF9780'
+          return (
+            <div key={i}
+              className="flex-1 flex flex-col items-center gap-1"
+              style={{ cursor: d.count > 0 ? 'pointer' : 'default', opacity: isDimmed ? 0.35 : 1, transition: 'opacity 200ms' }}
+              onClick={() => d.count > 0 && onDayClick(d.dateStr)}
+              onMouseEnter={() => setHoveredBar(i)}
+              onMouseLeave={() => setHoveredBar(null)}
+              title={d.count > 0 ? `${d.count} ticket${d.count !== 1 ? 's' : ''} on ${d.label}` : undefined}>
+              <div className="relative w-full">
+                {d.count > 0 && (d.count / maxCount) <= 0.5 && (
+                  <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                    style={{ color: isSelected ? '#fff' : '#FF9780', transition: 'color 150ms' }}>
                     {d.count}
                   </span>
                 )}
+                {/* Hover background glow behind the bar */}
+                {isHovered && !isSelected && (
+                  <div className="absolute inset-x-0 bottom-0 rounded-t-sm"
+                    style={{ height: '80px', background: 'rgba(255,151,128,0.07)', borderRadius: '4px 4px 0 0' }} />
+                )}
+                <div className="relative w-full rounded-t-sm"
+                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: barColor, transition: 'background 150ms, height 200ms', boxShadow: isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 8px rgba(255,151,128,0.4)' : 'none' }}>
+                  {d.count > 0 && (d.count / maxCount) > 0.5 && (
+                    <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                      style={{ color: 'rgba(0,0,0,0.6)' }}>
+                      {d.count}
+                    </span>
+                  )}
+                </div>
               </div>
+              <span className="text-xs" style={{ color: isSelected ? '#e0e0e0' : isHovered ? '#aaa' : '#666', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
             </div>
-            <span className="text-xs" style={{ color: '#666' }}>{d.label}</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
 const selectStyle = {
-  background: '#0f0f0f',
+  background: '#1e1e20',
   border: '1px solid rgba(255,255,255,0.07)',
   color: '#ccc',
   outline: 'none',
@@ -169,10 +191,25 @@ export default function DashboardPage() {
 
   // myAgentId from context — used only for display; scoreHistory is already scoped
   const { myAgentId } = useApp()
-  const [activeScore, setActiveScore] = useState(null)
+  const [panelScore, setPanelScore] = useState(null)
+  const [modalScore, setModalScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
+  const [selectedDay,  setSelectedDay]  = useState(null)
+  const tableRef = useRef(null)
+
+  const handleDayClick = (dateStr) => {
+    if (!dateStr || selectedDay === dateStr) {
+      setSelectedDay(null)
+      setFilters(f => ({ ...f, dateFrom: '', dateTo: '' }))
+    } else {
+      setSelectedDay(dateStr)
+      setFilters(f => ({ ...f, dateFrom: dateStr, dateTo: dateStr }))
+      setActiveRange(null)
+      setTimeout(() => tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+  }
 
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
@@ -217,24 +254,8 @@ export default function DashboardPage() {
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0)
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
 
-  const leaderboard = useMemo(() => {
-    const agentScoreMap = {}
-    filteredScores.forEach(s => {
-      s.agentIds?.forEach(id => {
-        if (!agentScoreMap[id]) agentScoreMap[id] = []
-        agentScoreMap[id].push(s)
-      })
-    })
-    return agents
-      .filter(a => agentScoreMap[a.id]?.length)
-      .map(a => {
-        const s = agentScoreMap[a.id]
-        return { ...a, count: s.length, avg: s.reduce((acc, x) => acc + x.effectiveScore, 0) / s.length }
-      })
-      .sort((a, b) => b.avg - a.avg)
-  }, [agents, filteredScores])
-
   return (
+    <div style={{ paddingRight: panelScore ? 560 : 0, transition: 'padding-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
     <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
 
       {/* Header */}
@@ -283,101 +304,11 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        <ScoreTrend scores={filteredScores} />
+        <ScoreTrend scores={filteredScores} onDayClick={handleDayClick} selectedDay={selectedDay} />
       </div>
 
-      {/* Agent leaderboard — hidden for agents */}
-      {role !== 'agent' && (
-        <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="g-label">Agent leaderboard</p>
-            {agents.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full"
-                style={{ background: '#161616', color: leaderboard.length === agents.length ? '#10b981' : '#555' }}>
-                {leaderboard.length}/{agents.length} agents reviewed
-              </span>
-            )}
-          </div>
-          {leaderboard.length === 0 ? <p className="text-xs" style={{ color: '#555' }}>No agent scores yet</p> : (
-            <div className="flex flex-col gap-1">
-              {leaderboard.slice(0, 8).map((a, i) => {
-                const medals = ['🥇', '🥈', '🥉']
-                const rankBg = i === 0 ? 'rgba(255,215,0,0.05)' : i === 1 ? 'rgba(192,192,192,0.04)' : i === 2 ? 'rgba(205,127,50,0.04)' : 'transparent'
-                return (
-                  <div key={a.id} className="flex items-center gap-3 py-1.5 px-2 rounded-lg stagger-item"
-                    style={{ '--i': i, background: rankBg }}>
-                    <span className="w-5 shrink-0 text-center" style={{ fontSize: i < 3 ? 14 : 11, color: '#666', lineHeight: 1 }}>
-                      {i < 3 ? medals[i] : i + 1}
-                    </span>
-                    <span className="text-sm text-white flex-1 truncate">{a.name}</span>
-                    <span className="text-xs" style={{ color: '#777' }}>{a.count} ticket{a.count !== 1 ? 's' : ''}</span>
-                    <span className="text-sm font-bold tabular-nums" style={{ color: avgColor(a.avg) }}>{a.avg.toFixed(1)}</span>
-                  </div>
-                )
-              })}
-              {(() => {
-                const reviewedIds = new Set(leaderboard.map(a => a.id))
-                const unreviewed = agents.filter(a => !reviewedIds.has(a.id))
-                if (!unreviewed.length) return null
-                return (
-                  <div className="mt-2 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                    <p className="text-xs mb-1.5 px-2" style={{ color: '#555' }}>Not reviewed in this period</p>
-                    <div className="flex flex-wrap gap-1.5 px-2">
-                      {unreviewed.map(a => (
-                        <span key={a.id} className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: '#111', color: '#666', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          {a.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Team leaderboard — hidden for agents */}
-      {role !== 'agent' && teams.length > 0 && (() => {
-        const teamStats = teams.map(t => {
-          const agentIds = new Set(agents.filter(a => a.team_id === t.id).map(a => a.id))
-          const scores   = filteredScores.filter(s => s.agentIds?.some(id => agentIds.has(id)))
-          const avg      = scores.length ? scores.reduce((s, x) => s + x.effectiveScore, 0) / scores.length : null
-          return { ...t, scores, avg, agentCount: agentIds.size }
-        }).filter(t => t.scores.length > 0).sort((a, b) => b.avg - a.avg)
-
-        if (!teamStats.length) return null
-        return (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-            <p className="g-label mb-4">Team performance — 30-day trend</p>
-            <div className="flex flex-col gap-1">
-              {teamStats.map((t, i) => {
-                const medals = ['🥇', '🥈', '🥉']
-                const rankBg = i === 0 ? 'rgba(255,215,0,0.05)' : i === 1 ? 'rgba(192,192,192,0.04)' : i === 2 ? 'rgba(205,127,50,0.04)' : 'transparent'
-                return (
-                <div key={t.id} className="flex items-center gap-3 py-2 px-2 rounded-lg stagger-item"
-                  style={{ '--i': i, background: rankBg }}>
-                  <span className="w-5 shrink-0 text-center" style={{ fontSize: i < 3 ? 14 : 11, color: '#666', lineHeight: 1 }}>
-                    {i < 3 ? medals[i] : i + 1}
-                  </span>
-                  <span className="text-sm text-white flex-1 truncate">{t.name}</span>
-                  <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.agentCount} agent{t.agentCount !== 1 ? 's' : ''}</span>
-                  <span className="text-xs shrink-0" style={{ color: '#777' }}>{t.scores.length} ticket{t.scores.length !== 1 ? 's' : ''}</span>
-                  <TeamSparkline scores={t.scores} />
-                  <span className="text-sm font-bold tabular-nums w-12 text-right shrink-0" style={{ color: avgColor(t.avg) }}>
-                    {t.avg.toFixed(1)}
-                  </span>
-                </div>
-                )}
-              )}
-            </div>
-          </div>
-        )
-      })()}
-
       {/* ── Ticket table with filters ── */}
-      <div>
+      <div ref={tableRef}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
           <div className="flex items-center gap-3">
@@ -427,7 +358,7 @@ export default function DashboardPage() {
               placeholder="Search by ticket URL or ID…"
               className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none transition-all"
               style={{
-                background: '#111',
+                background: '#1c1c1e',
                 border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
                 color: '#ccc',
                 boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.06)' : 'none',
@@ -436,9 +367,9 @@ export default function DashboardPage() {
             {ticketSearch && (
               <button onClick={() => setTicketSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors"
-                style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}
+                style={{ color: '#666', background: 'rgba(255,255,255,0.10)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.10)' }}>
                 ×
               </button>
             )}
@@ -534,7 +465,7 @@ export default function DashboardPage() {
             </div>
 
             {hasFilters && (
-              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch('') }}
+              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch(''); setSelectedDay(null) }}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
                 style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
@@ -565,8 +496,8 @@ export default function DashboardPage() {
 
             {filteredScores.map(s => (
               <div key={s.id} className="grid items-center px-4 py-3 transition-colors"
-                style={{ gridTemplateColumns: '100px 1fr 150px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#0f0f0f'}
+                style={{ gridTemplateColumns: '100px 1fr 150px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 
                 <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
@@ -576,7 +507,7 @@ export default function DashboardPage() {
                   #{s.ticketId}
                 </a>
 
-                <button onClick={() => setActiveScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
+                <button onClick={() => setPanelScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
                   className="text-sm text-left truncate pr-3 transition-colors"
                   style={{ color: '#ccc' }}
                   onMouseEnter={e => e.target.style.color='#fff'}
@@ -616,7 +547,16 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
+      {panelScore && (
+        <ScoreModal
+          score={panelScore}
+          onClose={() => setPanelScore(null)}
+          onExpand={() => { setModalScore(panelScore); setPanelScore(null) }}
+          panel
+        />
+      )}
+      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
+    </div>
     </div>
   )
 }

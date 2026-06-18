@@ -54,10 +54,10 @@ function NewSessionModal({ onCreated, onClose }) {
       style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="w-full max-w-lg rounded-2xl overflow-hidden"
-        style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}>
 
         <div className="px-6 py-5 flex items-center justify-between"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div>
             <h2 className="text-white font-semibold">New Calibration Session</h2>
             <p className="text-xs mt-0.5" style={{ color: '#666' }}>
@@ -87,7 +87,7 @@ function NewSessionModal({ onCreated, onClose }) {
         </div>
 
         <div className="px-6 py-4 flex gap-2 justify-end"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          style={{ borderTop: '1px solid rgba(255,255,255,0.10)' }}>
           <button onClick={onClose} className="text-sm px-4 py-2 rounded-xl g-btn-ghost">Cancel</button>
           <button onClick={create} disabled={!url.trim() || loading}
             className="g-btn-primary text-sm px-5 py-2 rounded-xl flex items-center gap-2"
@@ -213,7 +213,7 @@ function WaitingState({ session, entries, onReveal, isAdmin }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl p-5 text-center" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="rounded-xl p-5 text-center" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
         <p className="text-2xl mb-2">⏳</p>
         <p className="text-white font-semibold mb-1">Score submitted</p>
         <p className="text-sm" style={{ color: '#777' }}>
@@ -222,7 +222,7 @@ function WaitingState({ session, entries, onReveal, isAdmin }) {
         </p>
       </div>
 
-      <div className="rounded-xl p-4" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
         <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#777' }}>Submissions</p>
         <div className="flex flex-col gap-2">
           {entries.map(e => (
@@ -273,7 +273,7 @@ function RevealedView({ session, entries }) {
       {/* Comparison table */}
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
         {/* Header row */}
-        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${allCols.length}, 1fr)`, background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${allCols.length}, 1fr)`, background: '#171719', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div className="px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#555' }}>Criterion</div>
           {allCols.map(col => (
             <div key={col.key} className="px-4 py-3 text-xs font-semibold text-center" style={{ color: '#aaa' }}>{col.label}</div>
@@ -281,7 +281,7 @@ function RevealedView({ session, entries }) {
         </div>
 
         {/* Verdict row */}
-        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${allCols.length}, 1fr)`, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${allCols.length}, 1fr)`, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="px-4 py-3 text-xs" style={{ color: '#666' }}>Verdict</div>
           {allCols.map(col => {
             const vc = VERDICT_COLOR[col.verdict]
@@ -301,7 +301,7 @@ function RevealedView({ session, entries }) {
         </div>
 
         {/* Score row */}
-        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${allCols.length}, 1fr)`, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="grid" style={{ gridTemplateColumns: `120px repeat(${allCols.length}, 1fr)`, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <div className="px-4 py-3 text-xs" style={{ color: '#666' }}>Score</div>
           {allCols.map(col => (
             <div key={col.key} className="px-4 py-3 text-center">
@@ -401,8 +401,8 @@ function SessionRow({ session, onClick }) {
   return (
     <button onClick={onClick}
       className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors"
-      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-      onMouseEnter={e => e.currentTarget.style.background = '#0f0f0f'}
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+      onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 
       <div className="flex-1 min-w-0">
@@ -495,7 +495,7 @@ export default function CalibrationPage() {
 
       {/* Filter tabs */}
       <div className="flex items-center gap-1 p-1 rounded-xl w-fit mb-5"
-        style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.07)' }}>
+        style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
         {[{ id: 'all', label: 'All' }, { id: 'open', label: 'Open' }, { id: 'revealed', label: 'Revealed' }].map(f => (
           <button key={f.id} onClick={() => setStatusFilter(f.id)}
             className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all"

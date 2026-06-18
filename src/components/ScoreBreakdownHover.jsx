@@ -43,7 +43,7 @@ export default function ScoreBreakdownHover({ children, scores, align = 'right' 
           style={{
             [align === 'right' ? 'right' : 'left']: 0,
             width: 248,
-            background: '#111',
+            background: '#1c1c1e',
             border: '1px solid rgba(255,255,255,0.1)',
             pointerEvents: 'none',
           }}>
@@ -52,7 +52,7 @@ export default function ScoreBreakdownHover({ children, scores, align = 'right' 
             position: 'absolute', bottom: -5,
             [align === 'right' ? 'right' : 'left']: 12,
             width: 10, height: 10,
-            background: '#111',
+            background: '#1c1c1e',
             border: '1px solid rgba(255,255,255,0.1)',
             borderTop: 'none', borderLeft: 'none',
             transform: 'rotate(45deg)',
