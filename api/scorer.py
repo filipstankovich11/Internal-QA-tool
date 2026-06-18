@@ -56,7 +56,7 @@ Return only the JSON score object as specified in your instructions."""
     result_text = ""
     with client.messages.stream(
         model=MODEL,
-        max_tokens=4096,
+        max_tokens=16000,
         thinking={"type": "enabled", "budget_tokens": 8000},
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
