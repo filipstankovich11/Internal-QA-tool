@@ -106,12 +106,6 @@ function SubScoreRow({ label, data }) {
 function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
   const avg = typeof average === 'number' ? average : Number(average) || 0
   const color = scoreColor(avg)
-  const contentRef = useRef(null)
-  const [height, setHeight] = useState(0)
-
-  useEffect(() => {
-    if (contentRef.current) setHeight(contentRef.current.scrollHeight)
-  }, [rows])
 
   return (
     <div className="rounded-xl mb-2 overflow-hidden"
@@ -135,14 +129,14 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
         </div>
       </button>
 
-      {/* Animated body */}
+      {/* Animated body — 900px ceiling gives room for expanded SubScoreRows */}
       <div style={{
-        maxHeight: isOpen ? `${height + 24}px` : '0px',
+        maxHeight: isOpen ? '900px' : '0px',
         opacity: isOpen ? 1 : 0,
         overflow: 'hidden',
-        transition: 'max-height 380ms cubic-bezier(0.4,0,0.2,1), opacity 250ms cubic-bezier(0.4,0,0.2,1)',
+        transition: 'max-height 420ms cubic-bezier(0.4,0,0.2,1), opacity 250ms cubic-bezier(0.4,0,0.2,1)',
       }}>
-        <div ref={contentRef} style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{ paddingTop: 4 }}>
             {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}
           </div>
