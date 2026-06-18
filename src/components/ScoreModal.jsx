@@ -598,11 +598,11 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
             </div>
           </div>
 
-          {/* Row 2: Agent names — clickable, navigate to agents page */}
-          {matchedAgents.length > 0 && (
+          {/* Row 2: Agent names — matched ones are clickable, unmatched shown as plain chips */}
+          {agentNames.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
               {matchedAgents.map((agent, i) => (
-                <button key={i}
+                <button key={agent.id ?? i}
                   onClick={() => { navigateTo('agents'); onClose() }}
                   className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
                   style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)', cursor: 'pointer' }}
@@ -612,15 +612,15 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
                   {agent.name}
                 </button>
               ))}
-              {/* names for senders not matched to an agent record */}
               {(s.agent_senders || [])
                 .filter(a => !agents.find(ag =>
                   (a.gorgias_user_id && ag.gorgias_user_id === a.gorgias_user_id) ||
                   (a.email && ag.email?.toLowerCase() === a.email?.toLowerCase())
                 ))
+                .filter(a => a.name)
                 .map((a, i) => (
                   <span key={`unmatched-${i}`} className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ color: '#999', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                    style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)' }}>
                     {a.name}
                   </span>
                 ))
