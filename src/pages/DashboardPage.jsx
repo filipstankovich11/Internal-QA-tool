@@ -86,6 +86,8 @@ function MiniBar({ value, max, color }) {
 }
 
 function ScoreTrend({ scores, onDayClick, selectedDay }) {
+  const [hoveredBar, setHoveredBar] = useState(null)
+
   const days = useMemo(() => {
     const result = []
     for (let i = 6; i >= 0; i--) {
@@ -101,34 +103,64 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
     return result
   }, [scores])
 
-  const maxCount = Math.max(...days.map(d => d.count), 1)
+  const maxCount    = Math.max(...days.map(d => d.count), 1)
   const hasSelection = !!selectedDay
+  const selectedLabel = hasSelection
+    ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : null
 
   return (
     <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
-      <p className="g-label mb-4">Tickets scored — last 7 days</p>
+
+      {/* Header — shows back pill when a day is selected */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="g-label">Tickets scored — last 7 days</p>
+        {hasSelection && (
+          <button
+            onClick={() => onDayClick(null)}
+            className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 transition-all"
+            style={{ color: '#aaa', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            {selectedLabel}
+          </button>
+        )}
+      </div>
+
       <div className="flex items-end gap-2 h-20 overflow-visible">
         {days.map((d, i) => {
           const isSelected = selectedDay === d.dateStr
+          const isHovered  = hoveredBar === i && d.count > 0
           const isDimmed   = hasSelection && !isSelected
-          const barColor   = d.count === 0 ? '#242426'
-                           : isSelected    ? '#fff'
+          const barColor   = d.count === 0   ? '#242426'
+                           : isSelected      ? '#fff'
+                           : isHovered       ? '#ffb39a'
                            : '#FF9780'
           return (
             <div key={i}
               className="flex-1 flex flex-col items-center gap-1"
               style={{ cursor: d.count > 0 ? 'pointer' : 'default', opacity: isDimmed ? 0.35 : 1, transition: 'opacity 200ms' }}
               onClick={() => d.count > 0 && onDayClick(d.dateStr)}
-              title={d.count > 0 ? `${d.count} ticket${d.count !== 1 ? 's' : ''} — click to filter` : undefined}>
+              onMouseEnter={() => setHoveredBar(i)}
+              onMouseLeave={() => setHoveredBar(null)}
+              title={d.count > 0 ? `${d.count} ticket${d.count !== 1 ? 's' : ''} on ${d.label}` : undefined}>
               <div className="relative w-full">
                 {d.count > 0 && (d.count / maxCount) <= 0.5 && (
                   <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                    style={{ color: isSelected ? '#fff' : '#FF9780' }}>
+                    style={{ color: isSelected ? '#fff' : '#FF9780', transition: 'color 150ms' }}>
                     {d.count}
                   </span>
                 )}
-                <div className="relative w-full rounded-t-sm transition-all"
-                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: barColor, transition: 'background 200ms, height 200ms' }}>
+                {/* Hover background glow behind the bar */}
+                {isHovered && !isSelected && (
+                  <div className="absolute inset-x-0 bottom-0 rounded-t-sm"
+                    style={{ height: '80px', background: 'rgba(255,151,128,0.07)', borderRadius: '4px 4px 0 0' }} />
+                )}
+                <div className="relative w-full rounded-t-sm"
+                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: barColor, transition: 'background 150ms, height 200ms', boxShadow: isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 8px rgba(255,151,128,0.4)' : 'none' }}>
                   {d.count > 0 && (d.count / maxCount) > 0.5 && (
                     <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
                       style={{ color: 'rgba(0,0,0,0.6)' }}>
@@ -137,18 +169,11 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
                   )}
                 </div>
               </div>
-              <span className="text-xs" style={{ color: isSelected ? '#ccc' : '#666', fontWeight: isSelected ? 600 : 400, transition: 'color 200ms' }}>{d.label}</span>
+              <span className="text-xs" style={{ color: isSelected ? '#e0e0e0' : isHovered ? '#aaa' : '#666', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
             </div>
           )
         })}
       </div>
-      {hasSelection && (
-        <p className="text-xs mt-3 text-center" style={{ color: '#666' }}>
-          Showing tickets for <span style={{ color: '#FF9780' }}>{new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-          {' · '}
-          <button onClick={() => onDayClick(null)} style={{ color: '#888', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' }}>clear</button>
-        </p>
-      )}
     </div>
   )
 }
