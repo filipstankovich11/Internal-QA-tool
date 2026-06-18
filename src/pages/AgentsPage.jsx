@@ -216,7 +216,6 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
 
   const avg = scores.length ? (scores.reduce((s,x) => s + (x.effectiveScore ?? x.weightedScore), 0) / scores.length) : null
   const avgColor = avg != null ? (avg >= 80 ? '#10b981' : avg >= 60 ? '#f59e0b' : '#ef4444') : null
-  const unacknowledged = scores.filter(s => !s.acknowledged).length
 
   const save = () => {
     if (form.name.trim()) onEdit(agent.id, {
@@ -233,6 +232,10 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
     <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       {editing ? (
         <div className="flex flex-col gap-2.5 mb-4">
+          <div className="flex gap-2 justify-end">
+            <button onClick={save} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg">Save</button>
+            <button onClick={() => setEditing(false)} className="g-btn-ghost text-xs px-3 py-1.5">Cancel</button>
+          </div>
           <input autoFocus placeholder="Agent name" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             className="rounded-xl px-3 py-2 text-white text-sm g-input" style={{ border: '1px solid #FF9780' }} />
@@ -259,60 +262,58 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
-            <button onClick={save} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg">Save</button>
-            <button onClick={() => setEditing(false)} className="g-btn-ghost text-xs px-3 py-1.5">Cancel</button>
-          </div>
         </div>
       ) : (
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="mb-6">
+          {/* Row 1: account-linked label (left) · edit/delete (right) */}
+          <div className="flex items-center justify-between gap-3 mb-2" style={{ minHeight: 20 }}>
+            <span style={{ fontSize: 11, color: agent.user_id ? '#10b981' : '#ef4444' }}>
+              {agent.user_id ? '● Account linked' : '● No account linked'}
+            </span>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {canEdit && !confirmDelete && <button onClick={openEdit} className="g-btn-ghost text-xs">Edit</button>}
+              {canEdit && !confirmDelete && (
+                <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#ef4444' }}
+                  onMouseEnter={e=>e.target.style.color='#f87171'} onMouseLeave={e=>e.target.style.color='#ef4444'}>Delete</button>
+              )}
+              {confirmDelete && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete agent?</span>
+                  <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: name (left) · ticket count + total score (right) */}
+          <div className="flex items-center justify-between gap-3">
             <button onClick={onViewAll}
-              className="text-left transition-colors"
+              className="text-left transition-colors min-w-0"
               onMouseEnter={e=>e.currentTarget.querySelector('h3').style.color='#FF9780'}
               onMouseLeave={e=>e.currentTarget.querySelector('h3').style.color='#fff'}>
-              <div className="flex items-center gap-2">
-                <h3 className="text-white font-semibold transition-colors">{agent.name}</h3>
-                {unacknowledged > 0 && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', lineHeight: 1 }}>
-                    {unacknowledged}
-                  </span>
-                )}
-              </div>
+              <h3 className="text-white font-semibold transition-colors break-words">{agent.name}</h3>
             </button>
-            {agent.email && <p className="text-xs mt-0.5" style={{ color: '#777' }}>{agent.email}</p>}
-            {agent.gorgias_user_id && <p className="text-xs mt-0.5" style={{ color: '#666' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
-            <p className="text-xs mt-0.5" style={{ color: agent.user_id ? '#10b981' : '#ef4444' }}>
-              {agent.user_id ? '● Account linked' : '● No account linked'}
-            </p>
-            {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <TrendLine scores={scores} />
-            {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
-            {canEdit && !confirmDelete && <button onClick={openEdit} className="g-btn-ghost text-xs">Edit</button>}
-            {canEdit && !confirmDelete && (
-              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#777' }}
-                onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#555'}>Delete</button>
-            )}
-            {confirmDelete && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#ef4444' }}>Delete agent?</span>
-                <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
-              </div>
-            )}
-          </div>
+
+          {/* Row 3: email */}
+          {agent.email && <p className="text-xs mt-1 truncate" style={{ color: '#777' }}>{agent.email}</p>}
+
+          {/* Row 4: team — slot always reserved so spacing matches whether or not a team is set */}
+          {team
+            ? <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>
+            : <span aria-hidden className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ visibility: 'hidden' }}>—</span>}
         </div>
       )}
 
       {scores.length > 0 ? (
         <>
           <div className="mb-3">
-            <div className="flex items-center justify-between mb-1.5 text-xs">
-              <span style={{ color: '#777' }}>{scores.length} tickets scored</span>
+            <div className="flex items-center justify-end mb-1.5 text-xs">
               <div className="flex gap-3">
                 <span style={{ color: '#10b981' }}>{scores.filter(s=>s.verdict==='PASS').length} pass</span>
                 <span style={{ color: '#f59e0b' }}>{scores.filter(s=>s.verdict==='NEEDS_REVIEW').length} review</span>
@@ -629,7 +630,9 @@ export default function AgentsPage() {
   const handleImport      = async (...args) => { await addAgent(...args) }
   const handleAssign      = async (...args) => { await updateAgent(...args) }
 
-  const filtered = teamFilter === 'all' ? agents : agents.filter(a => a.team_id === teamFilter)
+  const filtered = (teamFilter === 'all' ? agents : agents.filter(a => a.team_id === teamFilter))
+    .slice()
+    .sort((a, b) => getAgentScores(b.id).length - getAgentScores(a.id).length)
 
   return (
     <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
