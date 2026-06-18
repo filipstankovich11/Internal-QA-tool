@@ -239,9 +239,12 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
           <input placeholder="Email" value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
             className="rounded-xl px-3 py-2 text-sm g-input" />
-          <input placeholder="Gorgias user ID" value={form.gorgiasUserId}
-            onChange={e => setForm(f => ({ ...f, gorgiasUserId: e.target.value.replace(/\D/,'') }))}
-            className="rounded-xl px-3 py-2 text-sm g-input" />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs" style={{ color: '#666' }}>Gorgias ID <span style={{ color: '#555' }}>(read-only — set via import)</span></label>
+            <input readOnly value={form.gorgiasUserId || '—'}
+              className="rounded-xl px-3 py-2 text-sm"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: '#555', cursor: 'default', outline: 'none' }} />
+          </div>
           <input placeholder="Score goal (e.g. 85)" value={form.goalScore}
             onChange={e => setForm(f => ({ ...f, goalScore: e.target.value.replace(/\D/,'') }))}
             className="rounded-xl px-3 py-2 text-sm g-input" />
