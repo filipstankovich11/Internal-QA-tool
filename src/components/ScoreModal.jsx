@@ -103,19 +103,76 @@ function SubScoreRow({ label, data }) {
   )
 }
 
-function DimensionCard({ name, weight, average, rows }) {
+function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
   const avg = typeof average === 'number' ? average : Number(average) || 0
   const color = scoreColor(avg)
+  const contentRef = useRef(null)
+  const [height, setHeight] = useState(0)
+
+  useEffect(() => {
+    if (contentRef.current) setHeight(contentRef.current.scrollHeight)
+  }, [rows])
+
   return (
-    <div className="rounded-xl p-4 mb-3" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>{name}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}/5</span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
+    <div className="rounded-xl mb-2 overflow-hidden"
+      style={{ background: '#1e1e20', border: `1px solid ${isOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.10)'}`, transition: 'border-color 250ms' }}>
+
+      {/* Header — always visible, click to toggle */}
+      <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3.5"
+        style={{ cursor: 'pointer', background: 'transparent', border: 'none', textAlign: 'left' }}>
+        <div className="flex items-center gap-2.5">
+          {/* Rotating chevron */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{ color: isOpen ? '#FF9780' : '#555', transition: 'transform 300ms cubic-bezier(0.4,0,0.2,1), color 200ms', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+          <span className="text-sm font-semibold" style={{ color: isOpen ? '#e0e0e0' : '#aaa', transition: 'color 200ms' }}>{name}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: '#555', fontWeight: 400 }}>/5</span></span>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}>{weight}</span>
+        </div>
+      </button>
+
+      {/* Animated body */}
+      <div style={{
+        maxHeight: isOpen ? `${height + 24}px` : '0px',
+        opacity: isOpen ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'max-height 380ms cubic-bezier(0.4,0,0.2,1), opacity 250ms cubic-bezier(0.4,0,0.2,1)',
+      }}>
+        <div ref={contentRef} style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ paddingTop: 4 }}>
+            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}
+          </div>
         </div>
       </div>
-      <div>{rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}</div>
+    </div>
+  )
+}
+
+function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception }) {
+  const [openDim, setOpenDim] = useState(0)
+  const toggle = i => setOpenDim(prev => prev === i ? -1 : i)
+  return (
+    <div>
+      <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
+        isOpen={openDim === 0} onToggle={() => toggle(0)}
+        rows={[
+          { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
+          { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
+          { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
+        ]} />
+      <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
+        isOpen={openDim === 1} onToggle={() => toggle(1)}
+        rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
+      <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
+        isOpen={openDim === 2} onToggle={() => toggle(2)}
+        rows={[
+          { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
+          { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
+        ]} />
     </div>
   )
 }
@@ -648,22 +705,12 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
             { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average },
           ]} />
 
-          {/* Criteria detail */}
-          <div>
-            <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
-              rows={[
-                { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
-                { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
-                { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
-              ]} />
-            <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
-              rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
-            <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
-              rows={[
-                { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
-                { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
-              ]} />
-          </div>
+          {/* Criteria detail — accordion, one open at a time */}
+          <DimensionAccordion
+            inquiry_resolution={inquiry_resolution}
+            internal_processes={internal_processes}
+            customer_perception={customer_perception}
+          />
 
           {/* Summary */}
           <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
