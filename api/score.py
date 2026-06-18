@@ -233,7 +233,7 @@ def notify_agent():
 
     # ── Build the DM message ─────────────────────────────────────────────────
     verdict    = score_data.get('verdict', '')
-    score      = score_data.get('weighted_score', 0)
+    score      = float(score_data.get('weighted_score') or 0)
     ticket_id  = score_data.get('ticket_id', '')
     subject    = score_data.get('ticket_subject', '') or f'Ticket #{ticket_id}'
     summary    = score_data.get('summary', '')
