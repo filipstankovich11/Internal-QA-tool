@@ -737,8 +737,8 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
           {/* Reviewer note — key forces remount on re-score so note state resets */}
           <NotesSection key={s.scoreId} scoreId={s.scoreId} initialNote={s.reviewerNote} />
 
-          {/* Acknowledgment */}
-          {s.scoreId && (
+          {/* Acknowledgment — only agents can mark as seen */}
+          {s.scoreId && !isAdmin && (
             <div className="rounded-xl px-4 py-3 flex items-center justify-between"
               style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#1e1e20', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.10)'}` }}>
               {s.acknowledged ? (
