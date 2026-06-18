@@ -598,33 +598,20 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
             </div>
           </div>
 
-          {/* Row 2: Agent names — matched ones are clickable, unmatched shown as plain chips */}
+          {/* Row 2: Agent names — all clickable, navigate to Agents page */}
           {agentNames.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
-              {matchedAgents.map((agent, i) => (
-                <button key={agent.id ?? i}
+              {agentNames.map((name, i) => (
+                <button key={i}
                   onClick={() => { navigateTo('agents'); onClose() }}
                   className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
                   style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)', cursor: 'pointer' }}
                   onMouseEnter={e => { e.currentTarget.style.background='rgba(255,151,128,0.15)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.35)' }}
                   onMouseLeave={e => { e.currentTarget.style.background='rgba(255,151,128,0.08)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.15)' }}
-                  title={`View ${agent.name}`}>
-                  {agent.name}
+                  title={`Go to ${name}`}>
+                  {name}
                 </button>
               ))}
-              {(s.agent_senders || [])
-                .filter(a => !agents.find(ag =>
-                  (a.gorgias_user_id && ag.gorgias_user_id === a.gorgias_user_id) ||
-                  (a.email && ag.email?.toLowerCase() === a.email?.toLowerCase())
-                ))
-                .filter(a => a.name)
-                .map((a, i) => (
-                  <span key={`unmatched-${i}`} className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)' }}>
-                    {a.name}
-                  </span>
-                ))
-              }
             </div>
           )}
 
