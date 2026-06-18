@@ -3,6 +3,13 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+// Only @gorgias.com addresses may use this tool. Enforced server-side by the
+// handle_new_user() trigger and the Google "Internal" consent screen; this is
+// the client-side guard that also catches session restore on reload.
+const ALLOWED_EMAIL_DOMAIN = '@gorgias.com'
+const isAllowedEmail = (email) =>
+  typeof email === 'string' && email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)
+
 export function AuthProvider({ children }) {
   const [user,            setUser]            = useState(null)
   const [profile,         setProfile]         = useState(null)
@@ -22,6 +29,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null
+
+      // Enforce @gorgias.com on session restore (e.g. page reload)
+      if (u && !isAllowedEmail(u.email)) {
+        supabase.auth.signOut()
+        setUser(null); setProfile(null); setLoading(false)
+        return
+      }
+
       setUser(u)
       if (u) fetchProfile(u.id)
       else setLoading(false)
@@ -30,8 +45,9 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null
 
-      // Enforce @gorgias.com domain for OAuth logins
-      if (u && event === 'SIGNED_IN' && !u.email?.endsWith('@gorgias.com')) {
+      // Enforce @gorgias.com domain for every authenticated session
+      // (OAuth sign-in, email/password, and token refresh)
+      if (u && !isAllowedEmail(u.email)) {
         supabase.auth.signOut()
         setUser(null); setProfile(null); setLoading(false)
         return

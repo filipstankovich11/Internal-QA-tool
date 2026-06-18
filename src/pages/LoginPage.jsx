@@ -172,6 +172,18 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState('')
   const [resetSent,  setResetSent]  = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  /* ── surface OAuth redirect errors (provider/domain rejected, etc.) ── */
+  useEffect(() => {
+    const hash = window.location.hash
+    if (!hash || !hash.includes('error')) return
+    const params = new URLSearchParams(hash.slice(1))
+    const desc = params.get('error_description')
+    if (desc) setError(decodeURIComponent(desc.replace(/\+/g, ' ')))
+    // strip the error from the URL so it doesn't persist on refresh
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  }, [])
 
   const handleSignIn = async (e) => {
     e.preventDefault()
@@ -179,6 +191,14 @@ export default function LoginPage() {
     setLoading(true); setError('')
     const { error: err } = await signIn(email.trim(), password)
     if (err) { setError(err.message); setLoading(false) }
+  }
+
+  const handleGoogle = async () => {
+    if (googleLoading) return
+    setGoogleLoading(true); setError('')
+    const { error: err } = await signInWithGoogle()
+    // On success the browser redirects to Google; we only get here on error.
+    if (err) { setError(err.message); setGoogleLoading(false) }
   }
 
   const handleReset = async (e) => {
@@ -252,11 +272,12 @@ export default function LoginPage() {
                 {/* Google SSO */}
                 <button
                   type="button"
-                  onClick={signInWithGoogle}
+                  onClick={handleGoogle}
                   className="btn-google"
+                  disabled={googleLoading}
                 >
                   <GoogleIcon />
-                  Sign in with Google
+                  {googleLoading ? 'Redirecting…' : 'Sign in with Google'}
                 </button>
 
                 <div className="divider-row">
