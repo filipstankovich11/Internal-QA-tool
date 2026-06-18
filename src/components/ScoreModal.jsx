@@ -919,6 +919,8 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
 
   if (panel) return (
     <>
+    {/* Transparent backdrop — click outside panel to close */}
+    <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={onClose} />
     <div
       className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
       style={{ width: 560, background: '#171719', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
