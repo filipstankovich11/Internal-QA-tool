@@ -85,50 +85,70 @@ function MiniBar({ value, max, color }) {
   )
 }
 
-function ScoreTrend({ scores }) {
+function ScoreTrend({ scores, onDayClick, selectedDay }) {
   const days = useMemo(() => {
     const result = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const label = d.toLocaleDateString('en-US', { weekday: 'short' })
-      const start = new Date(d.setHours(0, 0, 0, 0)).getTime()
-      const end   = start + 86400000
-      const day   = scores.filter(s => s.scoredAt >= start && s.scoredAt < end)
-      result.push({ label, count: day.length })
+      const dateStr = d.toISOString().slice(0, 10)
+      const label   = d.toLocaleDateString('en-US', { weekday: 'short' })
+      const start   = new Date(d.setHours(0, 0, 0, 0)).getTime()
+      const end     = start + 86400000
+      const count   = scores.filter(s => s.scoredAt >= start && s.scoredAt < end).length
+      result.push({ label, count, dateStr })
     }
     return result
   }, [scores])
 
   const maxCount = Math.max(...days.map(d => d.count), 1)
+  const hasSelection = !!selectedDay
 
   return (
     <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
       <p className="g-label mb-4">Tickets scored — last 7 days</p>
       <div className="flex items-end gap-2 h-20 overflow-visible">
-        {days.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="relative w-full">
-              {d.count > 0 && (d.count / maxCount) <= 0.5 && (
-                <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                  style={{ color: '#FF9780' }}>
-                  {d.count}
-                </span>
-              )}
-              <div className="relative w-full rounded-t-sm transition-all"
-                style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: d.count > 0 ? '#FF9780' : '#1e1e1e' }}>
-                {d.count > 0 && (d.count / maxCount) > 0.5 && (
-                  <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                    style={{ color: 'rgba(0,0,0,0.6)' }}>
+        {days.map((d, i) => {
+          const isSelected = selectedDay === d.dateStr
+          const isDimmed   = hasSelection && !isSelected
+          const barColor   = d.count === 0 ? '#242426'
+                           : isSelected    ? '#fff'
+                           : '#FF9780'
+          return (
+            <div key={i}
+              className="flex-1 flex flex-col items-center gap-1"
+              style={{ cursor: d.count > 0 ? 'pointer' : 'default', opacity: isDimmed ? 0.35 : 1, transition: 'opacity 200ms' }}
+              onClick={() => d.count > 0 && onDayClick(d.dateStr)}
+              title={d.count > 0 ? `${d.count} ticket${d.count !== 1 ? 's' : ''} — click to filter` : undefined}>
+              <div className="relative w-full">
+                {d.count > 0 && (d.count / maxCount) <= 0.5 && (
+                  <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                    style={{ color: isSelected ? '#fff' : '#FF9780' }}>
                     {d.count}
                   </span>
                 )}
+                <div className="relative w-full rounded-t-sm transition-all"
+                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: barColor, transition: 'background 200ms, height 200ms' }}>
+                  {d.count > 0 && (d.count / maxCount) > 0.5 && (
+                    <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                      style={{ color: 'rgba(0,0,0,0.6)' }}>
+                      {d.count}
+                    </span>
+                  )}
+                </div>
               </div>
+              <span className="text-xs" style={{ color: isSelected ? '#ccc' : '#666', fontWeight: isSelected ? 600 : 400, transition: 'color 200ms' }}>{d.label}</span>
             </div>
-            <span className="text-xs" style={{ color: '#666' }}>{d.label}</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
+      {hasSelection && (
+        <p className="text-xs mt-3 text-center" style={{ color: '#666' }}>
+          Showing tickets for <span style={{ color: '#FF9780' }}>{new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+          {' · '}
+          <button onClick={() => onDayClick(null)} style={{ color: '#888', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' }}>clear</button>
+        </p>
+      )}
     </div>
   )
 }
@@ -151,6 +171,20 @@ export default function DashboardPage() {
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
+  const [selectedDay,  setSelectedDay]  = useState(null)
+  const tableRef = useRef(null)
+
+  const handleDayClick = (dateStr) => {
+    if (!dateStr || selectedDay === dateStr) {
+      setSelectedDay(null)
+      setFilters(f => ({ ...f, dateFrom: '', dateTo: '' }))
+    } else {
+      setSelectedDay(dateStr)
+      setFilters(f => ({ ...f, dateFrom: dateStr, dateTo: dateStr }))
+      setActiveRange(null)
+      setTimeout(() => tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+  }
 
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
@@ -245,11 +279,11 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        <ScoreTrend scores={filteredScores} />
+        <ScoreTrend scores={filteredScores} onDayClick={handleDayClick} selectedDay={selectedDay} />
       </div>
 
       {/* ── Ticket table with filters ── */}
-      <div>
+      <div ref={tableRef}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
           <div className="flex items-center gap-3">
@@ -406,7 +440,7 @@ export default function DashboardPage() {
             </div>
 
             {hasFilters && (
-              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch('') }}
+              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch(''); setSelectedDay(null) }}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
                 style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
