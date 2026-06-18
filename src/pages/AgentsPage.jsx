@@ -233,6 +233,10 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
     <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       {editing ? (
         <div className="flex flex-col gap-2.5 mb-4">
+          <div className="flex gap-2 justify-end">
+            <button onClick={save} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg">Save</button>
+            <button onClick={() => setEditing(false)} className="g-btn-ghost text-xs px-3 py-1.5">Cancel</button>
+          </div>
           <input autoFocus placeholder="Agent name" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             className="rounded-xl px-3 py-2 text-white text-sm g-input" style={{ border: '1px solid #FF9780' }} />
@@ -259,20 +263,16 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
               ))}
             </select>
           </div>
-          <div className="flex gap-2">
-            <button onClick={save} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg">Save</button>
-            <button onClick={() => setEditing(false)} className="g-btn-ghost text-xs px-3 py-1.5">Cancel</button>
-          </div>
         </div>
       ) : (
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="min-w-0">
             <button onClick={onViewAll}
-              className="text-left transition-colors"
+              className="text-left transition-colors max-w-full"
               onMouseEnter={e=>e.currentTarget.querySelector('h3').style.color='#FF9780'}
               onMouseLeave={e=>e.currentTarget.querySelector('h3').style.color='#fff'}>
-              <div className="flex items-center gap-2">
-                <h3 className="text-white font-semibold transition-colors">{agent.name}</h3>
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="text-white font-semibold transition-colors truncate">{agent.name}</h3>
                 {unacknowledged > 0 && (
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
                     style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', lineHeight: 1 }}>
@@ -281,14 +281,14 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
                 )}
               </div>
             </button>
-            {agent.email && <p className="text-xs mt-0.5" style={{ color: '#777' }}>{agent.email}</p>}
-            {agent.gorgias_user_id && <p className="text-xs mt-0.5" style={{ color: '#666' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
+            {agent.email && <p className="text-xs mt-0.5 truncate" style={{ color: '#777' }}>{agent.email}</p>}
+            {agent.gorgias_user_id && <p className="text-xs mt-0.5 truncate" style={{ color: '#666' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
             <p className="text-xs mt-0.5" style={{ color: agent.user_id ? '#10b981' : '#ef4444' }}>
               {agent.user_id ? '● Account linked' : '● No account linked'}
             </p>
             {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <TrendLine scores={scores} />
             {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
             {canEdit && !confirmDelete && <button onClick={openEdit} className="g-btn-ghost text-xs">Edit</button>}
@@ -629,7 +629,9 @@ export default function AgentsPage() {
   const handleImport      = async (...args) => { await addAgent(...args) }
   const handleAssign      = async (...args) => { await updateAgent(...args) }
 
-  const filtered = teamFilter === 'all' ? agents : agents.filter(a => a.team_id === teamFilter)
+  const filtered = (teamFilter === 'all' ? agents : agents.filter(a => a.team_id === teamFilter))
+    .slice()
+    .sort((a, b) => getAgentScores(b.id).length - getAgentScores(a.id).length)
 
   return (
     <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
