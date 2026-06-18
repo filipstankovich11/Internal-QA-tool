@@ -5,6 +5,7 @@ import ScoreModal from '../components/ScoreModal'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { authFetch } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 const VERDICT_DOT   = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
@@ -203,10 +204,15 @@ function AgentHistoryModal({ agent, scores, onViewScore, onClose }) {
   )
 }
 
-function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewAll, canEdit }) {
+function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onViewScore, onViewAll, canEdit }) {
   const [editing,       setEditing]       = useState(false)
-  const [form,          setForm]          = useState({ name: agent.name, email: agent.email || '', gorgiasUserId: agent.gorgias_user_id ? String(agent.gorgias_user_id) : '', goalScore: agent.goal_score ? String(agent.goal_score) : '' })
+  const [form,          setForm]          = useState({ name: agent.name, email: agent.email || '', gorgiasUserId: agent.gorgias_user_id ? String(agent.gorgias_user_id) : '', goalScore: agent.goal_score ? String(agent.goal_score) : '', userId: agent.user_id || '' })
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const openEdit = () => {
+    setForm({ name: agent.name, email: agent.email || '', gorgiasUserId: agent.gorgias_user_id ? String(agent.gorgias_user_id) : '', goalScore: agent.goal_score ? String(agent.goal_score) : '', userId: agent.user_id || '' })
+    setEditing(true)
+  }
 
   const avg = scores.length ? (scores.reduce((s,x) => s + (x.effectiveScore ?? x.weightedScore), 0) / scores.length) : null
   const avgColor = avg != null ? (avg >= 80 ? '#10b981' : avg >= 60 ? '#f59e0b' : '#ef4444') : null
@@ -218,6 +224,7 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
       email: form.email.trim(),
       gorgias_user_id: form.gorgiasUserId ? parseInt(form.gorgiasUserId) : null,
       goal_score: form.goalScore ? parseInt(form.goalScore) : null,
+      user_id: form.userId || null,
     })
     setEditing(false)
   }
@@ -238,6 +245,17 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
           <input placeholder="Score goal (e.g. 85)" value={form.goalScore}
             onChange={e => setForm(f => ({ ...f, goalScore: e.target.value.replace(/\D/,'') }))}
             className="rounded-xl px-3 py-2 text-sm g-input" />
+          <div className="flex flex-col gap-1">
+            <label className="text-xs" style={{ color: '#666' }}>Linked account</label>
+            <select value={form.userId} onChange={e => setForm(f => ({ ...f, userId: e.target.value }))}
+              className="rounded-xl px-3 py-2 text-sm"
+              style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.1)', color: form.userId ? '#ccc' : '#555', outline: 'none' }}>
+              <option value="">— Not linked —</option>
+              {profiles.map(p => (
+                <option key={p.id} value={p.id}>{p.name || p.id} — {p.role}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex gap-2">
             <button onClick={save} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg">Save</button>
             <button onClick={() => setEditing(false)} className="g-btn-ghost text-xs px-3 py-1.5">Cancel</button>
@@ -262,12 +280,15 @@ function AgentCard({ agent, team, scores, onEdit, onDelete, onViewScore, onViewA
             </button>
             {agent.email && <p className="text-xs mt-0.5" style={{ color: '#777' }}>{agent.email}</p>}
             {agent.gorgias_user_id && <p className="text-xs mt-0.5" style={{ color: '#666' }}>Gorgias ID: {agent.gorgias_user_id}</p>}
+            <p className="text-xs mt-0.5" style={{ color: agent.user_id ? '#10b981' : '#ef4444' }}>
+              {agent.user_id ? '● Account linked' : '● No account linked'}
+            </p>
             {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
           </div>
           <div className="flex items-center gap-3">
             <TrendLine scores={scores} />
             {avg != null && <span className="text-sm font-bold" style={{ color: avgColor }}>{avg.toFixed(1)}/100</span>}
-            {canEdit && !confirmDelete && <button onClick={() => setEditing(true)} className="g-btn-ghost text-xs">Edit</button>}
+            {canEdit && !confirmDelete && <button onClick={openEdit} className="g-btn-ghost text-xs">Edit</button>}
             {canEdit && !confirmDelete && (
               <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#777' }}
                 onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#555'}>Delete</button>
@@ -459,6 +480,7 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
   const [selected,     setSelected]     = useState(new Set())
   const [teamId,       setTeamId]       = useState('')
   const [importing,    setImporting]    = useState(false)
+  const [agentSearch,  setAgentSearch]  = useState('')
 
   useEffect(() => {
     authFetch(`${API_BASE}/api/gorgias-users`)
@@ -502,6 +524,30 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
           <button onClick={onClose} className="text-xs g-btn-ghost px-3 py-1.5">Cancel</button>
         </div>
 
+        {/* Search */}
+        {!loading && !error && gorgiasUsers.length > 0 && (
+          <div className="px-4 pt-3 pb-1 relative">
+            <svg className="absolute left-7 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#555' }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              value={agentSearch}
+              onChange={e => setAgentSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              className="w-full rounded-xl pl-8 pr-8 py-2 text-sm outline-none"
+              style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc' }}
+              autoFocus
+            />
+            {agentSearch && (
+              <button onClick={() => setAgentSearch('')} className="absolute right-7 top-1/2 -translate-y-1/2 text-lg leading-none" style={{ color: '#555' }}
+                onMouseEnter={e => e.currentTarget.style.color='#ccc'} onMouseLeave={e => e.currentTarget.style.color='#555'}>
+                ×
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-4 py-3">
           {loading && <p className="text-sm text-center py-8" style={{ color: '#777' }}>Loading Gorgias users…</p>}
@@ -509,24 +555,33 @@ function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
           {!loading && !error && gorgiasUsers.length === 0 && (
             <p className="text-sm text-center py-8" style={{ color: '#777' }}>All Gorgias agents are already imported.</p>
           )}
-          {!loading && !error && gorgiasUsers.map(u => {
-            const checked = selected.has(u.gorgias_user_id)
-            return (
-              <button key={u.gorgias_user_id} onClick={() => toggle(u.gorgias_user_id)}
-                className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all mb-0.5"
-                style={{ background: checked ? 'rgba(255,151,128,0.06)' : 'transparent', border: `1px solid ${checked ? 'rgba(255,151,128,0.2)' : 'transparent'}` }}>
-                <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
-                  style={{ border: `1.5px solid ${checked ? '#FF9780' : '#333'}`, background: checked ? '#FF9780' : 'transparent' }}>
-                  {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#000" strokeWidth="1.5" strokeLinecap="round"/></svg>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{u.name}</p>
-                  <p className="text-xs truncate" style={{ color: '#777' }}>{u.email}</p>
-                </div>
-                <span className="text-xs shrink-0" style={{ color: '#555' }}>ID: {u.gorgias_user_id}</span>
-              </button>
-            )
-          })}
+          {!loading && !error && gorgiasUsers.length > 0 && (() => {
+            const q = agentSearch.trim().toLowerCase()
+            const visible = q
+              ? gorgiasUsers.filter(u => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+              : gorgiasUsers
+            if (q && visible.length === 0) {
+              return <p className="text-sm text-center py-8" style={{ color: '#777' }}>No agents match "{agentSearch}"</p>
+            }
+            return visible.map(u => {
+              const checked = selected.has(u.gorgias_user_id)
+              return (
+                <button key={u.gorgias_user_id} onClick={() => toggle(u.gorgias_user_id)}
+                  className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all mb-0.5"
+                  style={{ background: checked ? 'rgba(255,151,128,0.06)' : 'transparent', border: `1px solid ${checked ? 'rgba(255,151,128,0.2)' : 'transparent'}` }}>
+                  <div className="w-4 h-4 rounded flex items-center justify-center shrink-0"
+                    style={{ border: `1.5px solid ${checked ? '#FF9780' : '#333'}`, background: checked ? '#FF9780' : 'transparent' }}>
+                    {checked && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#000" strokeWidth="1.5" strokeLinecap="round"/></svg>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{u.name}</p>
+                    <p className="text-xs truncate" style={{ color: '#777' }}>{u.email}</p>
+                  </div>
+                  <span className="text-xs shrink-0" style={{ color: '#555' }}>ID: {u.gorgias_user_id}</span>
+                </button>
+              )
+            })
+          })()}
         </div>
 
         {/* Footer */}
@@ -559,6 +614,12 @@ export default function AgentsPage() {
   const [showAssignModal,   setShowAssignModal]   = useState(false)
   const [activeScore,       setActiveScore]       = useState(null)
   const [historyAgent,      setHistoryAgent]      = useState(null)
+  const [profiles,          setProfiles]          = useState([])
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, name, role').order('name')
+      .then(({ data }) => setProfiles(data || []))
+  }, [])
 
   const handleAddAgent    = async (...args) => { await addAgent(...args); toast.success('Agent added') }
   const handleDeleteAgent = async (id)      => { await deleteAgent(id);   toast.success('Agent deleted') }
@@ -582,7 +643,7 @@ export default function AgentsPage() {
               style={{ color: '#999' }}
               onMouseEnter={e => e.currentTarget.style.color = '#fff'}
               onMouseLeave={e => e.currentTarget.style.color = '#999'}>
-              Import Gorgias
+              Import from Gorgias
             </button>
             <button onClick={() => setShowAssignModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
@@ -634,6 +695,7 @@ export default function AgentsPage() {
             <AgentCard agent={agent}
               team={teams.find(t => t.id === agent.team_id)}
               scores={getAgentScores(agent.id)}
+              profiles={profiles}
               onEdit={updateAgent} onDelete={handleDeleteAgent} onViewScore={setActiveScore}
               onViewAll={() => setHistoryAgent(agent)} canEdit={canEdit} />
             </div>

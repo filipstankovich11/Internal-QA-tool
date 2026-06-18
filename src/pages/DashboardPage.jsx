@@ -172,6 +172,7 @@ export default function DashboardPage() {
   const [activeScore, setActiveScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
+  const [ticketSearch, setTicketSearch] = useState('')
 
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
@@ -186,17 +187,25 @@ export default function DashboardPage() {
     return map
   }, [teams, agents])
 
+  const searchTicketId = useMemo(() => {
+    const raw = ticketSearch.trim()
+    if (!raw) return null
+    const match = raw.match(/\/(?:tickets?|views\/\d+)\/(\d+)/) || raw.match(/^(\d+)$/)
+    return match ? match[1] : raw
+  }, [ticketSearch])
+
   const filteredScores = useMemo(() => scoreHistory.filter(s => {
     // scoreHistory is already scoped to agent's own tickets via AppContext
+    if (searchTicketId && String(s.ticketId) !== searchTicketId) return false
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
     if (filters.team  && !s.agentIds?.some(id => teamAgentMap[filters.team]?.has(id))) return false
     if (filters.verdicts.length && !filters.verdicts.includes(s.effectiveVerdict)) return false
     if (filters.dateFrom && s.scoredAt < new Date(filters.dateFrom).setHours(0,0,0,0)) return false
     if (filters.dateTo   && s.scoredAt > new Date(filters.dateTo).setHours(23,59,59,999)) return false
     return true
-  }), [scoreHistory, filters, teamAgentMap, myAgentId])
+  }), [scoreHistory, filters, teamAgentMap, searchTicketId])
 
-  const hasFilters = (role !== 'agent' && (filters.agent || filters.team)) || filters.verdicts.length || filters.dateFrom || filters.dateTo
+  const hasFilters = (role !== 'agent' && (filters.agent || filters.team)) || filters.verdicts.length || filters.dateFrom || filters.dateTo || ticketSearch
 
   // All stats use effective values (override when present, AI otherwise)
   const total    = filteredScores.length
@@ -405,6 +414,43 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Ticket search — admin/lead only */}
+        {role !== 'agent' && (
+          <div className="relative mb-3">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: ticketSearch ? '#FF9780' : '#444' }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              value={ticketSearch}
+              onChange={e => setTicketSearch(e.target.value)}
+              placeholder="Search by ticket URL or ID…"
+              className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none transition-all"
+              style={{
+                background: '#111',
+                border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                color: '#ccc',
+                boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.06)' : 'none',
+              }}
+            />
+            {ticketSearch && (
+              <button onClick={() => setTicketSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors"
+                style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}
+                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
+                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+                ×
+              </button>
+            )}
+            {ticketSearch && searchTicketId && (
+              <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
+                style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>
+                #{searchTicketId}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="rounded-2xl p-4 mb-4" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
           <div className="flex flex-wrap gap-3 items-end">
@@ -488,7 +534,7 @@ export default function DashboardPage() {
             </div>
 
             {hasFilters && (
-              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null) }}
+              <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch('') }}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
                 style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
@@ -547,16 +593,17 @@ export default function DashboardPage() {
                     : <span style={{ color: '#555' }}>—</span>}
                 </div>
 
-                <span className="text-sm font-bold tabular-nums text-right"
-                  style={{ color: avgColor(s.effectiveScore) }}>
+                <span className="text-sm tabular-nums text-right" style={{ color: '#999' }}>
                   {s.effectiveScore?.toFixed(0)}/100
-                  {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: '#818cf8' }}>*</span>}
+                  {s.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
                 </span>
 
                 <div className="flex justify-center">
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                    style={{ color: VERDICT_COLOR[s.effectiveVerdict], background: VERDICT_BG[s.effectiveVerdict] }}>
-                    {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
+                  <span className="flex items-center gap-1.5">
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[s.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
+                    <span className="text-xs font-medium" style={{ color: '#888', letterSpacing: '0.04em' }}>
+                      {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
+                    </span>
                   </span>
                 </div>
 

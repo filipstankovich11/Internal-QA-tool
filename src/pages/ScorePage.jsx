@@ -41,11 +41,10 @@ function ModeToggle({ mode, setMode }) {
 
 function HistoryItem({ item, onClick }) {
   const color = VERDICT_COLOR[item.effectiveVerdict]
-  const bg    = VERDICT_BG[item.effectiveVerdict]
   return (
     <button onClick={onClick}
       className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left"
-      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)', boxShadow: color ? `inset 3px 0 0 ${color}` : 'none' }}
+      style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}
       onMouseEnter={e => e.currentTarget.style.background = '#161616'}
       onMouseLeave={e => e.currentTarget.style.background = '#0f0f0f'}>
       <div className="flex items-center gap-3 min-w-0">
@@ -60,10 +59,13 @@ function HistoryItem({ item, onClick }) {
           {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
         </span>
       </div>
-      <div className="flex items-center gap-2 shrink-0 ml-4">
-        <span className="text-xs tabular-nums" style={{ color: '#777' }}>{item.effectiveScore?.toFixed(0)}/100</span>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>
-          {VERDICT_LABEL[item.effectiveVerdict]}
+      <div className="flex items-center gap-3 shrink-0 ml-4">
+        <span className="text-xs tabular-nums" style={{ color: '#666' }}>{item.effectiveScore?.toFixed(0)}/100</span>
+        <span className="flex items-center gap-1.5">
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8 }} />
+          <span className="text-xs font-medium" style={{ color: '#888', letterSpacing: '0.04em' }}>
+            {VERDICT_LABEL[item.effectiveVerdict]}
+          </span>
         </span>
       </div>
     </button>
@@ -239,7 +241,7 @@ export default function ScorePage() {
   const [ticketUrl, setTicketUrl] = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
-  const [filters,   setFilters]   = useState({ agent: '', verdicts: [], dateFrom: '', dateTo: '' })
+  const [filters,   setFilters]   = useState({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })
 
   // Batch mode state
   const [ticketIds, setTicketIds] = useState([])
@@ -248,15 +250,23 @@ export default function ScorePage() {
   const abortRef = useRef(false)
 
   const setF = (k, v) => setFilters(f => ({ ...f, [k]: v }))
-  const hasFilters = filters.agent || filters.verdicts.length || filters.dateFrom || filters.dateTo
+  const hasFilters = filters.agent || filters.verdicts.length || filters.dateFrom || filters.dateTo || filters.ticketSearch
+
+  const searchTicketId = useMemo(() => {
+    const raw = (filters.ticketSearch || '').trim()
+    if (!raw) return null
+    const match = raw.match(/\/(?:tickets?|views\/\d+)\/(\d+)/) || raw.match(/^(\d+)$/)
+    return match ? match[1] : raw
+  }, [filters.ticketSearch])
 
   const filteredHistory = useMemo(() => scoreHistory.filter(s => {
+    if (searchTicketId && String(s.ticketId) !== searchTicketId) return false
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
     if (filters.verdicts.length && !filters.verdicts.includes(s.effectiveVerdict)) return false
     if (filters.dateFrom && s.scoredAt < new Date(filters.dateFrom).setHours(0, 0, 0, 0)) return false
     if (filters.dateTo   && s.scoredAt > new Date(filters.dateTo).setHours(23, 59, 59, 999)) return false
     return true
-  }), [scoreHistory, filters])
+  }), [scoreHistory, filters, searchTicketId])
 
   const isValidUrl = val => {
     const v = val.trim()
@@ -361,7 +371,7 @@ export default function ScorePage() {
                   History {hasFilters && <span style={{ color: '#FF9780' }}>· {filteredHistory.length} match</span>}
                 </p>
                 {hasFilters && (
-                  <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '' })}
+                  <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
                     className="text-xs transition-colors" style={{ color: '#777' }}
                     onMouseEnter={e => e.target.style.color = '#ef4444'}
                     onMouseLeave={e => e.target.style.color = '#555'}>
@@ -372,6 +382,35 @@ export default function ScorePage() {
 
               <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
                 style={{ background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <label className="text-xs" style={{ color: '#777' }}>Ticket URL or ID</label>
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: filters.ticketSearch ? '#FF9780' : '#444' }}>
+                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input
+                      type="text"
+                      value={filters.ticketSearch}
+                      onChange={e => setF('ticketSearch', e.target.value)}
+                      placeholder="Paste ticket URL or ID…"
+                      className="w-full rounded-xl pl-9 pr-8 py-2 text-sm outline-none transition-all"
+                      style={{
+                        background: '#111',
+                        border: `1px solid ${filters.ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
+                        color: '#ccc',
+                      }}
+                    />
+                    {filters.ticketSearch && (
+                      <button onClick={() => setF('ticketSearch', '')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors"
+                        style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}
+                        onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
+                        onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
                   <label className="text-xs" style={{ color: '#777' }}>Agent</label>
                   <select value={filters.agent} onChange={e => setF('agent', e.target.value)}

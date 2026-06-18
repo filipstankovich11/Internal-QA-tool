@@ -159,6 +159,8 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
 
 // ── Team card ──────────────────────────────────────────────────────────────────
 
+const BORDER = '0.5px solid rgba(255,255,255,0.10)'
+
 function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelete, canEdit, getAgentScores, avgScore, onAssign, onUnassign }) {
   const [editing,       setEditing]       = useState(false)
   const [name,          setName]          = useState(team.name)
@@ -169,12 +171,11 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
   const pass     = scores.filter(s => s.effectiveVerdict === 'PASS').length
   const review   = scores.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW').length
   const fail     = scores.filter(s => s.effectiveVerdict === 'FAIL').length
-  const avg      = scores.length    ? +(scores.reduce((s, x)     => s + x.effectiveScore, 0) / scores.length).toFixed(1)    : null
+  const avg      = scores.length     ? +(scores.reduce((s, x)     => s + x.effectiveScore, 0) / scores.length).toFixed(1)     : null
   const prevAvg  = prevScores.length ? +(prevScores.reduce((s, x) => s + x.effectiveScore, 0) / prevScores.length).toFixed(1) : null
   const passRate = scores.length ? Math.round((pass / scores.length) * 100) : null
   const pending  = scores.filter(s => !s.acknowledged).length
 
-  // Top / bottom performer (only agents with scores)
   const agentStats = agents
     .map(a => { const s = getAgentScores(a.id); return { agent: a, avg: avgScore(s), count: s.length } })
     .filter(x => x.count > 0)
@@ -184,144 +185,131 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
 
   const save = () => { if (name.trim()) onEdit(team.id, name.trim()); setEditing(false) }
 
-  const accentColor = avg === null ? '#2a2a2a' : avg >= 80 ? '#10b981' : avg >= 60 ? '#f59e0b' : '#ef4444'
+  const cellStyle = { padding: '14px 20px', borderRight: BORDER }
+
+  const btn = {
+    fontSize: 12, padding: '4px 12px', background: 'transparent',
+    border: BORDER, borderRadius: 8, color: '#999', cursor: 'pointer',
+    fontFamily: 'inherit', transition: 'color 150ms, border-color 150ms',
+  }
 
   return (
-    <div className="rounded-2xl overflow-hidden flex" style={{ background: '#0f0f0f', border: '1px solid rgba(255,255,255,0.06)' }}>
-      {/* Left accent bar */}
-      <div className="w-1 shrink-0" style={{ background: accentColor, opacity: avg === null ? 0.15 : 0.6 }} />
+    <div style={{ fontFamily: "'Space Grotesk', system-ui, sans-serif", background: '#111', border: BORDER, borderRadius: 12, overflow: 'hidden', color: '#f2f2f2' }}>
 
-      <div className="flex-1 min-w-0">
-      <div className="p-5">
-        {/* Title + actions */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="min-w-0">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: BORDER }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 4, height: 28, background: '#FF9780', borderRadius: 2, flexShrink: 0 }} />
+          <div>
             {editing ? (
               <input autoFocus value={name}
                 onChange={e => setName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
                 onBlur={save}
-                className="rounded-lg px-3 py-1 text-sm text-white outline-none w-full"
-                style={{ background: '#1e1e1e', border: '1px solid #FF9780' }}
+                style={{ background: '#1a1a1a', border: '1px solid #FF9780', borderRadius: 8, padding: '4px 10px', color: '#fff', fontSize: 15, fontWeight: 500, outline: 'none', fontFamily: 'inherit' }}
               />
             ) : (
-              <h3 className="text-base font-semibold text-white">{team.name}</h3>
+              <p style={{ fontSize: 15, fontWeight: 500, margin: 0 }}>{team.name}</p>
             )}
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0 ml-4">
-            {canEdit && !confirmDelete && (
-              <>
-                <button onClick={() => { setManaging(v => !v); setExpanded(false) }}
-                  className="text-xs px-2.5 py-1 rounded-lg transition-colors"
-                  style={{ color: managing ? '#FF9780' : '#888', background: managing ? 'rgba(255,151,128,0.08)' : 'transparent', border: '1px solid transparent' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.2)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = managing ? '#FF9780' : '#888'; e.currentTarget.style.borderColor = 'transparent' }}>
-                  Manage
-                </button>
-                <button onClick={() => setEditing(true)}
-                  className="text-xs px-2.5 py-1 rounded-lg transition-colors"
-                  style={{ color: '#888', border: '1px solid transparent' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'transparent' }}>
-                  Edit
-                </button>
-                <button onClick={() => setConfirmDelete(true)}
-                  className="text-xs px-2.5 py-1 rounded-lg transition-colors"
-                  style={{ color: '#888', border: '1px solid transparent' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'transparent' }}>
-                  Delete
-                </button>
-              </>
-            )}
-            {confirmDelete && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#ef4444' }}>Delete?</span>
-                <button onClick={() => onDelete(team.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">Cancel</button>
-              </div>
-            )}
+            <p style={{ fontSize: 12, margin: '2px 0 0', color: '#888' }}>
+              {agents.length} agent{agents.length !== 1 ? 's' : ''} · {scores.length} tickets scored
+            </p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Score badge */}
-          {avg !== null && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg shrink-0"
-              style={{ background: `${accentColor}15`, border: `1px solid ${accentColor}30` }}>
-              <span className="text-sm font-bold" style={{ color: accentColor }}>{avg}</span>
-              <span className="text-xs" style={{ color: accentColor, opacity: 0.7 }}>/100</span>
-              <TrendBadge current={avg} prev={prevAvg} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {canEdit && !confirmDelete && (
+            <>
+              <button style={btn}
+                onClick={() => { setManaging(v => !v); setExpanded(false) }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = managing ? '#FF9780' : '#999'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                Manage
+              </button>
+              <button style={btn}
+                onClick={() => setEditing(true)}
+                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#999'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                Edit
+              </button>
+              <button style={btn}
+                onClick={() => setConfirmDelete(true)}
+                onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#999'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                Delete
+              </button>
+            </>
+          )}
+          {confirmDelete && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#ef4444' }}>Delete team?</span>
+              <button style={{ ...btn, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }} onClick={() => onDelete(team.id)}>Yes</button>
+              <button style={btn} onClick={() => setConfirmDelete(false)}>Cancel</button>
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Divider */}
-          {avg !== null && <div className="w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />}
+      {/* Metric strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderBottom: BORDER }}>
+        {[
+          { label: 'Score',     value: avg !== null ? `${avg}` : '—',          sub: '/100',  color: '#FF9780' },
+          { label: 'Pass rate', value: passRate !== null ? `${passRate}%` : '—', color: '#10b981' },
+          { label: 'Passed',    value: pass,   color: null },
+          { label: 'In review', value: review, color: null },
+          { label: 'Failed',    value: fail,   color: '#ef4444', last: true },
+        ].map(({ label, value, sub, color, last }) => (
+          <div key={label} style={{ ...cellStyle, ...(last ? { borderRight: 'none' } : {}) }}>
+            <p style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#666', margin: 0 }}>{label}</p>
+            <p style={{ fontSize: 20, fontWeight: 500, margin: '4px 0 0', color: color || '#e0e0e0' }}>
+              {value}
+              {sub && <span style={{ fontSize: 12, color: '#666' }}>{sub}</span>}
+              {label === 'Score' && avg !== null && prevAvg !== null && <TrendBadge current={avg} prev={prevAvg} />}
+            </p>
+          </div>
+        ))}
+      </div>
 
-          <span className="text-xs" style={{ color: '#888' }}>{agents.length} agent{agents.length !== 1 ? 's' : ''}</span>
-
-          {scores.length > 0 ? (
-            <>
-              <span className="text-xs" style={{ color: '#888' }}>{scores.length} tickets scored</span>
-              <div className="w-px h-4 shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />
-              <div className="flex items-center gap-2.5 text-xs">
-                <span style={{ color: '#10b981' }}>{pass} pass</span>
-                <span style={{ color: '#f59e0b' }}>{review} review</span>
-                <span style={{ color: '#ef4444' }}>{fail} fail</span>
-              </div>
-              {passRate !== null && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.15)' }}>
-                  {passRate}% pass rate
-                </span>
-              )}
-              {pending > 0 && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(245,158,11,0.08)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.15)' }}>
-                  {pending} pending
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="text-xs" style={{ color: '#666' }}>No tickets scored yet</span>
+      {/* Footer */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', background: 'rgba(255,255,255,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {top && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#888' }}>
+              <span style={{ color: '#10b981' }}>★</span>
+              {top.agent.name} · {top.avg}/100
+            </span>
+          )}
+          {bottom && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#888' }}>
+              <span style={{ color: '#888' }}>↘</span>
+              {bottom.agent.name} · {bottom.avg}/100
+            </span>
+          )}
+          {!top && !bottom && (
+            <span style={{ fontSize: 12, color: '#555' }}>No agents scored yet</span>
           )}
         </div>
-
-        {/* Top / bottom performer */}
-        {(top || bottom) && (
-          <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-            {top && (
-              <span className="text-xs" style={{ color: '#666' }}>
-                🏆 <span style={{ color: '#10b981' }}>{top.agent.name}</span> · {top.avg}/100
-              </span>
-            )}
-            {bottom && (
-              <span className="text-xs" style={{ color: '#666' }}>
-                ↘ <span style={{ color: '#f59e0b' }}>{bottom.agent.name}</span> · {bottom.avg}/100
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Show agents toggle */}
-        {agents.length > 0 && !managing && (
-          <button onClick={() => setExpanded(v => !v)}
-            className="mt-3 flex items-center gap-1.5 text-xs transition-colors"
-            style={{ color: '#666' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-            onMouseLeave={e => e.currentTarget.style.color = '#666'}>
-            <span style={{ display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▶</span>
-            {expanded ? 'Hide agents' : 'Show agents'}
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {pending > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '3px 10px', borderRadius: 8, background: 'rgba(255,151,128,0.08)', color: '#FF9780', border: '0.5px solid rgba(255,151,128,0.2)' }}>
+              {pending} pending
+            </span>
+          )}
+          {agents.length > 0 && !managing && (
+            <button
+              onClick={() => setExpanded(v => !v)}
+              style={{ ...btn, fontSize: 11, padding: '3px 10px', color: '#666' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+              {expanded ? 'Hide agents ▲' : 'Show agents ▼'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Expanded agent list */}
       {expanded && !managing && agents.length > 0 && (
-        <div className="border-t px-5 pb-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+        <div style={{ borderTop: BORDER }}>
           {agents.map((agent, idx) => {
             const aScores  = getAgentScores(agent.id)
             const aAvg     = avgScore(aScores)
@@ -330,26 +318,24 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
             const isTop    = top?.agent.id === agent.id && agentStats.length > 1
             const isLow    = bottom?.agent.id === agent.id && agentStats.length > 1
             return (
-              <div key={agent.id} className="flex items-center justify-between py-2.5"
-                style={{ borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{ background: '#1e1e1e', color: '#FF9780' }}>
+              <div key={agent.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderTop: idx > 0 ? BORDER : 'none', background: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#1e1e1e', color: '#FF9780', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                     {agent.name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <span className="text-sm truncate" style={{ color: '#ccc' }}>{agent.name}</span>
-                  {isTop && <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Top</span>}
-                  {isLow && <span className="text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b' }}>Needs attention</span>}
+                  <span style={{ fontSize: 13, color: '#ccc' }}>{agent.name}</span>
+                  {isTop && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Top</span>}
+                  {isLow && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,0.08)', color: '#f59e0b' }}>Needs attention</span>}
                 </div>
-                <div className="flex items-center gap-3 text-xs shrink-0 ml-3">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>
                   {aScores.length > 0 ? (
                     <>
                       <span style={{ color: '#666' }}>{aScores.length} tickets</span>
-                      <span className="font-medium" style={{ color: scoreColor(aAvg) }}>{aAvg}/100</span>
+                      <span style={{ color: scoreColor(aAvg), fontWeight: 500 }}>{aAvg}/100</span>
                       {aPassPct !== null && <span style={{ color: '#10b981' }}>{aPassPct}% pass</span>}
                     </>
                   ) : (
-                    <span style={{ color: '#aaa' }}>No scores yet</span>
+                    <span style={{ color: '#555' }}>No scores yet</span>
                   )}
                 </div>
               </div>
@@ -368,7 +354,6 @@ function TeamCard({ team, agents, allAgents, scores, prevScores, onEdit, onDelet
           onUnassign={onUnassign}
         />
       )}
-      </div>
     </div>
   )
 }
