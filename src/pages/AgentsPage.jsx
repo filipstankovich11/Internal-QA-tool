@@ -303,8 +303,10 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
           {/* Row 3: email */}
           {agent.email && <p className="text-xs mt-1 truncate" style={{ color: '#777' }}>{agent.email}</p>}
 
-          {/* Row 4: team */}
-          {team && <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
+          {/* Row 4: team — slot always reserved so spacing matches whether or not a team is set */}
+          {team
+            ? <span className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>
+            : <span aria-hidden className="text-xs px-2 py-0.5 rounded-full mt-1.5 inline-block" style={{ visibility: 'hidden' }}>—</span>}
         </div>
       )}
 
