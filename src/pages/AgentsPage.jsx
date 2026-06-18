@@ -272,7 +272,7 @@ function AgentCard({ agent, team, scores, profiles = [], onEdit, onDelete, onVie
               onMouseEnter={e=>e.currentTarget.querySelector('h3').style.color='#FF9780'}
               onMouseLeave={e=>e.currentTarget.querySelector('h3').style.color='#fff'}>
               <div className="flex items-center gap-2 min-w-0">
-                <h3 className="text-white font-semibold transition-colors truncate">{agent.name}</h3>
+                <h3 className="text-white font-semibold transition-colors break-words">{agent.name}</h3>
                 {unacknowledged > 0 && (
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
                     style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', lineHeight: 1 }}>
