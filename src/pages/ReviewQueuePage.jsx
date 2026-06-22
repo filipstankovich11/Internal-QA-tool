@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
@@ -6,6 +6,15 @@ import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { authFetch } from '../lib/api'
 import { useToast } from '../components/Toast'
+import { supabase } from '../lib/supabase'
+import { isClaimActive } from '../lib/claims'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER } from '../lib/verdict'
+
+const QUEUE_PAGE_SIZE = 10 // queue rows shown before "Show more"
+const colLabel = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c8c8c8' }
+// Shared grid template for the header + every row, so columns line up like the dashboard table.
+// Columns: [checkbox] Status · Ticket · Subject · Agents · Score · Waiting · Actions
+const gridCols = (isAdmin) => (isAdmin ? '16px ' : '') + '88px 84px minmax(0,1fr) 120px 56px 60px 130px'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -33,9 +42,10 @@ function priorityOf(item) {
 }
 
 const BADGES = {
-  DISPUTED:     { label: '⚑ DISPUTED', color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.15)', hoverBorder: 'rgba(251,146,60,0.3)' },
-  NEEDS_REVIEW: { label: '~ REVIEW',   color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.15)', hoverBorder: 'rgba(245,158,11,0.3)' },
-  FAIL:         { label: '✕ FAIL',     color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.15)',  hoverBorder: 'rgba(239,68,68,0.3)'  },
+  // DISPUTED is its own status (not a verdict) — keeps a distinct orange
+  DISPUTED:     { label: '⚑ DISPUTED', color: '#fb923c',                 bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.15)',     hoverBorder: 'rgba(251,146,60,0.3)' },
+  NEEDS_REVIEW: { label: '~ REVIEW',   color: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW, border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
+  FAIL:         { label: '✕ FAIL',     color: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL,         border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
 }
 
 function badgeFor(item) {
@@ -55,87 +65,95 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 
   return (
     <div className="rounded-xl transition-all"
-      style={{ background: selected ? '#161616' : '#1e1e20', border: `1px solid ${selected ? badge.hoverBorder : badge.border}`, boxShadow: `inset 3px 0 0 ${badge.color}` }}>
+      style={{ background: selected ? '#161616' : '#1e1e20', border: `1px solid ${selected ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}` }}
+      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#161616' }}
+      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = '#1e1e20' }}>
 
-      <div className="flex items-center gap-3 px-3 py-3.5">
+      <div className="grid items-center gap-3 px-3 py-3" style={{ gridTemplateColumns: gridCols(isAdmin) }}>
         {/* Checkbox */}
         {isAdmin && (
-          <button onClick={e => { e.stopPropagation(); onSelect(item.id) }}
-            className="shrink-0 w-4 h-4 rounded flex items-center justify-center transition-colors"
+          <button onClick={() => onSelect(item.id)}
+            className="w-4 h-4 rounded flex items-center justify-center transition-colors"
             style={{ background: selected ? '#FF9780' : 'transparent', border: `1.5px solid ${selected ? '#FF9780' : '#444'}` }}>
             {selected && <span style={{ color: '#000', fontSize: 9, fontWeight: 'bold', lineHeight: 1 }}>✓</span>}
           </button>
         )}
 
-        {/* Clickable content */}
-        <button onClick={onClick} className="flex-1 flex items-center justify-between gap-3 min-w-0 text-left">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-              style={{ background: badge.bg, color: badge.color }}>
-              {badge.label}
-            </span>
-            <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              className="text-xs font-mono shrink-0 transition-colors"
-              style={{ color: '#FF9780' }}
-              onMouseEnter={e => e.target.style.textDecoration = 'underline'}
-              onMouseLeave={e => e.target.style.textDecoration = 'none'}>
-              #{item.ticketId}
-            </a>
-            <span className="text-sm truncate" style={{ color: '#ccc' }}>
-              {item.fullScore?.ticket_subject || '—'}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            {item.agentIds?.length > 0 && (
-              <div className="hidden sm:flex gap-1">
-                {item.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
-                  <span key={i} className="text-xs px-1.5 py-0.5 rounded-full"
-                    style={{ background: '#1a1a1a', color: '#888' }}>{name}</span>
-                ))}
-              </div>
-            )}
-            <ScoreBreakdownHover scores={item.fullScore?.scores} align="right">
-              <span className="text-sm font-bold tabular-nums cursor-default" style={{ color: badge.color }}>
-                {item.effectiveScore?.toFixed(0)}/100
-              </span>
-            </ScoreBreakdownHover>
-            <span className="text-xs tabular-nums font-medium" style={{ color: wColor }}
-              title={new Date(item.scoredAt).toLocaleString()}>
-              {waiting}
-            </span>
-          </div>
+        {/* Status */}
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium truncate text-center"
+          style={{ background: badge.bg, color: badge.color }}>
+          {badge.label}
+        </span>
+
+        {/* Ticket */}
+        <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
+          className="text-xs font-mono transition-colors truncate"
+          style={{ color: '#FF9780' }}
+          onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+          onMouseLeave={e => e.target.style.textDecoration = 'none'}>
+          #{item.ticketId}
+        </a>
+
+        {/* Subject — click to open */}
+        <button onClick={onClick} className="text-sm truncate text-left transition-colors min-w-0"
+          style={{ color: '#e8e8e8' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+          onMouseLeave={e => e.currentTarget.style.color = '#e8e8e8'}>
+          {item.fullScore?.ticket_subject || '—'}
         </button>
 
-        {/* Row actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Agents */}
+        <div className="flex gap-1 overflow-hidden">
+          {item.agentIds?.length > 0
+            ? item.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
+              <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate"
+                style={{ background: '#1a1a1a', color: '#c8c8c8' }}>{name}</span>
+            ))
+            : <span className="text-xs" style={{ color: '#555' }}>—</span>}
+        </div>
+
+        {/* Score */}
+        <ScoreBreakdownHover scores={item.fullScore?.scores} align="right">
+          <span className="text-sm font-bold tabular-nums cursor-default block text-right" style={{ color: badge.color }}>
+            {item.effectiveScore?.toFixed(0)}/100
+          </span>
+        </ScoreBreakdownHover>
+
+        {/* Waiting */}
+        <span className="text-xs tabular-nums font-medium text-right" style={{ color: wColor }}
+          title={new Date(item.scoredAt).toLocaleString()}>
+          {waiting}
+        </span>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
           {/* Claim / unclaim */}
           {isAdmin && (
             claimedBy
-              ? <span className="text-xs px-2 py-1 rounded-lg"
+              ? <span className="text-xs px-2 py-1 rounded-lg truncate"
                   style={{ background: 'rgba(255,151,128,0.08)', color: '#FF9780', border: '1px solid rgba(255,151,128,0.2)' }}
                   title={`Claimed by ${claimedBy}`}>
                   ● {claimedBy.split(' ')[0]}
-                  <button onClick={e => { e.stopPropagation(); onUnclaim(item.id) }}
+                  <button onClick={() => onUnclaim(item.id)}
                     className="ml-1.5 opacity-60 hover:opacity-100" style={{ color: '#FF9780' }}>✕</button>
                 </span>
-              : <button onClick={e => { e.stopPropagation(); onClaim(item.id) }}
+              : <button onClick={() => onClaim(item.id)}
                   className="text-xs px-2 py-1 rounded-lg transition-colors"
-                  style={{ color: '#666', border: '1px solid rgba(255,255,255,0.07)' }}
+                  style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.07)' }}
                   onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.2)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
+                  onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
                   Claim
                 </button>
           )}
 
           {/* Notify */}
           {item.agentIds?.length > 0 && (
-            <button onClick={e => { e.stopPropagation(); onNotify(item) }}
+            <button onClick={() => onNotify(item)}
               disabled={notifying}
               className="text-xs px-2 py-1 rounded-lg transition-colors"
-              style={{ color: '#666', border: '1px solid rgba(255,255,255,0.07)', opacity: notifying ? 0.5 : 1 }}
-              onMouseEnter={e => { if (!notifying) { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' } }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+              style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.07)', opacity: notifying ? 0.5 : 1 }}
+              onMouseEnter={e => { if (!notifying) { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' } }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
               title="Notify agent via Slack DM">
               {notifying ? '…' : '↗ Notify'}
             </button>
@@ -146,7 +164,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
       {/* Dispute note */}
       {item.disputed && item.disputeNote && (
         <div className="px-4 pb-3.5" style={{ borderTop: '1px solid rgba(245,158,11,0.1)' }}>
-          <p className="text-xs pt-2.5 mb-1" style={{ color: '#888' }}>Agent's dispute reason:</p>
+          <p className="text-xs pt-2.5 mb-1" style={{ color: '#c8c8c8' }}>Agent's dispute reason:</p>
           <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{item.disputeNote}</p>
           {item.disputeAt && (
             <p className="text-xs mt-1.5" style={{ color: '#666' }}>
@@ -162,26 +180,34 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ReviewQueuePage() {
-  const { scoreHistory, agents, acknowledgeScore } = useApp()
+  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore, activeOverlay, setActiveOverlay } = useApp()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
 
-  const [activeScore,  setActiveScore]  = useState(null)
+  const [panelScore,  setPanelScore]  = useState(null) // concise side panel
+  const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
   const [sortOrder,    setSortOrder]    = useState('priority')
   const [agentFilter,  setAgentFilter]  = useState('')
   const [selected,     setSelected]     = useState(new Set())
   const [statusFilter, setStatusFilter] = useState(null) // null | 'needs_review' | 'disputed' | 'fails'
   const [bulkWorking,  setBulkWorking]  = useState(false)
-  // claimed: { [scoreId]: userName }
-  const [claimed,      setClaimed]      = useState({})
   const [notifying,    setNotifying]    = useState(null) // scoreId being notified
+  const [visibleCount, setVisibleCount] = useState(QUEUE_PAGE_SIZE) // progressive reveal
+  const [profiles,     setProfiles]     = useState({})   // id → name, for "claimed by" display
 
-  const userName = user?.email?.split('@')[0] || 'Reviewer'
+  // Resolve claimer names once (claims store a user id)
+  useEffect(() => {
+    supabase.from('profiles').select('id, name').then(({ data }) => {
+      const map = {}; (data || []).forEach(p => { map[p.id] = p.name }); setProfiles(map)
+    })
+  }, [])
+  const claimedName = (s) =>
+    !isClaimActive(s) ? null : (s.claimedBy === user?.id ? 'You' : (profiles[s.claimedBy] || 'Another reviewer'))
 
   // Queue buckets
-  const needsReview = scoreHistory.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
-  const disputed    = scoreHistory.filter(s => s.disputed)
-  const failed      = scoreHistory.filter(s => s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict)
+  const needsReview = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
+  const disputed    = scoreHistory.filter(s => !s.reviewedAt && s.disputed)
+  const failed      = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict)
   const allQueued   = useMemo(() => [...new Map([...disputed, ...needsReview, ...failed].map(s => [s.id, s])).values()], [scoreHistory])
 
   const totalCount  = allQueued.length
@@ -211,6 +237,9 @@ export default function ReviewQueuePage() {
                  : allQueued
   const sorted = sortAndFilter(baseList)
 
+  // Reset the progressive reveal when the filter/sort or queue size changes
+  useEffect(() => { setVisibleCount(QUEUE_PAGE_SIZE) }, [statusFilter, agentFilter, sortOrder, totalCount])
+
   // Selection
   const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const selectAll    = () => setSelected(new Set(sorted.map(s => s.id)))
@@ -226,9 +255,13 @@ export default function ReviewQueuePage() {
     clearSelect()
   }
 
-  // Claim / unclaim
-  const claimTicket   = (id) => setClaimed(c => ({ ...c, [id]: userName }))
-  const unclaimTicket = (id) => setClaimed(c => { const n = { ...c }; delete n[id]; return n })
+  // Claim / unclaim (persisted via AppContext)
+  const claimTicket   = async (id) => {
+    const err = await claimScore(id)
+    if (err) toast.error(`Failed to claim: ${err.message || err.code || 'unknown error'}`)
+    else toast.success('Ticket claimed')
+  }
+  const unclaimTicket = (id) => unclaimScore(id)
 
   // Quick notify (no preview — direct send)
   const quickNotify = async (item) => {
@@ -262,7 +295,13 @@ export default function ReviewQueuePage() {
     }
   }
 
-  const open = (item) => setActiveScore({
+  // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
+  // other overlays (notifications/settings), expandable to the full modal.
+  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
+  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
+  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
+
+  const open = (item) => openPanel({
     ...item.fullScore,
     scoreId:         item.id,
     reviewerNote:    item.notes,
@@ -276,7 +315,8 @@ export default function ReviewQueuePage() {
   })
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-10 pb-16">
+    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="max-w-6xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -289,7 +329,7 @@ export default function ReviewQueuePage() {
               </span>
             )}
           </div>
-          <p className="text-sm" style={{ color: '#888' }}>
+          <p className="text-sm" style={{ color: '#c8c8c8' }}>
             Tickets requiring human attention — reviews, disputes and fails
           </p>
         </div>
@@ -322,14 +362,14 @@ export default function ReviewQueuePage() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = `${color}66` }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
                   <p className="text-xl font-bold" style={{ color }}>{value}</p>
-                  <p className="mt-0.5" style={{ color: active ? '#aaa' : '#666', fontSize: small ? '10px' : '12px' }}>{label}</p>
+                  <p className="mt-0.5" style={{ color: active ? '#fff' : '#c8c8c8', fontSize: small ? '10px' : '12px' }}>{label}</p>
                 </button>
               )
             })}
             <div className="rounded-xl p-3 text-center"
               style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
               <p className="text-xl font-bold" style={{ color: +avgWaitDays > 2 ? '#ef4444' : '#aaa' }}>{avgWaitDays ? `${avgWaitDays}d` : '—'}</p>
-              <p className="mt-0.5 text-xs" style={{ color: '#666' }}>Avg wait</p>
+              <p className="mt-0.5 text-xs" style={{ color: '#c8c8c8' }}>Avg wait</p>
             </div>
           </div>
 
@@ -398,16 +438,30 @@ export default function ReviewQueuePage() {
             )}
           </div>
 
+          {/* Column headers — share the row grid template so columns line up */}
+          {sorted.length > 0 && (
+            <div className="grid items-center gap-3 px-3 mb-2" style={{ gridTemplateColumns: gridCols(isAdmin) }}>
+              {isAdmin && <span />}
+              <span style={colLabel}>Status</span>
+              <span style={colLabel}>Ticket</span>
+              <span style={colLabel}>Subject</span>
+              <span style={colLabel}>Agents</span>
+              <span style={colLabel} className="text-right">Score</span>
+              <span style={colLabel} className="text-right">Waiting</span>
+              <span style={colLabel}>Actions</span>
+            </div>
+          )}
+
           {/* Queue list */}
           <div className="flex flex-col gap-2">
-            {sorted.map(item => (
+            {sorted.slice(0, visibleCount).map(item => (
               <QueueItem
                 key={item.id}
                 item={item}
                 onClick={() => open(item)}
                 selected={selected.has(item.id)}
                 onSelect={toggleSelect}
-                claimedBy={claimed[item.id] || null}
+                claimedBy={claimedName(item)}
                 onClaim={claimTicket}
                 onUnclaim={unclaimTicket}
                 onNotify={quickNotify}
@@ -415,6 +469,15 @@ export default function ReviewQueuePage() {
                 isAdmin={isAdmin}
               />
             ))}
+            {visibleCount < sorted.length && (
+              <button onClick={() => setVisibleCount(c => c + QUEUE_PAGE_SIZE)}
+                className="text-xs mx-auto mt-2 px-4 py-1.5 rounded-lg transition-colors"
+                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                Show more · {Math.min(QUEUE_PAGE_SIZE, sorted.length - visibleCount)} of {sorted.length - visibleCount} remaining
+              </button>
+            )}
             {sorted.length === 0 && agentFilter && (
               <p className="text-sm text-center py-10" style={{ color: '#555' }}>No queue items for this agent.</p>
             )}
@@ -422,7 +485,16 @@ export default function ReviewQueuePage() {
         </>
       )}
 
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
+      </div>
+      {panelScore && (
+        <ScoreModal
+          score={panelScore}
+          onClose={closePanel}
+          onExpand={() => { setModalScore(panelScore); closePanel() }}
+          panel
+        />
+      )}
+      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }

@@ -39,8 +39,17 @@ create table public.scores (
   full_score     jsonb,
   notes          text,
   scored_by      uuid references auth.users(id),
-  scored_at      timestamptz default now()
+  scored_at      timestamptz default now(),
+  claimed_by     uuid references auth.users(id),
+  claimed_at     timestamptz,
+  reviewed_by    uuid references auth.users(id),
+  reviewed_at    timestamptz
 );
+
+-- Recent-scores listing (order by scored_at desc limit ...) — used on initial app load
+create index if not exists scores_scored_at_idx on public.scores (scored_at desc);
+-- Reviewer "My Queue" claims lookup
+create index if not exists scores_claimed_by_idx on public.scores (claimed_by);
 
 -- ============================================================
 -- Row Level Security

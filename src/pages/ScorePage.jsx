@@ -4,15 +4,29 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { authFetch, buildFewShotExamples } from '../lib/api'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS } from '../lib/verdict'
 
-const VERDICT_COLOR = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
-const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,158,11,0.1)', FAIL: 'rgba(239,68,68,0.1)' }
-const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
-const VERDICTS      = ['PASS', 'NEEDS_REVIEW', 'FAIL']
+const HISTORY_PAGE_SIZE = 10 // history rows shown before "Show more"
 
 const inputStyle = { background: '#1e1e20', border: '1px solid rgba(255,255,255,0.07)', color: '#ccc', outline: 'none' }
 const onFocus    = e => e.target.style.borderColor = '#FF9780'
 const onBlur     = e => e.target.style.borderColor = 'rgba(255,255,255,0.07)'
+
+// Cache the Gorgias views fetch for the session — ViewPicker remounts every time
+// the user toggles into View mode, so without this it re-hits /api/views each time.
+let viewsCache = null
+let viewsPromise = null
+function loadViews() {
+  if (viewsCache) return Promise.resolve(viewsCache)
+  if (!viewsPromise) {
+    viewsPromise = authFetch('/api/views').then(r => r.json()).then(d => {
+      if (d.error) throw new Error(d.error)
+      viewsCache = d.views || []
+      return viewsCache
+    }).catch(e => { viewsPromise = null; throw e }) // allow retry on failure
+  }
+  return viewsPromise
+}
 
 // ── Scoring progress bar ──────────────────────────────────────────────────────
 
@@ -102,9 +116,9 @@ function ModeToggle({ mode, setMode }) {
       {modes.map(({ id, label }) => (
         <button key={id} onClick={() => setMode(id)}
           className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={mode === id ? { background: '#1e1e1e', color: '#fff' } : { color: '#666' }}
-          onMouseEnter={e => { if (mode !== id) e.currentTarget.style.color = '#ccc' }}
-          onMouseLeave={e => { if (mode !== id) e.currentTarget.style.color = '#666' }}>
+          style={mode === id ? { background: '#1e1e1e', color: '#fff' } : { color: '#c8c8c8' }}
+          onMouseEnter={e => { if (mode !== id) e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { if (mode !== id) e.currentTarget.style.color = '#c8c8c8' }}>
           {label}
         </button>
       ))}
@@ -130,15 +144,15 @@ function HistoryItem({ item, onClick }) {
           onMouseLeave={e => e.target.style.textDecoration = 'none'}>
           #{item.ticketId}
         </a>
-        <span className="text-sm truncate" style={{ color: '#ccc' }}>
+        <span className="text-sm truncate" style={{ color: '#e8e8e8' }}>
           {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
         </span>
       </div>
       <div className="flex items-center gap-3 shrink-0 ml-4">
-        <span className="text-xs tabular-nums" style={{ color: '#666' }}>{item.effectiveScore?.toFixed(0)}/100</span>
+        <span className="text-xs tabular-nums" style={{ color: '#c8c8c8' }}>{item.effectiveScore?.toFixed(0)}/100</span>
         <span className="flex items-center gap-1.5">
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8 }} />
-          <span className="text-xs font-medium" style={{ color: '#888', letterSpacing: '0.04em' }}>
+          <span className="text-xs font-medium" style={{ color: '#c8c8c8', letterSpacing: '0.04em' }}>
             {VERDICT_LABEL[item.effectiveVerdict]}
           </span>
         </span>
@@ -160,7 +174,9 @@ function parseCSV(text) {
 
 function CSVUploadZone({ onTickets, disabled }) {
   const [dragging, setDragging] = useState(false)
+  const [hover,    setHover]    = useState(false)
   const [preview,  setPreview]  = useState(null)
+  const [fileName, setFileName] = useState(null)
   const [err,      setErr]      = useState(null)
   const inputRef = useRef()
 
@@ -168,7 +184,24 @@ function CSVUploadZone({ onTickets, disabled }) {
     try   { const ids = parseCSV(text); setPreview(ids); setErr(null); onTickets(ids) }
     catch (e) { setErr(e.message); setPreview(null); onTickets([]) }
   }
-  const onFile = f => { if (!f) return; const r = new FileReader(); r.onload = e => process(e.target.result); r.readAsText(f) }
+  const onFile = f => {
+    if (!f) return
+    if (!f.name.toLowerCase().endsWith('.csv')) { setErr('Please upload a .csv file'); setPreview(null); setFileName(null); onTickets([]); return }
+    setFileName(f.name)
+    const r = new FileReader(); r.onload = e => process(e.target.result); r.readAsText(f)
+  }
+  const clear = () => { setPreview(null); setErr(null); setFileName(null); onTickets([]); if (inputRef.current) inputRef.current.value = '' }
+
+  const loaded = preview && preview.length > 0
+  const borderColor = err ? 'rgba(239,68,68,0.4)'
+                    : dragging ? '#FF9780'
+                    : loaded ? 'rgba(16,185,129,0.4)'
+                    : hover ? 'rgba(255,255,255,0.20)'
+                    : 'rgba(255,255,255,0.10)'
+  const bg = dragging ? 'rgba(255,151,128,0.06)'
+           : loaded ? 'rgba(16,185,129,0.04)'
+           : hover ? 'rgba(255,255,255,0.02)'
+           : 'transparent'
 
   return (
     <div>
@@ -177,16 +210,128 @@ function CSVUploadZone({ onTickets, disabled }) {
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); onFile(e.dataTransfer.files[0]) }}
         onClick={() => !disabled && inputRef.current?.click()}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
         className="border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all"
-        style={{ borderColor: dragging ? '#FF9780' : 'rgba(255,255,255,0.07)', background: dragging ? 'rgba(255,151,128,0.04)' : 'transparent' }}>
-        <p className="text-3xl mb-3">📄</p>
-        <p className="text-sm font-medium text-white">Drop your CSV here</p>
-        <p className="text-xs mt-1" style={{ color: '#777' }}>or click to browse</p>
-        <p className="text-xs mt-3" style={{ color: '#666' }}>Expected column: <code style={{ color: '#888' }}>ticket_id</code> or <code style={{ color: '#888' }}>ticket_url</code></p>
+        style={{ borderColor, background: bg, transform: dragging ? 'scale(1.005)' : 'none' }}>
+        {loaded ? (
+          <>
+            <div className="mx-auto mb-3 w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <p className="text-sm font-medium text-white truncate">{fileName}</p>
+            <p className="text-xs mt-1" style={{ color: '#10b981' }}>{preview.length} ticket{preview.length !== 1 ? 's' : ''} ready</p>
+            <button onClick={e => { e.stopPropagation(); clear() }}
+              className="text-xs mt-3 px-3 py-1 rounded-lg transition-colors"
+              style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.12)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}>
+              Remove
+            </button>
+          </>
+        ) : (
+          <>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+              className="mx-auto mb-3" style={{ color: dragging || hover ? '#FF9780' : '#888', transition: 'color 150ms' }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p className="text-sm font-medium text-white">Drop your CSV here</p>
+            <p className="text-xs mt-1" style={{ color: '#999' }}>or click to browse</p>
+            <p className="text-xs mt-3" style={{ color: '#888' }}>Expected column: <code style={{ color: '#c8c8c8' }}>ticket_id</code> or <code style={{ color: '#c8c8c8' }}>ticket_url</code></p>
+          </>
+        )}
         <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={e => onFile(e.target.files[0])} />
       </div>
-      {err     && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{err}</p>}
-      {preview && <p className="text-xs mt-2" style={{ color: '#10b981' }}>✓ {preview.length} ticket{preview.length !== 1 ? 's' : ''} ready to run</p>}
+      {err && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{err}</p>}
+    </div>
+  )
+}
+
+// ── Searchable view combobox ──────────────────────────────────────────────────
+
+function ViewCombobox({ views, value, onChange, loading, disabled }) {
+  const [open,      setOpen]      = useState(false)
+  const [query,     setQuery]     = useState('')
+  const [highlight, setHighlight] = useState(0)
+  const rootRef  = useRef(null)
+  const inputRef = useRef(null)
+  const listRef  = useRef(null)
+
+  const selected = views.find(v => String(v.id) === String(value))
+  const q = query.trim().toLowerCase()
+  const filtered = q ? views.filter(v => v.name?.toLowerCase().includes(q)) : views
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const onDoc = e => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
+  // Reset + focus search when opening
+  useEffect(() => { if (open) { setQuery(''); setHighlight(0); setTimeout(() => inputRef.current?.focus(), 0) } }, [open])
+  useEffect(() => { setHighlight(0) }, [query])
+
+  // Keep the highlighted row in view
+  useEffect(() => {
+    if (open) listRef.current?.children[highlight]?.scrollIntoView({ block: 'nearest' })
+  }, [highlight, open])
+
+  const choose = (v) => { onChange(String(v.id)); setOpen(false) }
+
+  const onKeyDown = e => {
+    if (e.key === 'ArrowDown')      { e.preventDefault(); setHighlight(h => Math.min(h + 1, filtered.length - 1)) }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); setHighlight(h => Math.max(h - 1, 0)) }
+    else if (e.key === 'Enter')     { e.preventDefault(); if (filtered[highlight]) choose(filtered[highlight]) }
+    else if (e.key === 'Escape')    { setOpen(false) }
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button type="button" disabled={disabled || loading} onClick={() => setOpen(o => !o)}
+        className="w-full rounded-xl px-4 py-2.5 text-sm flex items-center justify-between gap-2 text-left transition-colors"
+        style={{ background: '#1e1e20', border: `1px solid ${open ? '#FF9780' : 'rgba(255,255,255,0.07)'}`, color: selected ? '#fff' : '#c8c8c8', outline: 'none', opacity: disabled ? 0.5 : 1 }}>
+        <span className="truncate">{loading ? 'Loading views…' : selected ? selected.name : 'Select a view…'}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ color: '#888', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', flexShrink: 0 }}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-1.5 w-full rounded-xl overflow-hidden"
+          style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)', animation: 'fadeIn 120ms ease' }}>
+          {/* Search */}
+          <div className="p-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="relative">
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#555' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown}
+                placeholder="Search views…"
+                className="w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none"
+                style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.07)', color: '#fff' }} />
+            </div>
+          </div>
+          {/* List */}
+          <div ref={listRef} className="max-h-60 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-center py-4 px-3" style={{ color: '#666' }}>No views match “{query}”</p>
+            ) : filtered.map((v, i) => {
+              const isSel = String(v.id) === String(value)
+              return (
+                <button key={v.id} type="button" onClick={() => choose(v)} onMouseEnter={() => setHighlight(i)}
+                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors"
+                  style={{ background: i === highlight ? 'rgba(255,255,255,0.06)' : 'transparent', color: isSel ? '#FF9780' : '#ccc' }}>
+                  <span style={{ width: 12, flexShrink: 0, color: '#FF9780' }}>{isSel ? '✓' : ''}</span>
+                  <span className="truncate">{v.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -201,11 +346,13 @@ function ViewPicker({ onTickets, disabled }) {
   const [fetching, setFetching] = useState(false)
   const [err,      setErr]      = useState(null)
   const [preview,  setPreview]  = useState(null)
+  const [btnHover, setBtnHover] = useState(false)
 
   useEffect(() => {
+    if (viewsCache) { setViews(viewsCache); return } // instant on repeat visits
     setLoading(true)
-    authFetch('/api/views').then(r => r.json())
-      .then(d => { if (d.error) throw new Error(d.error); setViews(d.views || []) })
+    loadViews()
+      .then(setViews)
       .catch(e => setErr(e.message || 'Could not load views'))
       .finally(() => setLoading(false))
   }, [])
@@ -226,29 +373,49 @@ function ViewPicker({ onTickets, disabled }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-end gap-3">
-        <div className="flex-1">
-          <label className="text-xs mb-1.5 block" style={{ color: '#888' }}>Gorgias View</label>
-          <select value={viewId} onChange={e => { setViewId(e.target.value); setPreview(null); onTickets([]) }}
-            disabled={disabled || loading}
-            className="w-full rounded-xl px-4 py-2.5 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-            <option value="">{loading ? 'Loading views…' : 'Select a view…'}</option>
-            {views.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </select>
-        </div>
-        <div className="w-24">
-          <label className="text-xs mb-1.5 block" style={{ color: '#888' }}>Limit</label>
-          <input type="number" min={1} max={100} value={limit}
-            onChange={e => setLimit(e.target.value)}
-            onBlur={e => setLimit(String(Math.min(100, Math.max(1, parseInt(e.target.value) || 30))))}
-            onFocus={e => e.target.select()}
+        <div className="flex-1 min-w-0">
+          <label className="text-xs mb-1.5 block" style={{ color: '#c8c8c8' }}>Gorgias View</label>
+          <ViewCombobox
+            views={views}
+            value={viewId}
+            onChange={id => { setViewId(id); setPreview(null); onTickets([]) }}
+            loading={loading}
             disabled={disabled}
-            className="w-full rounded-xl px-4 py-2.5 text-sm" style={inputStyle} />
+          />
         </div>
-        <button onClick={load} disabled={!viewId || fetching || disabled}
-          className="text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap"
-          style={{ background: '#1e1e1e', color: fetching ? '#555' : '#ccc', border: '1px solid rgba(255,255,255,0.07)' }}>
-          {fetching ? 'Loading…' : 'Load Tickets'}
-        </button>
+        <div className="w-28 shrink-0">
+          <label className="text-xs mb-1.5 block" style={{ color: '#c8c8c8' }}>Limit</label>
+          <div className="flex items-center rounded-xl overflow-hidden" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <button type="button" aria-label="Decrease"
+              onClick={() => setLimit(l => String(Math.max(1, (parseInt(l) || 30) - 5)))}
+              disabled={disabled || (parseInt(limit) || 0) <= 1}
+              className="stepper-btn shrink-0 w-8 py-2.5 text-base leading-none">−</button>
+            <input type="number" min={1} max={100} value={limit}
+              onChange={e => setLimit(e.target.value)}
+              onBlur={e => setLimit(String(Math.min(100, Math.max(1, parseInt(e.target.value) || 30))))}
+              onFocus={e => e.target.select()}
+              disabled={disabled}
+              className="no-spinner w-full text-center text-sm py-2.5 bg-transparent outline-none"
+              style={{ color: '#fff' }} />
+            <button type="button" aria-label="Increase"
+              onClick={() => setLimit(l => String(Math.min(100, (parseInt(l) || 30) + 5)))}
+              disabled={disabled || (parseInt(limit) || 0) >= 100}
+              className="stepper-btn shrink-0 w-8 py-2.5 text-base leading-none">+</button>
+          </div>
+        </div>
+        {(() => {
+          const hot = viewId && !fetching && !disabled && btnHover
+          return (
+            <button onClick={load} disabled={!viewId || fetching || disabled}
+              onMouseEnter={() => setBtnHover(true)}
+              onMouseLeave={() => setBtnHover(false)}
+              className="g-btn-primary text-sm px-5 py-2.5 rounded-xl whitespace-nowrap shrink-0 flex items-center gap-1.5">
+              {fetching
+                ? <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>Loading…</>
+                : <>Load Tickets <span style={{ display: 'inline-block', transform: hot ? 'translateX(3px)' : 'none', transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1)' }}>→</span></>}
+            </button>
+          )
+        })()}
       </div>
       {err && <p className="text-xs" style={{ color: '#ef4444' }}>{err}</p>}
       {preview && (
@@ -295,9 +462,9 @@ function ResultRow({ result, onView }) {
         onMouseLeave={e => e.target.style.textDecoration = 'none'}>
         #{result.ticketId}
       </a>
-      <span className="text-xs flex-1 truncate" style={{ color: '#ccc' }}>{result.fullScore?.ticket_subject || '—'}</span>
-      {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#777' }}>{result.agentName}</span>}
-      <span className="text-xs shrink-0 tabular-nums" style={{ color: '#888' }}>{result.weightedScore?.toFixed(0)}/100</span>
+      <span className="text-xs flex-1 truncate" style={{ color: '#e8e8e8' }}>{result.fullScore?.ticket_subject || '—'}</span>
+      {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#c8c8c8' }}>{result.agentName}</span>}
+      <span className="text-xs shrink-0 tabular-nums" style={{ color: '#c8c8c8' }}>{result.weightedScore?.toFixed(0)}/100</span>
       {color && <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>{VERDICT_LABEL[result.verdict]}</span>}
     </button>
   )
@@ -306,17 +473,25 @@ function ResultRow({ result, onView }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ScorePage() {
-  const { scoreHistory, addScore, agents, rubric } = useApp()
+  const { scoreHistory, addScore, agents, rubric, activeOverlay, setActiveOverlay } = useApp()
   const { canScore } = useAuth()
 
   const [mode,        setMode]        = useState('single')
-  const [activeScore, setActiveScore] = useState(null)
+  const [panelScore,  setPanelScore]  = useState(null) // concise side panel
+  const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
+
+  // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
+  // other overlays (notifications/settings), expandable to the full modal.
+  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
+  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
+  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
 
   // Single mode state
   const [ticketUrl, setTicketUrl] = useState('')
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
   const [filters,   setFilters]   = useState({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })
+  const [historyCount, setHistoryCount] = useState(HISTORY_PAGE_SIZE) // progressive reveal
 
   // Batch mode state
   const [ticketIds, setTicketIds] = useState([])
@@ -334,6 +509,9 @@ export default function ScorePage() {
     return match ? match[1] : raw
   }, [filters.ticketSearch])
 
+  // Built once per history change, not per score call (was rebuilt inside the batch loop)
+  const fewShotExamples = useMemo(() => buildFewShotExamples(scoreHistory), [scoreHistory])
+
   const filteredHistory = useMemo(() => scoreHistory.filter(s => {
     if (searchTicketId && String(s.ticketId) !== searchTicketId) return false
     if (filters.agent && !s.agentIds?.includes(filters.agent)) return false
@@ -342,6 +520,9 @@ export default function ScorePage() {
     if (filters.dateTo   && s.scoredAt > new Date(filters.dateTo).setHours(23, 59, 59, 999)) return false
     return true
   }), [scoreHistory, filters, searchTicketId])
+
+  // Reset the progressive reveal whenever the filtered result set changes
+  useEffect(() => { setHistoryCount(HISTORY_PAGE_SIZE) }, [filteredHistory])
 
   const isValidUrl = val => {
     const v = val.trim()
@@ -354,11 +535,11 @@ export default function ScorePage() {
     if (!url || loading || urlError) return
     setLoading(true); setError(null)
     try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
+      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Something went wrong.'); return }
       addScore(data)
-      setActiveScore(data)
+      openPanel(data)
       setTicketUrl('')
     } catch { setError('Could not reach the server.') }
     finally { setLoading(false) }
@@ -371,7 +552,7 @@ export default function ScorePage() {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//, '').trim()
       try {
-        const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
+        const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
         const data = await res.json()
         if (!res.ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
         addScore(data)
@@ -391,11 +572,12 @@ export default function ScorePage() {
     : null
 
   return (
+    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
     <div className="max-w-2xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Score</h1>
-        <p className="text-sm" style={{ color: '#888' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
+        <p className="text-sm" style={{ color: '#c8c8c8' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
       </div>
 
       {/* Mode toggle */}
@@ -442,8 +624,9 @@ export default function ScorePage() {
           {scoreHistory.length > 0 && (
             <div className="mt-10">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-wider" style={{ color: '#666' }}>
-                  History {hasFilters && <span style={{ color: '#FF9780' }}>· {filteredHistory.length} match</span>}
+                <p className="text-xs uppercase tracking-wider" style={{ color: '#c8c8c8' }}>
+                  History <span style={{ color: '#c8c8c8' }}>· showing {Math.min(historyCount, filteredHistory.length)} of {filteredHistory.length}</span>
+                  {hasFilters && <span style={{ color: '#FF9780' }}> match</span>}
                 </p>
                 {hasFilters && (
                   <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
@@ -458,7 +641,7 @@ export default function ScorePage() {
               <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
                 style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-xs" style={{ color: '#777' }}>Ticket URL or ID</label>
+                  <label className="text-xs" style={{ color: '#c8c8c8' }}>Ticket URL or ID</label>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: filters.ticketSearch ? '#FF9780' : '#444' }}>
                       <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -487,7 +670,7 @@ export default function ScorePage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-                  <label className="text-xs" style={{ color: '#777' }}>Agent</label>
+                  <label className="text-xs" style={{ color: '#c8c8c8' }}>Agent</label>
                   <select value={filters.agent} onChange={e => setF('agent', e.target.value)}
                     className="rounded-xl px-3 py-2 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
                     <option value="">All agents</option>
@@ -495,17 +678,17 @@ export default function ScorePage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: '#777' }}>From</label>
+                  <label className="text-xs" style={{ color: '#c8c8c8' }}>From</label>
                   <input type="date" value={filters.dateFrom} onChange={e => setF('dateFrom', e.target.value)}
                     className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'dark' }} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: '#777' }}>To</label>
+                  <label className="text-xs" style={{ color: '#c8c8c8' }}>To</label>
                   <input type="date" value={filters.dateTo} onChange={e => setF('dateTo', e.target.value)}
                     className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'dark' }} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: '#777' }}>Status</label>
+                  <label className="text-xs" style={{ color: '#c8c8c8' }}>Status</label>
                   <div className="flex gap-1.5">
                     {VERDICTS.map(v => {
                       const active = filters.verdicts.includes(v)
@@ -515,7 +698,7 @@ export default function ScorePage() {
                           className="text-xs px-2.5 py-2 rounded-xl border transition-all font-medium"
                           style={active
                             ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                            : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}>
+                            : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)' }}>
                           {VERDICT_LABEL[v]}
                         </button>
                       )
@@ -527,9 +710,9 @@ export default function ScorePage() {
               {filteredHistory.length === 0
                 ? <p className="text-xs text-center py-8" style={{ color: '#555' }}>No tickets match your filters.</p>
                 : <div className="flex flex-col gap-2">
-                    {filteredHistory.map((item, i) => (
+                    {filteredHistory.slice(0, historyCount).map((item, i) => (
                       <div key={item.id} className="stagger-item" style={{ '--i': i }}>
-                        <HistoryItem item={item} onClick={() => setActiveScore({
+                        <HistoryItem item={item} onClick={() => openPanel({
                           ...item.fullScore,
                           scoreId: item.id,
                           reviewerNote: item.notes,
@@ -538,6 +721,15 @@ export default function ScorePage() {
                         })} />
                       </div>
                     ))}
+                    {historyCount < filteredHistory.length && (
+                      <button onClick={() => setHistoryCount(c => c + HISTORY_PAGE_SIZE)}
+                        className="text-xs mx-auto mt-2 px-4 py-1.5 rounded-lg transition-colors"
+                        style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                        Show more · {Math.min(HISTORY_PAGE_SIZE, filteredHistory.length - historyCount)} of {filteredHistory.length - historyCount} remaining
+                      </button>
+                    )}
                   </div>
               }
             </div>
@@ -564,7 +756,7 @@ export default function ScorePage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                   </svg>Scoring…</>
-                : `▶ Run Batch (${ticketIds.length} ticket${ticketIds.length !== 1 ? 's' : ''})`}
+                : `▶ Score ${ticketIds.length} ticket${ticketIds.length !== 1 ? 's' : ''}`}
             </button>
             {running && (
               <button onClick={() => { abortRef.current = true }}
@@ -601,7 +793,7 @@ export default function ScorePage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                {results.map((r, i) => <ResultRow key={i} result={r} onView={setActiveScore} />)}
+                {results.map((r, i) => <ResultRow key={i} result={r} onView={openPanel} />)}
                 {running && batchDone < ticketIds.length && (
                   <div className="flex items-center gap-2 py-2 px-3">
                     <svg className="animate-spin h-3 w-3" style={{ color: '#333' }} viewBox="0 0 24 24" fill="none">
@@ -617,7 +809,16 @@ export default function ScorePage() {
         </>
       )}
 
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
+      </div>
+      {panelScore && (
+        <ScoreModal
+          score={panelScore}
+          onClose={closePanel}
+          onExpand={() => { setModalScore(panelScore); closePanel() }}
+          panel
+        />
+      )}
+      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }

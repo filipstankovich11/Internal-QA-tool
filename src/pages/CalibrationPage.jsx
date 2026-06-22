@@ -5,11 +5,8 @@ import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL } from '../lib/verdict'
 
-const VERDICT_COLOR  = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
-const VERDICT_BG     = { PASS: 'rgba(16,185,129,0.08)', NEEDS_REVIEW: 'rgba(245,158,11,0.08)', FAIL: 'rgba(239,68,68,0.08)' }
-const VERDICT_BORDER = { PASS: 'rgba(16,185,129,0.2)', NEEDS_REVIEW: 'rgba(245,158,11,0.2)', FAIL: 'rgba(239,68,68,0.2)' }
-const VERDICT_LABEL  = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
 const scoreColor     = v => v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
 
 // ── New session modal ─────────────────────────────────────────────────────────

@@ -5,14 +5,11 @@ import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL } from '../lib/verdict'
 
-// ── colour helpers ────────────────────────────────────────────────────────────
+// ── colour helpers (score-health gradient — separate from verdict palette) ─────
 const scoreColor  = v => v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
 const dimColor    = v => v >= 4  ? '#10b981' : v >= 3  ? '#f59e0b' : '#ef4444'
-
-const VERDICT_COLOR = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444' }
-const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,158,11,0.1)', FAIL: 'rgba(239,68,68,0.1)' }
-const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
 
 // ── trend chart ───────────────────────────────────────────────────────────────
 function buildTrendData(scores, days = 30) {
