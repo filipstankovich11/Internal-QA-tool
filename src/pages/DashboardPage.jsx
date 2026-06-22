@@ -8,6 +8,7 @@ const VERDICT_COLOR = { PASS: '#10b981', NEEDS_REVIEW: '#f59e0b', FAIL: '#ef4444
 const VERDICT_BG    = { PASS: 'rgba(16,185,129,0.1)', NEEDS_REVIEW: 'rgba(245,158,11,0.1)', FAIL: 'rgba(239,68,68,0.1)' }
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
 const VERDICTS      = ['PASS', 'NEEDS_REVIEW', 'FAIL']
+const PAGE_SIZE     = 10 // ticket rows shown before "Show more"
 
 function useCountUp(target, duration = 650) {
   const [display, setDisplay] = useState(target ?? 0)
@@ -45,14 +46,13 @@ function StatCard({ label, value, format, sub, color }) {
       style={{
         background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)',
         border: `1px solid ${hovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
-        borderTop: `2px solid ${color || 'rgba(255,255,255,0.15)'}`,
         boxShadow: `inset 0 1px 0 rgba(255,255,255,${hovered ? '0.10' : '0.07'})`,
         transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
       }}>
       <p className="g-label mb-2">{label}</p>
       <p className="text-3xl font-bold" style={{ color: color || '#fff' }}>{display}</p>
-      {sub && <p className="text-xs mt-1" style={{ color: '#666' }}>{sub}</p>}
+      {sub && <p className="text-xs mt-1" style={{ color: '#999' }}>{sub}</p>}
     </div>
   )
 }
@@ -80,7 +80,7 @@ function MiniBar({ value, max, color }) {
       <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}99)` }} />
       </div>
-      <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#777' }}>{value}</span>
+      <span className="text-xs tabular-nums w-6 text-right" style={{ color: '#c8c8c8' }}>{value}</span>
     </div>
   )
 }
@@ -148,20 +148,19 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
               onMouseLeave={() => setHoveredBar(null)}
               title={d.count > 0 ? `${d.count} ticket${d.count !== 1 ? 's' : ''} on ${d.label}` : undefined}>
               <div className="relative w-full">
-                {d.count > 0 && (d.count / maxCount) <= 0.5 && (
-                  <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                    style={{ color: isSelected ? '#fff' : '#FF9780', transition: 'color 150ms' }}>
-                    {d.count}
-                  </span>
-                )}
-                {/* Hover background glow behind the bar */}
+                {/* Hover background glow behind the bar — soft gradient that fades upward */}
                 {isHovered && !isSelected && (
-                  <div className="absolute inset-x-0 bottom-0 rounded-t-sm"
-                    style={{ height: '80px', background: 'rgba(255,151,128,0.07)', borderRadius: '4px 4px 0 0' }} />
+                  <div className="absolute bottom-0 pointer-events-none"
+                    style={{
+                      left: '-20%', right: '-20%', height: '92px',
+                      background: 'radial-gradient(ellipse 70% 100% at 50% 100%, rgba(255,151,128,0.22) 0%, rgba(255,151,128,0.10) 35%, rgba(255,151,128,0) 75%)',
+                      filter: 'blur(6px)',
+                      transition: 'opacity 150ms',
+                    }} />
                 )}
                 <div className="relative w-full rounded-t-sm"
-                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 6 : 0)}px`, background: barColor, transition: 'background 150ms, height 200ms', boxShadow: isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 8px rgba(255,151,128,0.4)' : 'none' }}>
-                  {d.count > 0 && (d.count / maxCount) > 0.5 && (
+                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 24 : 0)}px`, background: barColor, transition: 'background 150ms, height 200ms', boxShadow: isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 8px rgba(255,151,128,0.4)' : 'none' }}>
+                  {d.count > 0 && (
                     <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
                       style={{ color: 'rgba(0,0,0,0.6)' }}>
                       {d.count}
@@ -169,7 +168,7 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
                   )}
                 </div>
               </div>
-              <span className="text-xs" style={{ color: isSelected ? '#e0e0e0' : isHovered ? '#aaa' : '#666', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
+              <span className="text-xs" style={{ color: isSelected ? '#fff' : isHovered ? '#fff' : '#c8c8c8', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
             </div>
           )
         })}
@@ -181,7 +180,7 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
 const selectStyle = {
   background: '#1e1e20',
   border: '1px solid rgba(255,255,255,0.07)',
-  color: '#ccc',
+  color: '#fff',
   outline: 'none',
 }
 
@@ -190,14 +189,23 @@ export default function DashboardPage() {
   const { role, profile } = useAuth()
 
   // myAgentId from context — used only for display; scoreHistory is already scoped
-  const { myAgentId } = useApp()
+  const { myAgentId, activeOverlay, setActiveOverlay, dataLoading } = useApp()
   const [panelScore, setPanelScore] = useState(null)
   const [modalScore, setModalScore] = useState(null)
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
   const [selectedDay,  setSelectedDay]  = useState(null)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE) // progressive "Show more" reveal
   const tableRef = useRef(null)
+
+  // Close the score panel when another overlay (notifications / settings) opens
+  useEffect(() => {
+    if (activeOverlay !== 'score') setPanelScore(null)
+  }, [activeOverlay])
+
+  const openPanel = (score) => { setPanelScore(score); setActiveOverlay('score') }
+  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
 
   const handleDayClick = (dateStr) => {
     if (!dateStr || selectedDay === dateStr) {
@@ -244,6 +252,9 @@ export default function DashboardPage() {
 
   const hasFilters = (role !== 'agent' && (filters.agent || filters.team)) || filters.verdicts.length || filters.dateFrom || filters.dateTo || ticketSearch
 
+  // Reset the progressive reveal back to the first page whenever the result set changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [filteredScores])
+
   // All stats use effective values (override when present, AI otherwise)
   const total    = filteredScores.length
   const pass     = filteredScores.filter(s => s.effectiveVerdict === 'PASS').length
@@ -255,7 +266,7 @@ export default function DashboardPage() {
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
 
   return (
-    <div style={{ paddingRight: panelScore ? 560 : 0, transition: 'padding-right 300ms cubic-bezier(0.16,1,0.3,1)' }}>
+    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
     <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
 
       {/* Header */}
@@ -296,7 +307,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                       style={{ color: VERDICT_COLOR[v], background: VERDICT_BG[v] }}>{VERDICT_LABEL[v]}</span>
-                    <span className="text-xs" style={{ color: '#777' }}>{total > 0 ? Math.round((n/total)*100) : 0}%</span>
+                    <span className="text-xs" style={{ color: '#c8c8c8' }}>{total > 0 ? Math.round((n/total)*100) : 0}%</span>
                   </div>
                   <MiniBar value={n} max={total} color={VERDICT_COLOR[v]} />
                 </div>
@@ -312,7 +323,10 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: '#666' }}>{filteredScores.length} / {total}</span>
+            <span className="text-xs" style={{ color: '#c8c8c8' }}>
+              Showing {Math.min(visibleCount, filteredScores.length)} of {filteredScores.length}
+              {filteredScores.length !== total && ` · ${total} total`}
+            </span>
             {filteredScores.length > 0 && (
               <button
                 onClick={() => {
@@ -336,9 +350,9 @@ export default function DashboardPage() {
                   a.click(); URL.revokeObjectURL(url)
                 }}
                 className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                style={{ color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}
+                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
+                onMouseLeave={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
                 ↓ Export CSV
               </button>
             )}
@@ -360,7 +374,7 @@ export default function DashboardPage() {
               style={{
                 background: '#1c1c1e',
                 border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                color: '#ccc',
+                color: '#fff',
                 boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.06)' : 'none',
               }}
             />
@@ -388,7 +402,7 @@ export default function DashboardPage() {
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#777' }}>Agent</label>
+                <label className="text-xs" style={{ color: '#c8c8c8' }}>Agent</label>
                 <select value={filters.agent} onChange={e => set('agent', e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">All agents</option>
@@ -399,7 +413,7 @@ export default function DashboardPage() {
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#777' }}>Team</label>
+                <label className="text-xs" style={{ color: '#c8c8c8' }}>Team</label>
                 <select value={filters.team} onChange={e => set('team', e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">All teams</option>
@@ -409,19 +423,19 @@ export default function DashboardPage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#777' }}>From</label>
+              <label className="text-xs" style={{ color: '#c8c8c8' }}>From</label>
               <input type="date" value={filters.dateFrom} onChange={e => set('dateFrom', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#777' }}>To</label>
+              <label className="text-xs" style={{ color: '#c8c8c8' }}>To</label>
               <input type="date" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)}
                 className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#777' }}>Quick range</label>
+              <label className="text-xs" style={{ color: '#c8c8c8' }}>Quick range</label>
               <div className="flex gap-1.5">
                 {[['7d', 7], ['30d', 30], ['90d', 90]].map(([label, days]) => {
                   const isActive = activeRange === label
@@ -436,9 +450,9 @@ export default function DashboardPage() {
                       className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
                       style={isActive
                         ? { color: '#FF9780', borderColor: 'rgba(255,151,128,0.4)', background: 'rgba(255,151,128,0.08)' }
-                        : { color: '#777', borderColor: 'rgba(255,255,255,0.07)', background: 'transparent' }}
-                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color='#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
-                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color='#777'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' } }}>
+                        : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)', background: 'transparent' }}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' } }}>
                       {label}
                     </button>
                   )
@@ -447,7 +461,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#777' }}>Status</label>
+              <label className="text-xs" style={{ color: '#c8c8c8' }}>Status</label>
               <div className="flex gap-1.5">
                 {VERDICTS.map(v => {
                   const active = filters.verdicts.includes(v)
@@ -456,7 +470,7 @@ export default function DashboardPage() {
                       className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
                       style={active
                         ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                        : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}>
+                        : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)' }}>
                       {VERDICT_LABEL[v]}
                     </button>
                   )
@@ -467,9 +481,9 @@ export default function DashboardPage() {
             {hasFilters && (
               <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch(''); setSelectedDay(null) }}
                 className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
-                style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
+                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
-                onMouseLeave={e => { e.currentTarget.style.color='#555'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
+                onMouseLeave={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
                 Clear
               </button>
             )}
@@ -477,7 +491,31 @@ export default function DashboardPage() {
         </div>
 
         {/* Table */}
-        {filteredScores.length === 0 ? (
+        {dataLoading && scoreHistory.length === 0 ? (
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+            <div className="grid px-4 py-3" style={{
+              gridTemplateColumns: '100px 1fr 150px 80px 90px 80px',
+              background: 'rgba(255,255,255,0.03)',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: '#c8c8c8',
+            }}>
+              <span>Ticket</span><span>Subject</span><span>Agents</span>
+              <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
+            </div>
+            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+              <div key={i} className="grid items-center px-4 py-3"
+                style={{ gridTemplateColumns: '100px 1fr 150px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <span className="skeleton-bar" style={{ width: 56 }} />
+                <span className="skeleton-bar" style={{ width: '70%' }} />
+                <span className="skeleton-bar" style={{ width: 80 }} />
+                <span className="skeleton-bar justify-self-end" style={{ width: 44 }} />
+                <span className="skeleton-bar justify-self-center" style={{ width: 50 }} />
+                <span className="skeleton-bar justify-self-end" style={{ width: 36 }} />
+              </div>
+            ))}
+          </div>
+        ) : filteredScores.length === 0 ? (
           <div className="text-center py-16" style={{ color: '#555' }}>
             <p className="text-sm">{total === 0 ? 'No tickets scored yet.' : 'No tickets match your filters.'}</p>
           </div>
@@ -488,13 +526,13 @@ export default function DashboardPage() {
               background: 'rgba(255,255,255,0.03)',
               borderBottom: '1px solid rgba(255,255,255,0.08)',
               fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: '#777',
+              textTransform: 'uppercase', color: '#c8c8c8',
             }}>
               <span>Ticket</span><span>Subject</span><span>Agents</span>
               <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
             </div>
 
-            {filteredScores.map(s => (
+            {filteredScores.slice(0, visibleCount).map(s => (
               <div key={s.id} className="grid items-center px-4 py-3 transition-colors"
                 style={{ gridTemplateColumns: '100px 1fr 150px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
@@ -507,11 +545,11 @@ export default function DashboardPage() {
                   #{s.ticketId}
                 </a>
 
-                <button onClick={() => setPanelScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
+                <button onClick={() => openPanel({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
                   className="text-sm text-left truncate pr-3 transition-colors"
-                  style={{ color: '#ccc' }}
+                  style={{ color: '#e8e8e8' }}
                   onMouseEnter={e => e.target.style.color='#fff'}
-                  onMouseLeave={e => e.target.style.color='#ccc'}>
+                  onMouseLeave={e => e.target.style.color='#e8e8e8'}>
                   {s.fullScore?.ticket_subject || '—'}
                 </button>
 
@@ -519,12 +557,12 @@ export default function DashboardPage() {
                   {s.agentIds?.length > 0
                     ? s.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
                       <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[130px]"
-                        style={{ background: '#1a1a1a', color: '#888' }}>{name}</span>
+                        style={{ background: '#1a1a1a', color: '#c8c8c8' }}>{name}</span>
                     ))
-                    : <span style={{ color: '#555' }}>—</span>}
+                    : <span style={{ color: '#888' }}>—</span>}
                 </div>
 
-                <span className="text-sm tabular-nums text-right" style={{ color: '#999' }}>
+                <span className="text-sm tabular-nums text-right" style={{ color: '#e8e8e8' }}>
                   {s.effectiveScore?.toFixed(0)}/100
                   {s.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
                 </span>
@@ -532,17 +570,30 @@ export default function DashboardPage() {
                 <div className="flex justify-center">
                   <span className="flex items-center gap-1.5">
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[s.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
-                    <span className="text-xs font-medium" style={{ color: '#888', letterSpacing: '0.04em' }}>
+                    <span className="text-xs font-medium" style={{ color: '#c8c8c8', letterSpacing: '0.04em' }}>
                       {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
                     </span>
                   </span>
                 </div>
 
-                <span className="text-xs text-right" style={{ color: '#666' }}>
+                <span className="text-xs text-right" style={{ color: '#c8c8c8' }}>
                   {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
             ))}
+
+            {visibleCount < filteredScores.length && (
+              <div className="flex items-center justify-center px-4 py-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <button
+                  onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                  className="text-xs px-4 py-1.5 rounded-lg transition-colors"
+                  style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                  Show more · {Math.min(PAGE_SIZE, filteredScores.length - visibleCount)} of {filteredScores.length - visibleCount} remaining
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -550,8 +601,8 @@ export default function DashboardPage() {
       {panelScore && (
         <ScoreModal
           score={panelScore}
-          onClose={() => setPanelScore(null)}
-          onExpand={() => { setModalScore(panelScore); setPanelScore(null) }}
+          onClose={closePanel}
+          onExpand={() => { setModalScore(panelScore); closePanel() }}
           panel
         />
       )}

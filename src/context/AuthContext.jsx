@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { startPrefetch, resetPrefetch } from '../lib/prefetch'
 
 const AuthContext = createContext(null)
 
@@ -23,8 +24,10 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null
       setUser(u)
-      if (u) fetchProfile(u.id)
-      else setLoading(false)
+      if (u) {
+        startPrefetch()        // fire app-data queries in parallel with profile fetch
+        fetchProfile(u.id)
+      } else setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -35,9 +38,11 @@ export function AuthProvider({ children }) {
         setLoading(false)
       } else if (u) {
         setIsPasswordReset(false)
+        startPrefetch()        // fire app-data queries in parallel with profile fetch
         fetchProfile(u.id)
       } else {
         setIsPasswordReset(false)
+        resetPrefetch()        // clear so the next user fetches their own data
         setProfile(null)
         setLoading(false)
       }

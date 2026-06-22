@@ -42,6 +42,9 @@ create table public.scores (
   scored_at      timestamptz default now()
 );
 
+-- Recent-scores listing (order by scored_at desc limit ...) — used on initial app load
+create index if not exists scores_scored_at_idx on public.scores (scored_at desc);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================

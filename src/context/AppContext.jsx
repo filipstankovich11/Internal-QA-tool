@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
+import { startPrefetch } from '../lib/prefetch'
 
 const AppContext = createContext(null)
 
@@ -80,6 +81,13 @@ export function AppProvider({ children }) {
   const [rubric,       setRubric]       = useState(DEFAULT_RUBRIC)
   const [dataLoading,  setDataLoading]  = useState(true)
 
+  // ── Active overlay surface ───────────────────────────────────────────────────
+  // Only one slide-in/modal surface should be open at a time across the app
+  // (notification panel, settings modal, score detail panel). Each surface sets
+  // this when it opens; the others watch it and close themselves.
+  // Values: 'notifications' | 'settings' | 'score' | null
+  const [activeOverlay, setActiveOverlay] = useState(null)
+
   // ── Resolve the current user's agent record (agents only) ───────────────────
   const myAgentId = useMemo(
     () => role === 'agent' ? (agents.find(a => a.user_id === user?.id)?.id ?? null) : null,
@@ -94,34 +102,19 @@ export function AppProvider({ children }) {
   }, [scoreHistory, role, myAgentId])
 
   // ── Initial load ────────────────────────────────────────────────────────────
+  // Consume the queries kicked off at auth time (lib/prefetch) so they run in
+  // parallel with the profile fetch rather than only after AppProvider mounts.
+  // startPrefetch() is idempotent — if auth already fired it, we get the same
+  // in-flight promises; otherwise it starts them now.
   useEffect(() => {
-    Promise.all([fetchTeams(), fetchAgents(), fetchScores(), fetchRubric()])
-      .finally(() => setDataLoading(false))
+    const q = startPrefetch()
+    Promise.all([
+      q.teams.then(({ data }) => setTeams(data || [])),
+      q.agents.then(({ data }) => setAgents(data || [])),
+      q.scores.then(({ data }) => setScoreHistory((data || []).map(dbToScore))),
+      q.rubric.then(({ data }) => { if (data?.config) setRubric(data.config) }),
+    ]).finally(() => setDataLoading(false))
   }, [])
-
-  const fetchTeams = async () => {
-    const { data } = await supabase.from('teams').select('*').order('created_at')
-    setTeams(data || [])
-  }
-
-  const fetchAgents = async () => {
-    const { data } = await supabase.from('agents').select('*').order('created_at')
-    setAgents(data || [])
-  }
-
-  const fetchScores = async () => {
-    const { data } = await supabase
-      .from('scores')
-      .select('*')
-      .order('scored_at', { ascending: false })
-      .limit(500)
-    setScoreHistory((data || []).map(dbToScore))
-  }
-
-  const fetchRubric = async () => {
-    const { data } = await supabase.from('rubric').select('config').eq('id', 1).single()
-    if (data?.config) setRubric(data.config)
-  }
 
   // ── Teams ──────────────────────────────────────────────────────────────────
   const addTeam = async (name) => {
@@ -335,6 +328,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       teams, agents, scoreHistory: visibleScoreHistory, rubric, dataLoading, myAgentId,
+      activeOverlay, setActiveOverlay,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,

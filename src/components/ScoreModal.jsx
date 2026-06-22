@@ -58,6 +58,35 @@ function ScoreDots({ score }) {
   )
 }
 
+// ── Line-clamped text with an inline Read more / Show less toggle ─────────────
+// Used in the concise side panel; the toggle only appears when the text actually
+// overflows the clamp.
+function ClampText({ text, lines = 3, className, style }) {
+  const ref = useRef(null)
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (el) setOverflowing(el.scrollHeight > el.clientHeight + 1)
+  }, [text])
+  const clamp = expanded ? {} : {
+    display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+  }
+  return (
+    <>
+      <p ref={ref} className={className} style={{ ...style, ...clamp }}>{text}</p>
+      {overflowing && (
+        <button onClick={() => setExpanded(e => !e)} className="text-xs mt-1 transition-colors"
+          style={{ color: '#FF9780' }}
+          onMouseEnter={e => e.target.style.color = '#ffb39a'}
+          onMouseLeave={e => e.target.style.color = '#FF9780'}>
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </>
+  )
+}
+
 // ── Dimension summary strip ───────────────────────────────────────────────────
 function DimensionStrip({ dimensions }) {
   return (
@@ -361,7 +390,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
   )
 }
 
-function WhatWentWell({ scores }) {
+function WhatWentWell({ scores, panel }) {
   // Collect all criteria across dimensions, sort by score desc, take top 2
   const all = Object.values(scores).flatMap(dim =>
     Object.entries(dim)
@@ -378,7 +407,8 @@ function WhatWentWell({ scores }) {
         {top.map((c, i) => (
           <div key={i} className="flex items-start gap-2.5">
             <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color: '#10b981' }}>✓</span>
-            <p className="text-sm leading-relaxed" style={{ color: '#aaa' }}>{c.notes}</p>
+            <p className="text-sm leading-relaxed" style={{ color: '#aaa',
+              ...(panel ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{c.notes}</p>
           </div>
         ))}
       </div>
@@ -395,6 +425,9 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
   const [saving,  setSaving]  = useState(false)
 
   if (!scoreId) return null
+  // Only agents can flag a dispute. Admins see this section only once a dispute
+  // exists (so they can review/clear it) — never the "Flag for dispute" action.
+  if (isAdmin && !disputed) return null
 
   const submit = async () => {
     if (!note.trim()) return
@@ -669,7 +702,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
           {/* Row 3: Verdict badge + score */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
-              style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em', boxShadow: `0 0 12px ${vc.text}44` }}>
+              style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
               {vc.icon} {vc.label}
             </span>
             <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>
@@ -709,28 +742,39 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
           {/* Summary */}
           <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Summary</p>
-            <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>
+            {panel
+              ? <ClampText text={s.summary} lines={3} className="text-sm leading-relaxed" style={{ color: '#ccc' }} />
+              : <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>}
           </div>
 
           {/* What went well */}
-          <WhatWentWell scores={s.scores} />
+          <WhatWentWell scores={s.scores} panel={panel} />
 
           {/* Coaching cards */}
           {s.key_improvements?.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Key Improvements</p>
               <div className="flex flex-col gap-2">
-                {s.key_improvements.map((imp, i) => (
+                {(panel ? s.key_improvements.slice(0, 2) : s.key_improvements).map((imp, i) => (
                   <div key={i} className="rounded-xl p-3.5 flex gap-3"
                     style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
                       style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
                       {i + 1}
                     </div>
-                    <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{imp}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#bbb',
+                      ...(panel ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{imp}</p>
                   </div>
                 ))}
               </div>
+              {panel && onExpand && s.key_improvements.length > 2 && (
+                <button onClick={onExpand} className="text-xs mt-2 transition-colors"
+                  style={{ color: '#FF9780' }}
+                  onMouseEnter={e => e.target.style.color = '#ffb39a'}
+                  onMouseLeave={e => e.target.style.color = '#FF9780'}>
+                  +{s.key_improvements.length - 2} more — expand
+                </button>
+              )}
             </div>
           )}
 
@@ -919,8 +963,8 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
 
   if (panel) return (
     <>
-    {/* Transparent backdrop — click outside panel to close */}
-    <div className="fixed inset-0" style={{ zIndex: 39 }} onClick={onClose} />
+    {/* Dimmed backdrop — click outside panel to close */}
+    <div className="fixed inset-0" style={{ zIndex: 39, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', animation: 'fadeIn 180ms ease' }} onClick={onClose} />
     <div
       className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
       style={{ width: 560, background: '#171719', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}

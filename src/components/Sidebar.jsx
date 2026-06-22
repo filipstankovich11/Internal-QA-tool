@@ -26,11 +26,12 @@ const SignOutIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="
 const ChevronLeft  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
 const ChevronRight = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
 
-function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
+function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger, bright }) {
   const [hovered, setHovered] = useState(false)
   const active = isActive
-  const color  = danger ? (hovered ? '#ef4444' : '#888')
+  const color  = danger ? (hovered ? '#ef4444' : bright ? '#ffffff' : '#888')
                : active  ? '#FF9780'
+               : bright  ? '#ffffff'
                : hovered ? '#f0f0f0'
                : '#b0b0b0'
   const bg     = active  ? 'rgba(255,151,128,0.10)'
@@ -97,8 +98,8 @@ function SectionLabel({ label, collapsed }) {
   if (collapsed) return <div style={{ height: 1, background: 'rgba(255,255,255,0.10)', margin: '8px 10px' }} />
   return (
     <p style={{
-      fontSize: 10, fontWeight: 600, letterSpacing: '0.10em',
-      textTransform: 'uppercase', color: '#666',
+      fontSize: 12, fontWeight: 600, letterSpacing: '0.10em',
+      textTransform: 'uppercase', color: '#c8c8c8',
       padding: '4px 12px 6px', margin: 0,
     }}>
       {label}
@@ -112,7 +113,13 @@ export default function Sidebar({ page, setPage }) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [unreadCount,       setUnreadCount]       = useState(0)
   const { user, profile, role, canScore, isAdmin, signOut } = useAuth()
-  const { agents, scoreHistory } = useApp()
+  const { agents, scoreHistory, activeOverlay, setActiveOverlay } = useApp()
+
+  // Close our panels when a different overlay surface (e.g. the score panel) opens
+  useEffect(() => {
+    if (activeOverlay !== 'notifications') setShowNotifications(false)
+    if (activeOverlay !== 'settings')      setShowSettings(false)
+  }, [activeOverlay])
 
   const fetchUnread = useCallback(async () => {
     if (!user) return
@@ -218,6 +225,7 @@ export default function Sidebar({ page, setPage }) {
               null
             }
             collapsed={collapsed}
+            bright
           />
         ))}
 
@@ -228,17 +236,19 @@ export default function Sidebar({ page, setPage }) {
             icon={<BellIcon />}
             label="Notifications"
             isActive={showNotifications}
-            onClick={() => { setShowNotifications(true); setShowSettings(false) }}
+            onClick={() => { setShowNotifications(true); setShowSettings(false); setActiveOverlay('notifications') }}
             badge={unreadCount}
             collapsed={collapsed}
+            bright
           />
           <NavItem
             icon={<GearIcon />}
             label="Settings"
             isActive={showSettings}
-            onClick={() => { setShowSettings(true); setShowNotifications(false) }}
+            onClick={() => { setShowSettings(true); setShowNotifications(false); setActiveOverlay('settings') }}
             badge={null}
             collapsed={collapsed}
+            bright
           />
           <NavItem
             icon={<SignOutIcon />}
@@ -248,6 +258,7 @@ export default function Sidebar({ page, setPage }) {
             badge={null}
             collapsed={collapsed}
             danger
+            bright
           />
         </div>
       </nav>
@@ -265,10 +276,10 @@ export default function Sidebar({ page, setPage }) {
             justifyContent: collapsed ? 'center' : 'flex-start',
           }}>
             <div style={{
-              width: 30, height: 30, borderRadius: '50%',
+              width: 40, height: 40, borderRadius: '50%',
               background: 'rgba(255,151,128,0.12)', color: '#FF9780',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, flexShrink: 0,
+              fontSize: 16, fontWeight: 700, flexShrink: 0,
               border: '1px solid rgba(255,151,128,0.2)',
             }}
               title={collapsed ? `${profile.name} · ${role}` : undefined}
@@ -277,10 +288,10 @@ export default function Sidebar({ page, setPage }) {
             </div>
             {!collapsed && (
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#e0e0e0', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: '#e0e0e0', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.name}
                 </div>
-                <div style={{ color: ROLE_COLOR[role] || '#888', fontSize: 11, textTransform: 'capitalize', marginTop: 1 }}>
+                <div style={{ color: ROLE_COLOR[role] || '#888', fontSize: 13, textTransform: 'capitalize', marginTop: 1 }}>
                   {role}
                 </div>
               </div>
@@ -289,10 +300,10 @@ export default function Sidebar({ page, setPage }) {
         </div>
       )}
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setActiveOverlay(o => o === 'settings' ? null : o) }} />}
       {showNotifications && (
         <NotificationPanel
-          onClose={() => { setShowNotifications(false); fetchUnread() }}
+          onClose={() => { setShowNotifications(false); setActiveOverlay(o => o === 'notifications' ? null : o); fetchUnread() }}
           offsetLeft={collapsed ? 56 : 232}
         />
       )}
