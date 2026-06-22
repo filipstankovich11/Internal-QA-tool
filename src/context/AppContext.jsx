@@ -34,6 +34,10 @@ function dbToScore(row) {
     disputeAt:       row.dispute_at     ? new Date(row.dispute_at).getTime() : null,
     acknowledged:    row.acknowledged   || false,
     acknowledgedAt:  row.acknowledged_at ? new Date(row.acknowledged_at).getTime() : null,
+    claimedBy:       row.claimed_by      || null,
+    claimedAt:       row.claimed_at      ? new Date(row.claimed_at).getTime() : null,
+    reviewedBy:      row.reviewed_by     || null,
+    reviewedAt:      row.reviewed_at     ? new Date(row.reviewed_at).getTime() : null,
   }
 }
 
@@ -114,6 +118,32 @@ export function AppProvider({ children }) {
       q.scores.then(({ data }) => setScoreHistory((data || []).map(dbToScore))),
       q.rubric.then(({ data }) => { if (data?.config) setRubric(data.config) }),
     ]).finally(() => setDataLoading(false))
+  }, [])
+
+  // ── Live cross-reviewer sync ─────────────────────────────────────────────────
+  // Merge score changes from other reviewers as they happen — claims/unclaims,
+  // overrides, disputes, acknowledgements, and newly scored tickets. The local
+  // optimistic update echoes back here too (idempotent replace by id).
+  useEffect(() => {
+    const channel = supabase.channel('scores-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setScoreHistory(prev => prev.filter(s => s.id !== payload.old.id))
+          return
+        }
+        const mapped = dbToScore(payload.new)
+        setScoreHistory(prev => {
+          const idx = prev.findIndex(s => s.id === mapped.id)
+          if (idx === -1) return [mapped, ...prev]          // new score → newest first
+          // Realtime can truncate/omit the large full_score jsonb — merge over the
+          // existing row so an echo never wipes data we already hold (esp. fullScore).
+          const existing = prev[idx]
+          const merged = { ...existing, ...mapped, fullScore: mapped.fullScore ?? existing.fullScore }
+          const next = [...prev]; next[idx] = merged; return next
+        })
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
   }, [])
 
   // ── Teams ──────────────────────────────────────────────────────────────────
@@ -254,6 +284,41 @@ export function AppProvider({ children }) {
     return !error
   }
 
+  // ── Reviewer claims (My Queue) ───────────────────────────────────────────────
+  const claimScore = async (id) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from('scores').update({ claimed_by: user?.id, claimed_at: new Date().toISOString() }).eq('id', id)
+    if (error) { console.error('claimScore failed:', error); return error }
+    setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, claimedBy: user?.id, claimedAt: Date.now() } : s))
+    return null
+  }
+
+  const unclaimScore = async (id) => {
+    const { error } = await supabase.from('scores').update({ claimed_by: null, claimed_at: null }).eq('id', id)
+    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, claimedBy: null, claimedAt: null } : s))
+    return !error
+  }
+
+  // Mark a ticket reviewed (the reviewer finished with it) — also releases the
+  // claim, since the work is done. Removes it from the review queue.
+  const markReviewed = async (id) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from('scores').update({
+      reviewed_by: user?.id, reviewed_at: new Date().toISOString(),
+      claimed_by: null, claimed_at: null,
+    }).eq('id', id)
+    if (error) { console.error('markReviewed failed:', error); return error }
+    setScoreHistory(prev => prev.map(s => s.id === id
+      ? { ...s, reviewedBy: user?.id, reviewedAt: Date.now(), claimedBy: null, claimedAt: null } : s))
+    return null
+  }
+
+  const reopenReview = async (id) => {
+    const { error } = await supabase.from('scores').update({ reviewed_by: null, reviewed_at: null }).eq('id', id)
+    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, reviewedBy: null, reviewedAt: null } : s))
+    return !error
+  }
+
   const acknowledgeScore = async (id) => {
     const { error } = await supabase.from('scores').update({
       acknowledged: true, acknowledged_at: new Date().toISOString(),
@@ -332,6 +397,7 @@ export function AppProvider({ children }) {
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,
+      claimScore, unclaimScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,
     }}>

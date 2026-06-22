@@ -1,29 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
 
-function weightColor(w) {
-  return w === 100 ? '#10b981' : '#ef4444'
-}
+const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
-function CriterionEditor({ crit, onChange }) {
+function CriterionEditor({ crit, onChange, onRemove }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#1c1c1e' }}>
-      <button onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left">
-        <span className="text-sm font-medium text-white">{crit.name || <span style={{ color: '#666' }}>Unnamed criterion</span>}</span>
-        <span className="text-xs transition-transform shrink-0" style={{ color: '#666', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
-      </button>
+      <div className="w-full flex items-center justify-between px-4 py-3 gap-2">
+        <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 text-left flex-1 min-w-0">
+          <span className="text-xs transition-transform shrink-0" style={{ color: '#888', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+          <span className="text-sm font-medium truncate" style={{ color: crit.name ? '#fff' : '#888' }}>{crit.name || 'Unnamed criterion'}</span>
+        </button>
+        {onRemove && (
+          <button onClick={onRemove}
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-xs transition-colors" style={{ color: '#888' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+            onMouseLeave={e => e.currentTarget.style.color = '#888'}
+            title="Remove criterion">
+            ✕
+          </button>
+        )}
+      </div>
       {open && (
         <div className="px-4 pb-4 flex flex-col gap-2.5 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <div className="pt-3">
-            <label className="text-xs mb-1.5 block" style={{ color: '#777' }}>Criterion name</label>
+            <label className="text-xs mb-1.5 block" style={{ color: '#c8c8c8' }}>Criterion name</label>
             <input value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
               className="w-full rounded-lg px-3 py-2 text-sm text-white g-input" placeholder="e.g. Core Inquiry Resolution" />
           </div>
           <div>
-            <label className="text-xs mb-1.5 block" style={{ color: '#777' }}>Description & scoring guide (1–5)</label>
+            <label className="text-xs mb-1.5 block" style={{ color: '#c8c8c8' }}>Description & scoring guide (1–5)</label>
             <textarea value={crit.description} onChange={e => onChange({ ...crit, description: e.target.value })}
               rows={6}
               className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-y g-input"
@@ -36,30 +44,52 @@ function CriterionEditor({ crit, onChange }) {
   )
 }
 
-function DimensionEditor({ dim, onChange }) {
+// memo + stable (index-based) callbacks: editing one dimension, the Scoring
+// Guidance, or the thresholds won't re-render the other dimension editors.
+const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, onRemove }) {
+  const update  = updated => onChange(index, updated)
+  const addCrit = () => update({ ...dim, criteria: [...dim.criteria, { id: `c_${Date.now()}`, name: '', description: '' }] })
+
   return (
     <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <div className="flex items-center gap-3 mb-4">
-        <input value={dim.name} onChange={e => onChange({ ...dim, name: e.target.value })}
+        <input value={dim.name} onChange={e => update({ ...dim, name: e.target.value })}
           className="flex-1 rounded-xl px-3 py-2 text-sm font-semibold text-white g-input"
           placeholder="Dimension name" />
         <div className="flex items-center gap-2 shrink-0">
           <input type="number" min="0" max="100" value={dim.weight}
-            onChange={e => onChange({ ...dim, weight: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
+            onChange={e => update({ ...dim, weight: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
             className="w-16 rounded-lg px-2 py-2 text-sm text-center font-bold g-input"
             style={{ color: '#FF9780' }} />
-          <span className="text-sm" style={{ color: '#777' }}>%</span>
+          <span className="text-sm" style={{ color: '#888' }}>%</span>
+          <button onClick={() => onRemove(index)}
+            className="ml-1 w-7 h-7 flex items-center justify-center rounded-md text-xs transition-colors" style={{ color: '#888' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.background = 'transparent' }}
+            title="Remove dimension">
+            ✕
+          </button>
         </div>
       </div>
       <div className="flex flex-col gap-2">
         {dim.criteria.map((crit, ci) => (
           <CriterionEditor key={crit.id} crit={crit}
-            onChange={updated => onChange({ ...dim, criteria: dim.criteria.map((c, i) => i === ci ? updated : c) })} />
+            onChange={updated => update({ ...dim, criteria: dim.criteria.map((c, i) => i === ci ? updated : c) })}
+            onRemove={() => update({ ...dim, criteria: dim.criteria.filter((_, i) => i !== ci) })} />
         ))}
+        {dim.criteria.length === 0 && (
+          <p className="text-xs text-center py-3" style={{ color: '#888' }}>No criteria yet. Add one below.</p>
+        )}
       </div>
+      <button onClick={addCrit}
+        className="mt-3 text-xs px-3 py-1.5 rounded-lg transition-colors" style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.10)' }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.3)' }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+        + Add criterion
+      </button>
     </div>
   )
-}
+})
 
 function AutoFailEditor({ conditions, onChange }) {
   const add = () => onChange([...conditions, { id: `af_${Date.now()}`, name: '', description: '' }])
@@ -86,9 +116,9 @@ function AutoFailEditor({ conditions, onChange }) {
                 placeholder="Condition name" />
               <button onClick={() => remove(i)}
                 className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-xs transition-colors"
-                style={{ color: '#666' }}
+                style={{ color: '#888' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                onMouseLeave={e => e.currentTarget.style.color = '#444'}
+                onMouseLeave={e => e.currentTarget.style.color = '#888'}
                 title="Remove condition">
                 ✕
               </button>
@@ -99,7 +129,7 @@ function AutoFailEditor({ conditions, onChange }) {
           </div>
         ))}
         {conditions.length === 0 && (
-          <p className="text-xs text-center py-4" style={{ color: '#555' }}>No auto-fail conditions. Add one above.</p>
+          <p className="text-xs text-center py-4" style={{ color: '#888' }}>No auto-fail conditions. Add one above.</p>
         )}
       </div>
     </div>
@@ -110,19 +140,50 @@ function AutoFailEditor({ conditions, onChange }) {
 export default function RubricPage() {
   const { rubric, updateRubric } = useApp()
   const toast = useToast()
-  const [draft,       setDraft]       = useState(() => JSON.parse(JSON.stringify(rubric)))
-  const [saving,      setSaving]      = useState(false)
-  const [saved,       setSaved]       = useState(false)
-  const [error,       setError]       = useState(null)
+  const [draft,        setDraft]        = useState(() => deepCopy(rubric))
+  const [saving,       setSaving]       = useState(false)
+  const [saved,        setSaved]        = useState(false)
+  const [error,        setError]        = useState(null)
+  const [confirmReset, setConfirmReset] = useState(false)
 
-  const totalWeight = draft.dimensions.reduce((s, d) => s + d.weight, 0)
-  const weightOk    = totalWeight === 100
+  // Resync the draft if the rubric loads/changes after mount (e.g. the page was
+  // opened before the rubric finished loading) — but only when the user hasn't
+  // started editing, so in-progress changes are never clobbered.
+  const lastSynced = useRef(rubric)
+  useEffect(() => {
+    if (rubric === lastSynced.current) return
+    const pristine = JSON.stringify(draft) === JSON.stringify(lastSynced.current)
+    if (pristine) setDraft(deepCopy(rubric))
+    lastSynced.current = rubric
+  }, [rubric]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setDim = (i, updated) =>
-    setDraft(d => ({ ...d, dimensions: d.dimensions.map((dim, j) => j === i ? updated : dim) }))
+  const dirty = JSON.stringify(draft) !== JSON.stringify(rubric)
+
+  // Warn before a browser close/refresh discards unsaved edits
+  useEffect(() => {
+    if (!dirty) return
+    const handler = e => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
+
+  const totalWeight  = draft.dimensions.reduce((s, d) => s + d.weight, 0)
+  const weightOk     = totalWeight === 100
+  const thresholdsOk = draft.verdict_thresholds.pass > draft.verdict_thresholds.needs_review
+  const canSave      = weightOk && thresholdsOk
+
+  // Stable identities so the memoized DimensionEditors don't re-render on every keystroke
+  const setDim = useCallback((i, updated) =>
+    setDraft(d => ({ ...d, dimensions: d.dimensions.map((dim, j) => j === i ? updated : dim) })), [])
+
+  const removeDimension = useCallback((i) =>
+    setDraft(d => ({ ...d, dimensions: d.dimensions.filter((_, j) => j !== i) })), [])
+
+  const addDimension = () =>
+    setDraft(d => ({ ...d, dimensions: [...d.dimensions, { id: `dim_${Date.now()}`, name: '', weight: 0, criteria: [] }] }))
 
   const save = async () => {
-    if (!weightOk) return
+    if (!canSave) return
     setSaving(true); setError(null)
     const ok = await updateRubric(draft)
     setSaving(false)
@@ -130,46 +191,60 @@ export default function RubricPage() {
     else { setError('Failed to save. Check your permissions.'); toast.error('Failed to save rubric') }
   }
 
-  const reset = () => {
-    setDraft(JSON.parse(JSON.stringify(DEFAULT_RUBRIC)))
+  const doReset = () => {
+    setDraft(deepCopy(DEFAULT_RUBRIC))
     setError(null)
+    setConfirmReset(false)
   }
 
   return (
     <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">QA Guidance</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#888' }}>
+          <p className="text-sm mt-0.5" style={{ color: '#c8c8c8' }}>
             Customise the scoring framework — changes apply to all future scorings
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button onClick={reset}
-            className="text-sm px-4 py-2 rounded-xl border transition-colors"
-            style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#888' }}
-            onMouseEnter={e => { e.currentTarget.style.color='#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' }}
-            onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.borderColor='rgba(255,255,255,0.1)' }}>
-            Reset to default
-          </button>
-          <button onClick={save} disabled={!weightOk || saving}
+          {dirty && (
+            <span className="text-xs px-2.5 py-1 rounded-lg" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
+              Unsaved changes
+            </span>
+          )}
+          {confirmReset ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#ef4444' }}>Reset everything?</span>
+              <button onClick={doReset} className="text-xs font-medium px-2.5 py-1.5 rounded-lg" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes, reset</button>
+              <button onClick={() => setConfirmReset(false)} className="text-xs g-btn-ghost px-2.5 py-1.5">Cancel</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmReset(true)}
+              className="text-sm px-4 py-2 rounded-xl border transition-colors"
+              style={{ borderColor: 'rgba(255,255,255,0.1)', color: '#c8c8c8' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}>
+              Reset to default
+            </button>
+          )}
+          <button onClick={save} disabled={!canSave || saving}
             className="g-btn-primary text-sm px-5 py-2 rounded-xl"
-            style={{ opacity: (!weightOk || saving) ? 0.5 : 1 }}>
+            style={{ opacity: (!canSave || saving) ? 0.5 : 1 }}>
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Rubric'}
           </button>
         </div>
       </div>
 
       {/* Weight validator */}
-      <div className="rounded-xl px-4 py-3 mb-6 flex items-center justify-between"
+      <div className="rounded-xl px-4 py-3 mb-6 flex items-center justify-between gap-4 flex-wrap"
         style={{ background: weightOk ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)', border: `1px solid ${weightOk ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}` }}>
         <p className="text-sm" style={{ color: weightOk ? '#10b981' : '#ef4444' }}>
           {weightOk ? '✓ Dimension weights sum to 100%' : `⚠ Weights sum to ${totalWeight}% — must equal 100% to save`}
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {draft.dimensions.map(d => (
-            <span key={d.id} className="text-xs" style={{ color: '#888' }}>{d.name}: <span style={{ color: '#FF9780' }}>{d.weight}%</span></span>
+            <span key={d.id} className="text-xs" style={{ color: '#c8c8c8' }}>{d.name || 'Untitled'}: <span style={{ color: '#FF9780' }}>{d.weight}%</span></span>
           ))}
         </div>
       </div>
@@ -178,7 +253,7 @@ export default function RubricPage() {
 
       {/* Verdict thresholds */}
       <div className="rounded-2xl p-5 mb-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#777' }}>Verdict Thresholds</p>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: '#c8c8c8' }}>Verdict Thresholds</p>
         <div className="flex items-center gap-6 flex-wrap">
           {[
             { key: 'pass',         label: 'PASS ≥',         color: '#10b981' },
@@ -191,19 +266,32 @@ export default function RubricPage() {
                 onChange={e => setDraft(d => ({ ...d, verdict_thresholds: { ...d.verdict_thresholds, [key]: parseInt(e.target.value) || 0 } }))}
                 className="w-16 rounded-lg px-2 py-1.5 text-sm text-center font-bold g-input"
                 style={{ color }} />
-              <span className="text-sm" style={{ color: '#777' }}>pts</span>
+              <span className="text-sm" style={{ color: '#888' }}>pts</span>
             </div>
           ))}
-          <p className="text-xs" style={{ color: '#666' }}>FAIL: below NEEDS REVIEW threshold or any auto-fail triggered</p>
+          <p className="text-xs" style={{ color: '#888' }}>FAIL: below NEEDS REVIEW threshold or any auto-fail triggered</p>
         </div>
+        {!thresholdsOk && (
+          <p className="text-xs mt-3" style={{ color: '#ef4444' }}>⚠ The PASS threshold must be higher than NEEDS REVIEW.</p>
+        )}
       </div>
 
       {/* Dimensions */}
       <div className="flex flex-col gap-4 mb-4">
         {draft.dimensions.map((dim, i) => (
-          <DimensionEditor key={dim.id} dim={dim} onChange={updated => setDim(i, updated)} />
+          <DimensionEditor key={dim.id} dim={dim} index={i}
+            onChange={setDim}
+            onRemove={removeDimension} />
         ))}
       </div>
+
+      <button onClick={addDimension}
+        className="w-full rounded-2xl py-3 text-sm transition-colors mb-4"
+        style={{ border: '1px dashed rgba(255,255,255,0.15)', color: '#c8c8c8' }}
+        onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.4)' }}
+        onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}>
+        + Add dimension
+      </button>
 
       {/* Auto-fail conditions */}
       <AutoFailEditor
@@ -213,8 +301,8 @@ export default function RubricPage() {
       {/* Scoring Guidance */}
       <div className="rounded-2xl p-5 mt-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
         <div className="mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>Scoring Guidance</p>
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#666' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#c8c8c8' }}>Scoring Guidance</p>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#888' }}>
             Free-text instructions injected into every AI scoring prompt before the rubric. Use this to give Claude context it can't infer from the ticket alone — your product domain, internal tools agents are expected to use, escalation norms, or how to handle recurring edge cases. The more specific, the more consistent the scores.
           </p>
         </div>

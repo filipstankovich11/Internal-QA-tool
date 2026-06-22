@@ -6,6 +6,9 @@ import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { authFetch } from '../lib/api'
 import { useToast } from '../components/Toast'
+import { supabase } from '../lib/supabase'
+import { isClaimActive } from '../lib/claims'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER } from '../lib/verdict'
 
 const QUEUE_PAGE_SIZE = 10 // queue rows shown before "Show more"
 const colLabel = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c8c8c8' }
@@ -39,9 +42,10 @@ function priorityOf(item) {
 }
 
 const BADGES = {
-  DISPUTED:     { label: '⚑ DISPUTED', color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.15)', hoverBorder: 'rgba(251,146,60,0.3)' },
-  NEEDS_REVIEW: { label: '~ REVIEW',   color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.15)', hoverBorder: 'rgba(245,158,11,0.3)' },
-  FAIL:         { label: '✕ FAIL',     color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.15)',  hoverBorder: 'rgba(239,68,68,0.3)'  },
+  // DISPUTED is its own status (not a verdict) — keeps a distinct orange
+  DISPUTED:     { label: '⚑ DISPUTED', color: '#fb923c',                 bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.15)',     hoverBorder: 'rgba(251,146,60,0.3)' },
+  NEEDS_REVIEW: { label: '~ REVIEW',   color: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW, border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
+  FAIL:         { label: '✕ FAIL',     color: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL,         border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
 }
 
 function badgeFor(item) {
@@ -176,7 +180,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ReviewQueuePage() {
-  const { scoreHistory, agents, acknowledgeScore, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore, activeOverlay, setActiveOverlay } = useApp()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
 
@@ -187,17 +191,23 @@ export default function ReviewQueuePage() {
   const [selected,     setSelected]     = useState(new Set())
   const [statusFilter, setStatusFilter] = useState(null) // null | 'needs_review' | 'disputed' | 'fails'
   const [bulkWorking,  setBulkWorking]  = useState(false)
-  // claimed: { [scoreId]: userName }
-  const [claimed,      setClaimed]      = useState({})
   const [notifying,    setNotifying]    = useState(null) // scoreId being notified
   const [visibleCount, setVisibleCount] = useState(QUEUE_PAGE_SIZE) // progressive reveal
+  const [profiles,     setProfiles]     = useState({})   // id → name, for "claimed by" display
 
-  const userName = user?.email?.split('@')[0] || 'Reviewer'
+  // Resolve claimer names once (claims store a user id)
+  useEffect(() => {
+    supabase.from('profiles').select('id, name').then(({ data }) => {
+      const map = {}; (data || []).forEach(p => { map[p.id] = p.name }); setProfiles(map)
+    })
+  }, [])
+  const claimedName = (s) =>
+    !isClaimActive(s) ? null : (s.claimedBy === user?.id ? 'You' : (profiles[s.claimedBy] || 'Another reviewer'))
 
   // Queue buckets
-  const needsReview = scoreHistory.filter(s => s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
-  const disputed    = scoreHistory.filter(s => s.disputed)
-  const failed      = scoreHistory.filter(s => s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict)
+  const needsReview = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
+  const disputed    = scoreHistory.filter(s => !s.reviewedAt && s.disputed)
+  const failed      = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict)
   const allQueued   = useMemo(() => [...new Map([...disputed, ...needsReview, ...failed].map(s => [s.id, s])).values()], [scoreHistory])
 
   const totalCount  = allQueued.length
@@ -245,9 +255,13 @@ export default function ReviewQueuePage() {
     clearSelect()
   }
 
-  // Claim / unclaim
-  const claimTicket   = (id) => setClaimed(c => ({ ...c, [id]: userName }))
-  const unclaimTicket = (id) => setClaimed(c => { const n = { ...c }; delete n[id]; return n })
+  // Claim / unclaim (persisted via AppContext)
+  const claimTicket   = async (id) => {
+    const err = await claimScore(id)
+    if (err) toast.error(`Failed to claim: ${err.message || err.code || 'unknown error'}`)
+    else toast.success('Ticket claimed')
+  }
+  const unclaimTicket = (id) => unclaimScore(id)
 
   // Quick notify (no preview — direct send)
   const quickNotify = async (item) => {
@@ -447,7 +461,7 @@ export default function ReviewQueuePage() {
                 onClick={() => open(item)}
                 selected={selected.has(item.id)}
                 onSelect={toggleSelect}
-                claimedBy={claimed[item.id] || null}
+                claimedBy={claimedName(item)}
                 onClaim={claimTicket}
                 onUnclaim={unclaimTicket}
                 onNotify={quickNotify}

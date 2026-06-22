@@ -37,6 +37,7 @@ const CoachingPage     = lazy(() => import('./pages/CoachingPage'))
 const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
+const MyQueuePage      = lazy(() => import('./pages/MyQueuePage'))
 const CalibrationPage  = lazy(() => import('./pages/CalibrationPage'))
 
 const Spinner = () => (
@@ -52,6 +53,7 @@ function Router({ page, role }) {
   switch (page) {
     case 'dashboard': return <DashboardPage />
     case 'review':    return <ReviewQueuePage />
+    case 'myqueue':   return <MyQueuePage />
     case 'agents':    return role === 'agent' ? <AgentProfilePage /> : <AgentsPage />
     case 'inbox':     return <InboxPage />
     case 'coaching':  return <CoachingPage />

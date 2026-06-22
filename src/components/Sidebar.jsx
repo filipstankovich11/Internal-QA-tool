@@ -5,11 +5,14 @@ import NotificationPanel from './NotificationPanel'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { isInReviewQueue } from '../lib/queue'
+import { isClaimActive } from '../lib/claims'
 
 const MENU_TABS = [
-  { id: 'dashboard',   label: 'Dashboard',    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
-  { id: 'score',       label: 'Score',        scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> },
+  { id: 'dashboard',   label: 'Dashboard',    icon: <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M280-280h80v-200h-80v200Zm320 0h80v-400h-80v400Zm-160 0h80v-120h-80v120Zm0-200h80v-80h-80v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/></svg> },
+  { id: 'score',       label: 'Score',        scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M657-121 544-234l56-56 57 57 127-127 56 56-183 183Zm-537 1v-80h360v80H120Zm0-160v-80h360v80H120Zm0-160v-80h720v80H120Zm0-160v-80h720v80H120Zm0-160v-80h720v80H120Z"/></svg> },
   { id: 'review',      label: 'Review Queue', scorerOnly: true, badge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
+  { id: 'myqueue',     label: 'My Queue',     adminOnly: true, myQueueBadge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg> },
   { id: 'agents',      label: 'Agents',       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
   { id: 'inbox',       label: 'Inbox',        agentOnly: true, inboxBadge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg> },
   { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
@@ -140,7 +143,8 @@ export default function Sidebar({ page, setPage }) {
     return () => supabase.removeChannel(channel)
   }, [fetchUnread])
 
-  const reviewCount  = scoreHistory.filter(s => (s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict) || s.disputed).length
+  const reviewCount  = scoreHistory.filter(isInReviewQueue).length
+  const myQueueCount = scoreHistory.filter(s => s.claimedBy === user?.id && isClaimActive(s) && isInReviewQueue(s)).length
   const inboxUnread  = scoreHistory.filter(s => !s.acknowledged).length
   const isAgent      = role === 'agent'
 
@@ -220,8 +224,9 @@ export default function Sidebar({ page, setPage }) {
             isActive={page === tab.id}
             onClick={() => setPage(tab.id)}
             badge={
-              tab.badge      ? reviewCount  :
-              tab.inboxBadge ? inboxUnread  :
+              tab.badge        ? reviewCount  :
+              tab.myQueueBadge ? myQueueCount :
+              tab.inboxBadge   ? inboxUnread  :
               null
             }
             collapsed={collapsed}

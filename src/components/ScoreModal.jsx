@@ -5,6 +5,7 @@ import { useNavigate } from '../context/NavigationContext'
 import { useToast } from './Toast'
 import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -31,13 +32,12 @@ const RefreshIcon = () => (
   </svg>
 )
 
+// Rich verdict styling — colors come from the shared tokens (lib/verdict)
 const VERDICT = {
-  PASS:         { label: 'PASS',        icon: '✓', text: '#10b981', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.2)',  wash: 'rgba(16,185,129,0.06)'  },
-  NEEDS_REVIEW: { label: 'NEEDS REVIEW', icon: '~', text: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)',  wash: 'rgba(245,158,11,0.06)'  },
-  FAIL:         { label: 'FAIL',         icon: '✗', text: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.2)',   wash: 'rgba(239,68,68,0.06)'   },
+  PASS:         { label: 'PASS',         icon: '✓', text: VERDICT_COLOR.PASS,         bg: VERDICT_BG.PASS,         border: VERDICT_BORDER.PASS,         wash: VERDICT_WASH.PASS         },
+  NEEDS_REVIEW: { label: 'NEEDS REVIEW', icon: '~', text: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW, border: VERDICT_BORDER.NEEDS_REVIEW, wash: VERDICT_WASH.NEEDS_REVIEW },
+  FAIL:         { label: 'FAIL',         icon: '✗', text: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL,         border: VERDICT_BORDER.FAIL,         wash: VERDICT_WASH.FAIL         },
 }
-
-const VERDICTS = ['PASS', 'NEEDS_REVIEW', 'FAIL']
 
 const scoreColor = n => n >= 4 ? '#10b981' : n >= 3 ? '#f59e0b' : '#ef4444'
 
@@ -176,7 +176,7 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
 }
 
 function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception }) {
-  const [openDim, setOpenDim] = useState(0)
+  const [openDim, setOpenDim] = useState(-1) // start collapsed — no dimension auto-opens
   const toggle = i => setOpenDim(prev => prev === i ? -1 : i)
   return (
     <div>
@@ -264,7 +264,7 @@ function NotesSection({ scoreId, initialNote }) {
   )
 }
 
-function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdict, overrideScore, overrideNote, overrideAt }) {
+function OverrideSection({ scoreId, actions = false, currentVerdict, currentScore, overrideVerdict, overrideScore, overrideNote, overrideAt }) {
   const { overrideScore: saveOverride } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
@@ -275,8 +275,12 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
   const [saving,  setSaving]  = useState(false)
   const [saved,   setSaved]   = useState(false)
 
+  // Editing is only allowed where the modal is in "work" mode (My Queue).
+  // Elsewhere an existing override still shows, read-only.
+  const canEdit = actions && isAdmin
+
   if (!scoreId) return null
-  if (!isAdmin && !overrideVerdict) return null
+  if (!overrideVerdict && !canEdit) return null
 
   const hasOverride = !!overrideVerdict
 
@@ -307,7 +311,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
               {vc.icon} {vc.label} · {overrideScore?.toFixed(0)}/100
             </span>
           </div>
-          {isAdmin && (
+          {canEdit && (
             <button onClick={() => setOpen(v => !v)}
               className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
               onMouseEnter={e => e.target.style.color='#818cf8'} onMouseLeave={e => e.target.style.color='#aaa'}>
@@ -315,7 +319,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
             </button>
           )}
         </div>
-      ) : isAdmin ? (
+      ) : canEdit ? (
         <button onClick={() => setOpen(v => !v)}
           className="w-[85%] mx-auto block text-sm font-semibold py-2 rounded-lg transition-all"
           style={{ color: '#f97316', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}
@@ -392,6 +396,7 @@ function OverrideSection({ scoreId, currentVerdict, currentScore, overrideVerdic
 
 function WhatWentWell({ scores, panel }) {
   // Collect all criteria across dimensions, sort by score desc, take top 2
+  if (!scores) return null
   const all = Object.values(scores).flatMap(dim =>
     Object.entries(dim)
       .filter(([k, v]) => k !== 'dimension_average' && v?.score != null)
@@ -501,9 +506,9 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose, onExpand, panel = false }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, rubric, scoreHistory } = useApp()
-  const { isAdmin } = useAuth()
+export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false }) {
+  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory } = useApp()
+  const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
@@ -516,6 +521,13 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
 
   // Use liveScore after a re-score, fall back to the original prop
   const s = liveScore ?? score
+
+  // Reviewed state pulled from the live record (so it updates after marking)
+  const record    = s.scoreId ? scoreHistory.find(x => x.id === s.scoreId) : null
+  const reviewed  = !!record?.reviewedAt
+  const [reviewing,      setReviewing]      = useState(false)
+  const [confirmReview,  setConfirmReview]  = useState(false)
+  const [notifyOnReview, setNotifyOnReview] = useState(true)
 
   const displayVerdict  = s.overrideVerdict || s.verdict
   const displayScore    = s.overrideScore   ?? s.weighted_score
@@ -591,6 +603,23 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
     finally { setRescoring(false) }
   }
 
+  // Mark reviewed — opens a confirmation with an optional Slack notify
+  const canNotify = matchedAgents.some(a => a.email)
+  const openReviewConfirm = () => {
+    setSelectedAgentIds(matchedAgents.filter(a => a.email).map(a => a.id))
+    setNotifyOnReview(canNotify)
+    setConfirmReview(true)
+  }
+  const confirmMarkReviewed = async () => {
+    setReviewing(true)
+    if (notifyOnReview && canNotify) await sendNotification()
+    const err = await markReviewed(s.scoreId)
+    setReviewing(false)
+    setConfirmReview(false)
+    if (err) toast.error(`Failed: ${err.message || 'could not mark reviewed'}`)
+    else toast.success('Marked reviewed')
+  }
+
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -600,6 +629,36 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
 
   const inner = (
     <>
+    {/* Mark-reviewed confirmation */}
+    {confirmReview && (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
+        onClick={() => { if (!reviewing) setConfirmReview(false) }}>
+        <div className="rounded-2xl p-6 w-full max-w-sm modal-enter" onClick={e => e.stopPropagation()}
+          style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+          <h3 className="text-white font-semibold mb-1.5">Mark this ticket reviewed?</h3>
+          <p className="text-sm mb-4 leading-relaxed" style={{ color: '#c8c8c8' }}>
+            It leaves the review queue and releases your claim. Confident in the score
+            {displayScore != null && <> — <span style={{ color: vc.text, fontWeight: 600 }}>{Math.round(displayScore)}/100 · {vc.label}</span></>}?
+          </p>
+          {canNotify ? (
+            <label className="flex items-center gap-2.5 mb-5 cursor-pointer text-sm" style={{ color: '#ccc' }}>
+              <input type="checkbox" checked={notifyOnReview} onChange={e => setNotifyOnReview(e.target.checked)}
+                style={{ accentColor: '#FF9780', width: 15, height: 15 }} />
+              Notify {agentNames[0] || 'the agent'} on Slack
+            </label>
+          ) : (
+            <p className="text-xs mb-5" style={{ color: '#888' }}>No agent email on file — can't send a Slack notification.</p>
+          )}
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setConfirmReview(false)} disabled={reviewing} className="g-btn-ghost text-sm px-3 py-2">Cancel</button>
+            <button onClick={confirmMarkReviewed} disabled={reviewing}
+              className="g-btn-primary text-sm px-4 py-2 rounded-xl" style={{ opacity: reviewing ? 0.6 : 1 }}>
+              {reviewing ? 'Working…' : (notifyOnReview && canNotify ? 'Notify & mark reviewed' : 'Mark reviewed')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
           style={{ background: `rgba(20,20,22,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
@@ -614,6 +673,31 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
               Ticket #{s.ticket_id}
             </a>
             <div className="flex items-center gap-2 shrink-0 pl-6">
+              {/* Work actions — only on My Queue; elsewhere the modal is view-only */}
+              {actions && (<>
+              {isAdmin && s.scoreId && !confirmDelete && !reviewed && (
+                <button onClick={openReviewConfirm} disabled={reviewing}
+                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.25)', color: reviewing ? '#555' : '#10b981', cursor: reviewing ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!reviewing) { e.currentTarget.style.background = 'rgba(16,185,129,0.18)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.10)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.25)' }}
+                  title="Mark this ticket reviewed — removes it from the queue and releases your claim">
+                  {reviewing ? 'Marking…' : '✓ Mark reviewed'}
+                </button>
+              )}
+              {isAdmin && s.scoreId && !confirmDelete && reviewed && (
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg"
+                    style={{ background: 'rgba(16,185,129,0.10)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)' }}
+                    title={record?.reviewedBy === user?.id ? 'Reviewed by you' : 'Reviewed'}>
+                    ✓ Reviewed{record?.reviewedAt ? ` · ${new Date(record.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+                  </span>
+                  <button onClick={() => reopenReview(s.scoreId)} className="text-xs transition-colors" style={{ color: '#888' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#FF9780'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#888'}
+                    title="Re-open — puts it back in the queue">Re-open</button>
+                </span>
+              )}
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={openNotifyPreview} disabled={notifying}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
@@ -662,6 +746,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
                 </div>
               )}
               <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.10)', margin: '0 2px' }} />
+              </>)}
               {panel && onExpand && (
                 <button onClick={onExpand} title="Expand to full view"
                   className="flex items-center justify-center rounded-lg transition-all"
@@ -725,19 +810,25 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
             </div>
           )}
 
-          {/* Dimension summary strip */}
-          <DimensionStrip dimensions={[
-            { name: 'Inquiry Resolution',  weight: '50%', average: inquiry_resolution.dimension_average },
-            { name: 'Internal Processes',  weight: '25%', average: internal_processes.dimension_average },
-            { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average },
-          ]} />
+          {/* Dimension breakdown — guarded against incomplete score data */}
+          {inquiry_resolution && internal_processes && customer_perception ? (
+            <>
+              <DimensionStrip dimensions={[
+                { name: 'Inquiry Resolution',  weight: '50%', average: inquiry_resolution.dimension_average },
+                { name: 'Internal Processes',  weight: '25%', average: internal_processes.dimension_average },
+                { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average },
+              ]} />
 
-          {/* Criteria detail — accordion, one open at a time */}
-          <DimensionAccordion
-            inquiry_resolution={inquiry_resolution}
-            internal_processes={internal_processes}
-            customer_perception={customer_perception}
-          />
+              {/* Criteria detail — accordion, one open at a time */}
+              <DimensionAccordion
+                inquiry_resolution={inquiry_resolution}
+                internal_processes={internal_processes}
+                customer_perception={customer_perception}
+              />
+            </>
+          ) : (
+            <p className="text-xs px-1" style={{ color: '#888' }}>Detailed dimension breakdown unavailable for this score.</p>
+          )}
 
           {/* Summary */}
           <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
@@ -834,6 +925,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false }) 
           <OverrideSection
             key={`ovr-${s.scoreId}`}
             scoreId={s.scoreId}
+            actions={actions}
             currentVerdict={s.verdict}
             currentScore={s.weighted_score}
             overrideVerdict={s.overrideVerdict}
