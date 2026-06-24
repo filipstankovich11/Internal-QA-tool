@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase'
 import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
+import ScoreModal from '../components/ScoreModal'
+import ScoringProgress from '../components/ScoringProgress'
 
 // ── New session modal ─────────────────────────────────────────────────────────
 function NewSessionModal({ onCreated, onClose }) {
@@ -79,6 +81,7 @@ function NewSessionModal({ onCreated, onClose }) {
               onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
             />
           </div>
+          <ScoringProgress loading={loading} />
         </div>
 
         <div className="px-6 py-4 flex gap-2 justify-end"
@@ -113,7 +116,7 @@ function SubmitForm({ session, onSubmitted }) {
       reviewer_id:   user?.id,
       reviewer_name: profile?.name || user?.email || 'Reviewer',
       verdict,
-      weighted_score: parseFloat(score),
+      weighted_score: Math.max(0, Math.min(100, parseFloat(score) || 0)),
       notes: notes.trim(),
     })
     setSaving(false)
@@ -158,13 +161,22 @@ function SubmitForm({ session, onSubmitted }) {
         </div>
       </div>
 
-      {/* Score slider */}
+      {/* Score — drag the slider or type the exact grade */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-medium" style={{ color: '#888' }}>Score</p>
-          <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(score) }}>{score}/100</span>
+          <div className="flex items-center gap-1.5">
+            <input type="number" min="0" max="100"
+              value={score}
+              onChange={e => setScore(e.target.value === '' ? '' : Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+              className="no-spinner w-14 text-right text-sm font-bold tabular-nums rounded-lg px-2 py-1 outline-none transition-colors"
+              style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.10)', color: gradeColor(score === '' ? 0 : score) }}
+              onFocus={e => e.target.style.borderColor = '#FF9780'}
+              onBlur={e => { if (e.target.value === '') setScore(0); e.target.style.borderColor = 'rgba(255,255,255,0.10)' }} />
+            <span className="text-xs" style={{ color: '#555' }}>/100</span>
+          </div>
         </div>
-        <input type="range" min="0" max="100" step="1" value={score} onChange={e => setScore(+e.target.value)}
+        <input type="range" min="0" max="100" step="1" value={score === '' ? 0 : score} onChange={e => setScore(+e.target.value)}
           className="w-full" style={{ accentColor: '#FF9780' }} />
         <div className="flex justify-between mt-1">
           <span className="text-xs" style={{ color: '#555' }}>0</span>
@@ -243,8 +255,92 @@ function WaitingState({ session, entries, onReveal, isAdmin }) {
   )
 }
 
+// ── Alignment / divergence summary ────────────────────────────────────────────
+// The point of calibration is measuring how far apart reviewers landed. Shows the
+// score spread, the group avg vs the AI, the biggest outlier, and a 0–100 strip
+// with a dot per reviewer so the spread is visible at a glance.
+function DivergenceSummary({ aiScore, entries }) {
+  const scored = entries.filter(e => isFinite(Number(e.weighted_score)))
+  if (!scored.length) return null
+  const scores = scored.map(e => Number(e.weighted_score))
+  const min = Math.min(...scores), max = Math.max(...scores)
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+  const spread = max - min
+  const ai = isFinite(Number(aiScore)) ? Number(aiScore) : null
+  const aiDelta = ai != null ? avg - ai : null
+
+  // Outlier = reviewer furthest from the group average (only flag if meaningful)
+  let outlier = null
+  if (scored.length >= 3) {
+    const ranked = scored
+      .map(e => ({ name: e.reviewer_name, dev: Math.abs(Number(e.weighted_score) - avg) }))
+      .sort((a, b) => b.dev - a.dev)
+    if (ranked[0]?.dev >= 10) outlier = ranked[0]
+  }
+
+  const spreadColor = spread <= 8 ? '#10b981' : spread <= 20 ? '#f59e0b' : '#ef4444'
+
+  return (
+    <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#777' }}>Alignment</p>
+        <div className="flex items-center gap-4 text-xs">
+          <span style={{ color: '#888' }}>Spread <span className="font-bold tabular-nums" style={{ color: spreadColor }}>{Math.round(spread)} pts</span></span>
+          <span style={{ color: '#888' }}>Reviewer avg <span className="font-bold tabular-nums" style={{ color: gradeColor(avg) }}>{Math.round(avg)}</span></span>
+          {aiDelta != null && (
+            <span style={{ color: '#888' }}>vs AI <span className="font-bold tabular-nums" style={{ color: Math.abs(aiDelta) <= 8 ? '#10b981' : '#f59e0b' }}>{aiDelta >= 0 ? '+' : ''}{Math.round(aiDelta)}</span></span>
+          )}
+        </div>
+      </div>
+
+      {/* 0–100 strip: dot per reviewer + AI diamond + avg tick */}
+      <div className="relative" style={{ height: 22 }}>
+        <div className="absolute left-0 right-0" style={{ top: 10, height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.08)' }} />
+        <div className="absolute" title={`Reviewer avg ${Math.round(avg)}`}
+          style={{ left: `${avg}%`, top: 4, width: 1, height: 15, background: 'rgba(255,255,255,0.28)', transform: 'translateX(-50%)' }} />
+        {ai != null && (
+          <div className="absolute" title={`AI ${Math.round(ai)}`}
+            style={{ left: `${ai}%`, top: 6, width: 9, height: 9, background: '#818cf8', transform: 'translateX(-50%) rotate(45deg)', borderRadius: 2, border: '1px solid #1e1e20' }} />
+        )}
+        {scored.map(e => {
+          const sc = Number(e.weighted_score)
+          const isOut = outlier && e.reviewer_name === outlier.name
+          return (
+            <div key={e.id} className="absolute" title={`${e.reviewer_name}: ${Math.round(sc)}`}
+              style={{ left: `${sc}%`, top: 6, width: 11, height: 11, borderRadius: '50%', background: '#FF9780',
+                transform: 'translateX(-50%)', border: isOut ? '2px solid #fff' : '1px solid #1e1e20',
+                boxShadow: isOut ? '0 0 8px rgba(255,255,255,0.45)' : 'none', zIndex: isOut ? 2 : 1 }} />
+          )
+        })}
+      </div>
+      <div className="flex justify-between mt-1">
+        <span className="text-xs" style={{ color: '#555' }}>0</span>
+        <span className="text-xs" style={{ color: '#555' }}>100</span>
+      </div>
+
+      <div className="flex items-center justify-between mt-2.5 flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-xs" style={{ color: '#888' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF9780' }} /> Reviewer
+          </span>
+          {ai != null && (
+            <span className="flex items-center gap-1.5 text-xs" style={{ color: '#888' }}>
+              <span style={{ width: 8, height: 8, background: '#818cf8', transform: 'rotate(45deg)', borderRadius: 1 }} /> AI
+            </span>
+          )}
+        </div>
+        {outlier && (
+          <span className="text-xs" style={{ color: '#f59e0b' }}>
+            {outlier.name} diverges most (±{Math.round(outlier.dev)} from avg)
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Revealed comparison view ──────────────────────────────────────────────────
-function RevealedView({ session, entries }) {
+function RevealedView({ session, entries, onViewAI }) {
   const ai = session.ai_score || {}
   const allCols = [
     { key: 'ai', label: '🤖 AI', verdict: ai.verdict, score: ai.weighted_score, notes: ai.summary },
@@ -258,12 +354,23 @@ function RevealedView({ session, entries }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl p-3" style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}>
+      <div className="flex items-center justify-between gap-3 rounded-xl p-3" style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}>
         <p className="text-xs" style={{ color: '#10b981' }}>
           Session revealed — {entries.length} reviewer{entries.length !== 1 ? 's' : ''} participated
           {majorityVerdict && <> · Majority verdict: <strong>{VERDICT_LABEL[majorityVerdict] || majorityVerdict}</strong></>}
         </p>
+        {session.ai_score && (
+          <button onClick={() => onViewAI(session.ai_score)}
+            className="text-xs px-3 py-1.5 rounded-lg shrink-0 transition-colors whitespace-nowrap"
+            style={{ color: '#FF9780', border: '1px solid rgba(255,151,128,0.25)', background: 'rgba(255,151,128,0.06)' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,151,128,0.14)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,151,128,0.06)'}>
+            View AI breakdown →
+          </button>
+        )}
       </div>
+
+      <DivergenceSummary aiScore={ai.weighted_score} entries={entries} />
 
       {/* Comparison table */}
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -323,11 +430,18 @@ function RevealedView({ session, entries }) {
 
 // ── Session detail panel ──────────────────────────────────────────────────────
 function SessionDetail({ session: initialSession, onBack }) {
-  const { user } = useAuth()
-  const { isAdmin } = useAuth()
+  const { user, isAdmin } = useAuth()
+  const { activeOverlay, setActiveOverlay } = useApp()
   const [session,  setSession]  = useState(initialSession)
   const [entries,  setEntries]  = useState([])
   const [loading,  setLoading]  = useState(true)
+
+  // Score detail — slide-in panel + expand-to-full modal, same as the other pages
+  const [panelScore, setPanelScore] = useState(null)
+  const [modalScore, setModalScore] = useState(null)
+  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
+  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
+  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
 
   const myEntry = entries.find(e => e.reviewer_id === user?.id)
 
@@ -347,7 +461,8 @@ function SessionDetail({ session: initialSession, onBack }) {
     : { label: 'Open', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' }
 
   return (
-    <div>
+    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
       {/* Back + header */}
       <div className="flex items-start gap-4 mb-6">
         <button onClick={onBack} className="text-sm mt-0.5 transition-colors shrink-0" style={{ color: '#666' }}
@@ -378,12 +493,22 @@ function SessionDetail({ session: initialSession, onBack }) {
       {loading ? (
         <div className="text-center py-12" style={{ color: '#555' }}>Loading…</div>
       ) : session.status === 'revealed' ? (
-        <RevealedView session={session} entries={entries} />
+        <RevealedView session={session} entries={entries} onViewAI={openPanel} />
       ) : myEntry ? (
         <WaitingState session={session} entries={entries} onReveal={load} isAdmin={isAdmin} />
       ) : (
         <SubmitForm session={session} onSubmitted={load} />
       )}
+    </div>
+    {panelScore && (
+      <ScoreModal
+        score={panelScore}
+        onClose={closePanel}
+        onExpand={() => { setModalScore(panelScore); closePanel() }}
+        panel
+      />
+    )}
+    {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }
@@ -460,12 +585,10 @@ export default function CalibrationPage() {
 
   if (activeSession) {
     return (
-      <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
-        <SessionDetail
-          session={activeSession}
-          onBack={() => { setActiveSession(null); fetchSessions() }}
-        />
-      </div>
+      <SessionDetail
+        session={activeSession}
+        onBack={() => { setActiveSession(null); fetchSessions() }}
+      />
     )
   }
 
