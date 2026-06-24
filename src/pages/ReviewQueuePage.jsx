@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
+import DisputeResolution from '../components/DisputeResolution'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import Segmented from '../components/Segmented'
 import Dropdown from '../components/Dropdown'
@@ -57,7 +58,7 @@ function badgeFor(item) {
 
 // ── Queue item row ─────────────────────────────────────────────────────────────
 
-function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUnclaim, isAdmin }) {
+function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUnclaim, onResolve, isAdmin }) {
   const { agents } = useApp()
   const agentName  = (id) => agents.find(a => a.id === id)?.name
   const badge      = badgeFor(item)
@@ -154,11 +155,22 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
         <div className="px-4 pb-3.5" style={{ borderTop: '1px solid #F0ECE9' }}>
           <p className="text-xs pt-2.5 mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Agent's dispute reason:</p>
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{item.disputeNote}</p>
-          {item.disputeAt && (
-            <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.5)' }}>
-              Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </p>
-          )}
+          <div className="flex items-center justify-between gap-3 mt-1.5">
+            {item.disputeAt ? (
+              <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+                Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            ) : <span />}
+            {isAdmin && onResolve && (
+              <button onClick={() => onResolve(item)}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shrink-0"
+                style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFE0D6' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#FFEAE6'}
+                onMouseLeave={e => e.currentTarget.style.background = '#FFF4F1'}>
+                Resolve dispute →
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -174,6 +186,7 @@ export default function ReviewQueuePage() {
 
   const [panelScore,  setPanelScore]  = useState(null) // concise side panel
   const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
+  const [disputeScore, setDisputeScore] = useState(null) // dispute resolution modal
   const [sortOrder,    setSortOrder]    = useState('priority')
   const [agentFilter,  setAgentFilter]  = useState('')
   const [selected,     setSelected]     = useState(new Set())
@@ -434,6 +447,7 @@ export default function ReviewQueuePage() {
                 claimedBy={claimedName(item)}
                 onClaim={claimTicket}
                 onUnclaim={unclaimTicket}
+                onResolve={setDisputeScore}
                 isAdmin={isAdmin}
               />
             ))}
@@ -463,6 +477,7 @@ export default function ReviewQueuePage() {
         />
       )}
       {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
+      {disputeScore && <DisputeResolution score={disputeScore} onClose={() => setDisputeScore(null)} onResolved={() => setDisputeScore(null)} />}
     </div>
   )
 }
