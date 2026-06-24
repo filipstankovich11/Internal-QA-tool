@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase'
 import { scoreExplanation, ScoreInfoPopover } from '../components/ScoreInfo'
 import { VERDICT_COLOR, GRADE, gradeColor, VERDICT_DESC } from '../lib/verdict'
 import { AgentEditForm, AgentHistoryModal, AddAgentModal, AssignTeamsModal, ImportGorgiasModal, EditAgentModal } from '../components/agents/modals'
+import Segmented from '../components/Segmented'
+import Dropdown from '../components/Dropdown'
 
 const SORT_OPTIONS = [
   { id: 'avg',     label: 'Avg score' },
@@ -437,10 +439,8 @@ export default function AgentsPage() {
               className="w-full rounded-lg pl-9 pr-3 py-2 text-sm outline-none g-input"
               style={{ border: `1px solid ${search ? '#FF9780' : '#E1DCD7'}` }} />
           </div>
-          <select value={sortKey} onChange={e => setSortKey(e.target.value)}
-            className="rounded-lg px-3 py-2 text-sm" style={selectStyle}>
-            {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>Sort: {o.label}</option>)}
-          </select>
+          <Dropdown value={sortKey} onChange={setSortKey} width={170}
+            options={SORT_OPTIONS.map(o => ({ value: o.id, label: `Sort: ${o.label}` }))} />
           <button onClick={() => setBelowGoalOnly(v => !v)}
             className="text-xs px-3 py-2 rounded-lg border transition-all font-medium whitespace-nowrap"
             style={belowGoalOnly
@@ -449,15 +449,8 @@ export default function AgentsPage() {
             Below goal
           </button>
           {/* Layout toggle — Cards vs compact List */}
-          <div className="flex rounded-lg overflow-hidden shrink-0 p-0.5" style={{ background: '#F1ECE8' }}>
-            {[['cards', 'Cards'], ['list', 'List']].map(([id, label]) => (
-              <button key={id} onClick={() => setLayoutOverride(id)}
-                className="text-xs px-3 py-1.5 rounded-md transition-colors font-medium"
-                style={layout === id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.06)' } : { color: 'rgba(26,30,35,.6)', background: 'transparent' }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented options={[{ id: 'cards', label: 'Cards' }, { id: 'list', label: 'List' }]}
+            value={layout} onChange={setLayoutOverride} segWidth={60} fontPx={12} padY={6} />
         </div>
       )}
 

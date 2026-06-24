@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
+import DatePicker from '../components/DatePicker'
+import Dropdown from '../components/Dropdown'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, VERDICT_DESC } from '../lib/verdict'
 
@@ -475,35 +477,27 @@ export default function DashboardPage() {
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
                 <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Agent</label>
-                <select value={filters.agent} onChange={e => set('agent', e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
-                  <option value="">All agents</option>
-                  {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                <Dropdown value={filters.agent} onChange={v => set('agent', v)} width={170} avatars
+                  options={[{ value: '', label: 'All agents' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
               </div>
             )}
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
                 <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Team</label>
-                <select value={filters.team} onChange={e => set('team', e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
-                  <option value="">All teams</option>
-                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <Dropdown value={filters.team} onChange={v => set('team', v)} width={170}
+                  options={[{ value: '', label: 'All teams' }, ...teams.map(t => ({ value: t.id, label: t.name }))]} />
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>From</label>
-              <input type="date" value={filters.dateFrom} onChange={e => set('dateFrom', e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'light' }} onFocus={focus} onBlur={blur} />
+              <DatePicker value={filters.dateFrom} onChange={v => { set('dateFrom', v); setActiveRange(null) }} width={150} />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>To</label>
-              <input type="date" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'light' }} onFocus={focus} onBlur={blur} />
+              <DatePicker value={filters.dateTo} onChange={v => { set('dateTo', v); setActiveRange(null) }} width={150} />
             </div>
 
             <div className="flex flex-col gap-1.5">

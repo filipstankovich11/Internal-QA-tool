@@ -7,6 +7,9 @@ import { authFetchJson, buildFewShotExamples } from '../lib/api'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, gradeColor } from '../lib/verdict'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import ScoringProgress from '../components/ScoringProgress'
+import DatePicker from '../components/DatePicker'
+import Segmented from '../components/Segmented'
+import Dropdown from '../components/Dropdown'
 
 const HISTORY_PAGE_SIZE = 10 // history rows shown before "Show more"
 
@@ -40,19 +43,7 @@ function ModeToggle({ mode, setMode }) {
     { id: 'csv',    label: 'CSV Upload'    },
     { id: 'view',   label: 'Gorgias View'  },
   ]
-  return (
-    <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#F1ECE8' }}>
-      {modes.map(({ id, label }) => (
-        <button key={id} onClick={() => setMode(id)}
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={mode === id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.06)' } : { color: 'rgba(26,30,35,.6)' }}
-          onMouseEnter={e => { if (mode !== id) e.currentTarget.style.color = '#1A1E23' }}
-          onMouseLeave={e => { if (mode !== id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-          {label}
-        </button>
-      ))}
-    </div>
-  )
+  return <Segmented options={modes} value={mode} onChange={setMode} segWidth={116} fontPx={14} padY={8} />
 }
 
 // ── Batch — CSV upload zone ───────────────────────────────────────────────────
@@ -468,10 +459,10 @@ export default function ScorePage() {
 
   return (
     <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
-    <div className="max-w-2xl mx-auto px-4 pt-10 pb-16">
+    <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: '#1A1E23' }}>Score</h1>
+        <h1 className="mb-1" style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>Score</h1>
         <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
       </div>
 
@@ -490,7 +481,7 @@ export default function ScorePage() {
             </div>
           )}
 
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-2 mb-3 max-w-2xl">
             <input
               type="text" value={ticketUrl}
               onChange={e => setTicketUrl(e.target.value)}
@@ -578,21 +569,16 @@ export default function ScorePage() {
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Agent</label>
-                  <select value={filters.agent} onChange={e => setF('agent', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-                    <option value="">All agents</option>
-                    {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <Dropdown value={filters.agent} onChange={v => setF('agent', v)} width={180} avatars
+                    options={[{ value: '', label: 'All agents' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>From</label>
-                  <input type="date" value={filters.dateFrom} onChange={e => setF('dateFrom', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'light' }} onFocus={onFocus} onBlur={onBlur} />
+                  <DatePicker value={filters.dateFrom} onChange={v => setF('dateFrom', v)} width={150} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>To</label>
-                  <input type="date" value={filters.dateTo} onChange={e => setF('dateTo', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'light' }} onFocus={onFocus} onBlur={onBlur} />
+                  <DatePicker value={filters.dateTo} onChange={v => setF('dateTo', v)} width={150} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Status</label>

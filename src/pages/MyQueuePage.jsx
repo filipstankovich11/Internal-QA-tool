@@ -4,17 +4,18 @@ import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { useToast } from '../components/Toast'
-import { isClaimActive, CLAIM_TTL_MS } from '../lib/claims'
+import { isClaimActive } from '../lib/claims'
 import { isInReviewQueue } from '../lib/queue'
-import { VERDICT_COLOR, VERDICT_BG, gradeColor } from '../lib/verdict'
+import { gradeColor } from '../lib/verdict'
 
+// Status pill — matches the Review Queue tints
 function statusOf(s) {
-  if (s.disputed)                      return { label: 'DISPUTED', color: '#C8841E', bg: '#FFEAE6' }
-  if (s.effectiveVerdict === 'FAIL')   return { label: 'FAIL',     color: '#D14B3D', bg: '#FCE9E6' }
-  return { label: 'REVIEW', color: '#C8841E', bg: '#FBEBD3' }
+  if (s.disputed)                      return { label: '⚑ DISPUTED', color: '#B84A2E', bg: '#FFEAE6' }
+  if (s.effectiveVerdict === 'FAIL')   return { label: '✕ FAIL',     color: '#D14B3D', bg: '#FCE9E6' }
+  return { label: '~ REVIEW', color: '#C8841E', bg: '#FBEBD3' }
 }
 
-function timeSince(ts) {
+function ago(ts) {
   const ms = Date.now() - ts
   const d = Math.floor(ms / 86400000)
   if (d >= 1) return `${d}d`
@@ -23,80 +24,58 @@ function timeSince(ts) {
   return `${Math.max(1, Math.floor(ms / 60000))}m`
 }
 
-// Shared column template so the header and every row line up
-const QUEUE_COLS = '88px minmax(0,1fr) 120px 88px 64px 44px 152px'
-const colLabel   = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' }
+const PlayIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+const PenIcon  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
 
-function QueueHeader() {
+const CARD_SHADOW = '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)'
+
+function StatTile({ label, value, color }) {
   return (
-    <div className="grid items-center gap-3 px-3 mb-1.5" style={{ gridTemplateColumns: QUEUE_COLS }}>
-      <span style={colLabel} title="Gorgias ticket ID">Ticket</span>
-      <span style={colLabel} title="Ticket subject">Subject</span>
-      <span style={colLabel} title="Agents on the ticket">Agents</span>
-      <span style={colLabel} title="Verdict — fail / review / disputed">Status</span>
-      <span style={colLabel} className="text-right" title="Weighted QA score (0–100)">Grade</span>
-      <span style={colLabel} className="text-right" title="Time since the ticket was scored">Age</span>
-      <span style={colLabel} className="text-right">Actions</span>
+    <div style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 14, padding: '16px 18px', boxShadow: CARD_SHADOW }}>
+      <p className="tabular-nums m-0" style={{ fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, fontSize: 28, color: color || '#1A1E23', lineHeight: 1.1 }}>{value}</p>
+      <p className="m-0 mt-1 uppercase" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>{label}</p>
     </div>
   )
 }
 
-function QueueRow({ s, onOpen, onRelease, onComplete, agentNames, muted }) {
+function ClaimCard({ s, agentNames, onScore, onRelease, muted }) {
   const st = statusOf(s)
-  const claimAge = Date.now() - (s.claimedAt || Date.now())
-  const expiresIn = Math.max(0, Math.ceil((CLAIM_TTL_MS - claimAge) / 86400000))
   return (
-    <div className="grid items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
-      style={{ gridTemplateColumns: QUEUE_COLS, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', opacity: muted ? 0.6 : 1 }}
-      onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
-      onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}>
-      {/* Ticket */}
-      <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
-        className="text-xs font-mono truncate transition-colors" style={{ color: '#FF9780' }}
-        onMouseEnter={e => e.target.style.textDecoration = 'underline'}
-        onMouseLeave={e => e.target.style.textDecoration = 'none'}>
-        #{s.ticketId}
-      </a>
-      {/* Subject */}
-      <button onClick={() => onOpen(s)} className="text-left truncate text-sm transition-colors min-w-0"
-        style={{ color: '#1A1E23' }}
-        title={s.fullScore?.ticket_subject || undefined}
-        onMouseEnter={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}
-        onMouseLeave={e => e.currentTarget.style.color = '#1A1E23'}>
-        {s.fullScore?.ticket_subject || '—'}
-      </button>
-      {/* Agents */}
-      <span className="text-xs truncate" style={{ color: agentNames ? 'rgba(26,30,35,.6)' : 'rgba(26,30,35,.45)' }} title={agentNames || undefined}>
-        {agentNames || '—'}
-      </span>
-      {/* Status */}
-      {!muted
-        ? <span className="text-xs font-medium px-2 py-0.5 rounded-full justify-self-start" style={{ color: st.color, background: st.bg }}>{st.label}</span>
-        : <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
-      {/* Grade */}
-      <span className="text-sm tabular-nums text-right" style={{ color: gradeColor(s.effectiveScore) }}>{s.effectiveScore?.toFixed(0)}/100</span>
-      {/* Age */}
-      <span className="text-xs tabular-nums text-right" style={{ color: muted ? 'rgba(26,30,35,.5)' : '#B84A2E' }}
-        title={muted ? undefined : `Auto-releases in ~${expiresIn} day${expiresIn !== 1 ? 's' : ''} if untouched`}>
-        {timeSince(s.scoredAt)}
-      </span>
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-2">
-        {onComplete && (
-          <button onClick={() => onComplete(s.id)}
-            className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#2F8F5B', border: '1px solid #BFE3CD', background: '#E6F4EC' }}
-            onMouseEnter={e => e.currentTarget.style.background = '#D8EDDF'}
-            onMouseLeave={e => e.currentTarget.style.background = '#E6F4EC'}
-            title="Mark reviewed — removes it from the queue and releases the claim">
-            ✓ Reviewed
-          </button>
-        )}
+    <div className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-colors"
+      style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: CARD_SHADOW, opacity: muted ? 0.65 : 1 }}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: st.color, background: st.bg }}>{st.label}</span>
+          <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
+            className="text-xs font-mono transition-colors" style={{ color: '#B84A2E' }}
+            onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+            onMouseLeave={e => e.target.style.textDecoration = 'none'}>
+            #{s.ticketId}
+          </a>
+          <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>· claimed {ago(s.claimedAt || s.scoredAt)} ago</span>
+        </div>
+        <button onClick={() => onScore(s)} className="block text-left max-w-full transition-colors"
+          onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'}
+          onMouseLeave={e => e.currentTarget.style.color = '#1A1E23'}
+          style={{ color: '#1A1E23' }}>
+          <p className="truncate font-medium" style={{ fontSize: 15 }}>{s.fullScore?.ticket_subject || '—'}</p>
+        </button>
+        <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+          Auto-score <span className="font-semibold" style={{ color: gradeColor(s.effectiveScore) }}>{s.effectiveScore?.toFixed(0)}/100</span>
+          {' · '}{agentNames || 'no agent linked'}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
         <button onClick={() => onRelease(s.id)}
-          className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: 'rgba(26,30,35,.6)', border: '1px solid #E7E3DF' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.borderColor = 'rgba(209,75,61,0.4)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#E7E3DF' }}
+          className="text-xs px-3 py-2 rounded-lg transition-colors" style={{ color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF', background: '#FFFFFF' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.borderColor = '#F4DDD7' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}
           title="Release this claim back to the Review Queue">
           Release
+        </button>
+        <button onClick={() => onScore(s)}
+          className="g-btn-primary inline-flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-lg font-medium whitespace-nowrap">
+          <PenIcon /> Score now
         </button>
       </div>
     </div>
@@ -104,7 +83,7 @@ function QueueRow({ s, onOpen, onRelease, onComplete, agentNames, muted }) {
 }
 
 export default function MyQueuePage() {
-  const { scoreHistory, agents, unclaimScore, markReviewed, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, agents, unclaimScore, activeOverlay, setActiveOverlay } = useApp()
   const { user } = useAuth()
   const toast = useToast()
 
@@ -114,7 +93,7 @@ export default function MyQueuePage() {
   const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
   useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
 
-  const agentNamesFor = (s) => (s.agentIds || []).map(id => agents.find(a => a.id === id)?.name).filter(Boolean).join(', ')
+  const agentNamesFor = (s) => (s.agentIds || []).map(id => agents.find(a => a.id === id)?.name).filter(Boolean).join(' · ')
 
   // My active claims — oldest first, so you work through the queue in order
   const mine = useMemo(() => {
@@ -127,8 +106,12 @@ export default function MyQueuePage() {
   const open = mine.filter(isInReviewQueue)
   const done = mine.filter(s => !isInReviewQueue(s))
 
-  const release  = async (id) => { const ok = await unclaimScore(id); if (ok) toast.info('Ticket released') }
-  const complete = async (id) => { const err = await markReviewed(id); if (!err) toast.success('Marked reviewed') }
+  // Stats
+  const oldestWait = open.length ? Math.floor((Date.now() - Math.min(...open.map(s => s.scoredAt))) / 86400000) : 0
+  const isToday = (ts) => ts && new Date(ts).toDateString() === new Date().toDateString()
+  const scoredToday = scoreHistory.filter(s => s.reviewedBy === user?.id && isToday(s.reviewedAt)).length
+
+  const release = async (id) => { const ok = await unclaimScore(id); if (ok) toast.info('Ticket released') }
 
   const openScore = (s) => openPanel({
     ...s.fullScore, scoreId: s.id, reviewerNote: s.notes,
@@ -137,57 +120,51 @@ export default function MyQueuePage() {
 
   return (
     <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
-    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
+    <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>My queue</h1>
-          {open.length > 0 && (
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E' }}>
-              {open.length} to review
-            </span>
-          )}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>My queue</h1>
+            {open.length > 0 && (
+              <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E' }}>{open.length}</span>
+            )}
+          </div>
+          <p className="text-sm mt-1" style={{ color: 'rgba(26,30,35,.6)' }}>Tickets you've claimed — score them before the wait runs out.</p>
         </div>
-        <p className="text-sm mt-0.5" style={{ color: 'rgba(26,30,35,.6)' }}>
-          Tickets you've claimed from the Review Queue. Claims auto-release after {Math.round(CLAIM_TTL_MS / 86400000)} days if untouched.
-        </p>
+        <button onClick={() => open.length && openScore(open[0])} disabled={!open.length}
+          className="g-btn-primary inline-flex items-center gap-2 text-sm px-4 rounded-lg font-medium shrink-0"
+          style={{ height: 40, opacity: open.length ? 1 : 0.5, cursor: open.length ? 'pointer' : 'not-allowed' }}>
+          <PlayIcon /> Start scoring
+        </button>
+      </div>
+
+      {/* Stat ribbon */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <StatTile label="Claimed by me" value={mine.length} />
+        <StatTile label="Oldest wait"   value={`${oldestWait}d`} color={oldestWait > 7 ? '#D14B3D' : oldestWait > 0 ? '#C8841E' : '#1A1E23'} />
+        <StatTile label="Scored today"  value={scoredToday} color={scoredToday > 0 ? '#2F8F5B' : 'rgba(26,30,35,.45)'} />
       </div>
 
       {mine.length === 0 ? (
-        <div className="text-center py-20" style={{ color: 'rgba(26,30,35,.5)' }}>
+        <div className="text-center py-20" style={{ color: 'rgba(26,30,35,.45)' }}>
           <p className="text-4xl mb-3">🗂️</p>
-          <p className="text-sm">Nothing claimed yet. Claim tickets from the Review Queue to build your worklist.</p>
+          <p className="text-sm">Nothing claimed yet. Claim tickets from the Review Queue to add them here.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          {/* To review */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>To review</p>
-            {open.length === 0 ? (
-              <p className="text-sm py-4 text-center" style={{ color: 'rgba(26,30,35,.5)' }}>All caught up — nothing left to review in your claims.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <QueueHeader />
-                {open.map(s => (
-                  <QueueRow key={s.id} s={s} onOpen={openScore} onRelease={release} onComplete={complete} agentNames={agentNamesFor(s)} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Resolved (claimed, already reviewed) */}
+        <div className="flex flex-col gap-3">
+          {open.map(s => (
+            <ClaimCard key={s.id} s={s} agentNames={agentNamesFor(s)} onScore={openScore} onRelease={release} />
+          ))}
           {done.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>
-                Resolved <span style={{ color: 'rgba(26,30,35,.45)' }}>· release to clear from your queue</span>
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wider mt-3 mb-1" style={{ color: 'rgba(26,30,35,.45)', letterSpacing: '.08em' }}>
+                Resolved <span style={{ color: 'rgba(26,30,35,.35)' }}>· release to clear</span>
               </p>
-              <div className="flex flex-col gap-2">
-                <QueueHeader />
-                {done.map(s => (
-                  <QueueRow key={s.id} s={s} onOpen={openScore} onRelease={release} agentNames={agentNamesFor(s)} muted />
-                ))}
-              </div>
-            </div>
+              {done.map(s => (
+                <ClaimCard key={s.id} s={s} agentNames={agentNamesFor(s)} onScore={openScore} onRelease={release} muted />
+              ))}
+            </>
           )}
         </div>
       )}

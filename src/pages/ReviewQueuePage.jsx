@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
+import Segmented from '../components/Segmented'
+import Dropdown from '../components/Dropdown'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
@@ -331,26 +333,13 @@ export default function ReviewQueuePage() {
           {/* Toolbar */}
           <div className="flex items-center gap-2 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid #EEEEEE' }}>
             {/* Sort */}
-            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#F1ECE8', border: '1px solid #EEEEEE' }}>
-              {[{ id: 'priority', label: 'Priority' }, { id: 'oldest', label: 'Oldest' }, { id: 'newest', label: 'Newest' }].map(o => (
-                <button key={o.id} onClick={() => setSortOrder(o.id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={sortOrder === o.id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' } : { color: 'rgba(26,30,35,.6)' }}
-                  onMouseEnter={e => { if (sortOrder !== o.id) e.currentTarget.style.color = '#1A1E23' }}
-                  onMouseLeave={e => { if (sortOrder !== o.id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
+            <Segmented options={[{ id: 'priority', label: 'Priority' }, { id: 'oldest', label: 'Oldest' }, { id: 'newest', label: 'Newest' }]}
+              value={sortOrder} onChange={setSortOrder} segWidth={72} fontPx={12} padY={6} />
 
             {/* Agent filter */}
             {queueAgents.length > 0 && (
-              <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
-                className="rounded-xl px-3 py-2 text-xs"
-                style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: agentFilter ? '#1A1E23' : 'rgba(26,30,35,.6)', outline: 'none' }}>
-                <option value="">All agents</option>
-                {queueAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              <Dropdown value={agentFilter} onChange={setAgentFilter} width={170} avatars
+                options={[{ value: '', label: 'All agents' }, ...queueAgents.map(a => ({ value: a.id, label: a.name }))]} />
             )}
 
             {/* Bulk select controls */}

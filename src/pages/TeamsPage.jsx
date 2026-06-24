@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import { TrendChart } from '../components/TrendChart'
 import ScoreModal from '../components/ScoreModal'
+import Segmented from '../components/Segmented'
 import { VERDICT_COLOR, gradeColor } from '../lib/verdict'
 
 const SORT_OPTIONS   = [
@@ -744,9 +745,6 @@ export default function TeamsPage() {
   const moversLabel = period === 'week' ? 'vs last week' : 'vs previous month'
 
   const vt = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
-  const tabStyle = (active) => active
-    ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.08)' }
-    : { color: 'rgba(26,30,35,.6)' }
   const detailStat = detailTeamId ? teamStats.find(s => s.team.id === detailTeamId) : null
 
   return (
@@ -802,31 +800,11 @@ export default function TeamsPage() {
       {teams.length > 0 && (
         <div className="flex items-center flex-wrap mb-6 pb-5" style={{ gap: 14, borderBottom: '1px solid #EEEEEE' }}>
           {/* Period */}
-          <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: '#F1ECE8' }}>
-            {PERIOD_OPTIONS.map(o => (
-              <button key={o.id} onClick={() => setPeriod(o.id)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
-                style={tabStyle(period === o.id)}
-                onMouseEnter={e => { if (period !== o.id) e.currentTarget.style.color = '#1A1E23' }}
-                onMouseLeave={e => { if (period !== o.id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-                {o.label}
-              </button>
-            ))}
-          </div>
+          <Segmented options={PERIOD_OPTIONS} value={period} onChange={setPeriod} segWidth={84} fontPx={12} padY={6} />
 
           {/* Cards / Compare */}
           {teams.length > 1 && (
-            <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: '#F1ECE8' }}>
-              {['cards', 'compare'].map(v => (
-                <button key={v} onClick={() => setView(v)}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize"
-                  style={tabStyle(view === v)}
-                  onMouseEnter={e => { if (view !== v) e.currentTarget.style.color = '#1A1E23' }}
-                  onMouseLeave={e => { if (view !== v) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-                  {v}
-                </button>
-              ))}
-            </div>
+            <Segmented options={[{ id: 'cards', label: 'Cards' }, { id: 'compare', label: 'Compare' }]} value={view} onChange={setView} segWidth={72} fontPx={12} padY={6} />
           )}
 
           {/* Sort by (cards only) */}

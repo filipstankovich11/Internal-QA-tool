@@ -8,6 +8,7 @@ import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
 import ScoreModal from '../components/ScoreModal'
 import ScoringProgress from '../components/ScoringProgress'
+import Segmented from '../components/Segmented'
 
 // ── New session modal ─────────────────────────────────────────────────────────
 function NewSessionModal({ onCreated, onClose }) {
@@ -631,17 +632,10 @@ export default function CalibrationPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex items-center gap-1 p-1 rounded-xl w-fit mb-5"
-        style={{ background: '#F1ECE8' }}>
-        {[{ id: 'all', label: 'All' }, { id: 'open', label: 'Open' }, { id: 'revealed', label: 'Revealed' }].map(f => (
-          <button key={f.id} onClick={() => setStatusFilter(f.id)}
-            className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all"
-            style={statusFilter === f.id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.06)' } : { color: 'rgba(26,30,35,.6)' }}
-            onMouseEnter={e => { if (statusFilter !== f.id) e.currentTarget.style.color = '#1A1E23' }}
-            onMouseLeave={e => { if (statusFilter !== f.id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-            {f.label}
-          </button>
-        ))}
+      <div className="mb-5">
+        <Segmented
+          options={[{ id: 'all', label: 'All' }, { id: 'open', label: 'Open' }, { id: 'revealed', label: 'Revealed' }]}
+          value={statusFilter} onChange={setStatusFilter} segWidth={80} fontPx={12} padY={6} />
       </div>
 
       {/* Sessions list */}
