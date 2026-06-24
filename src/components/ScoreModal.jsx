@@ -39,7 +39,7 @@ const VERDICT = {
   FAIL:         { label: 'FAIL',         icon: '✗', text: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL,         border: VERDICT_BORDER.FAIL,         wash: VERDICT_WASH.FAIL         },
 }
 
-const scoreColor = n => n >= 4 ? '#10b981' : n >= 3 ? '#f59e0b' : '#ef4444'
+const scoreColor = n => n >= 4 ? '#2F8F5B' : n >= 3 ? '#C8841E' : '#D14B3D'
 
 // ── 5-dot score indicator ─────────────────────────────────────────────────────
 function ScoreDots({ score }) {
@@ -50,7 +50,7 @@ function ScoreDots({ score }) {
         <div key={i} className="rounded-full transition-all"
           style={{
             width: 8, height: 8,
-            background: i <= score ? color : '#222',
+            background: i <= score ? color : '#F0ECE9',
             boxShadow: i <= score ? `0 0 4px ${color}88` : 'none',
           }} />
       ))}
@@ -97,15 +97,15 @@ function DimensionStrip({ dimensions }) {
         const pct   = (avg / 5) * 100
         return (
           <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
-            style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+            style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>{weight}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#B84A2E', background: '#FFF4F1' }}>{weight}</span>
             </div>
-            <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#1e1e1e' }}>
+            <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#F0ECE9' }}>
               <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
             </div>
-            <p className="text-xs leading-tight" style={{ color: '#888' }}>{name}</p>
+            <p className="text-xs leading-tight" style={{ color: 'rgba(26,30,35,.6)' }}>{name}</p>
           </div>
         )
       })}
@@ -120,14 +120,14 @@ function SubScoreRow({ label, data }) {
   const color = scoreColor(score)
 
   return (
-    <div className="py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="py-2.5" style={{ borderBottom: '1px solid #F0ECE9' }}>
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
-        <span className="shrink-0 transition-transform" style={{ color: '#666', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
-        <span className="text-sm flex-1" style={{ color: '#ccc' }}>{label}</span>
+        <span className="shrink-0 transition-transform" style={{ color: 'rgba(26,30,35,.45)', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
+        <span className="text-sm flex-1" style={{ color: 'rgba(26,30,35,.72)' }}>{label}</span>
         <ScoreDots score={score} />
         <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
       </button>
-      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: '#888' }}>{notes}</p>}
+      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>}
     </div>
   )
 }
@@ -138,7 +138,7 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
 
   return (
     <div className="rounded-xl mb-2 overflow-hidden"
-      style={{ background: '#1e1e20', border: `1px solid ${isOpen ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.10)'}`, transition: 'border-color 250ms' }}>
+      style={{ background: '#FBF7F3', border: `1px solid ${isOpen ? '#E1DCD7' : '#F0ECE9'}`, transition: 'border-color 250ms' }}>
 
       {/* Header — always visible, click to toggle */}
       <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3.5"
@@ -147,14 +147,14 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
           {/* Rotating chevron */}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
             strokeLinecap="round" strokeLinejoin="round"
-            style={{ color: isOpen ? '#FF9780' : '#555', transition: 'transform 300ms cubic-bezier(0.4,0,0.2,1), color 200ms', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+            style={{ color: isOpen ? '#FF9780' : 'rgba(26,30,35,.45)', transition: 'transform 300ms cubic-bezier(0.4,0,0.2,1), color 200ms', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
             <polyline points="9 18 15 12 9 6"/>
           </svg>
-          <span className="text-sm font-semibold" style={{ color: isOpen ? '#e0e0e0' : '#aaa', transition: 'color 200ms' }}>{name}</span>
+          <span className="text-sm font-semibold" style={{ color: isOpen ? '#1A1E23' : 'rgba(26,30,35,.72)', transition: 'color 200ms' }}>{name}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: '#555', fontWeight: 400 }}>/5</span></span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#666', background: 'rgba(255,255,255,0.06)' }}>{weight}</span>
+          <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: 'rgba(26,30,35,.45)', fontWeight: 400 }}>/5</span></span>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#B84A2E', background: '#FFF4F1' }}>{weight}</span>
         </div>
       </button>
 
@@ -165,7 +165,7 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
         overflow: 'hidden',
         transition: 'max-height 420ms cubic-bezier(0.4,0,0.2,1), opacity 250ms cubic-bezier(0.4,0,0.2,1)',
       }}>
-        <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ padding: '0 16px 16px', borderTop: '1px solid #F0ECE9' }}>
           <div style={{ paddingTop: 4 }}>
             {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}
           </div>
@@ -228,14 +228,14 @@ function NotesSection({ scoreId, initialNote }) {
   const cancel = () => { setNote(initialNote || ''); setEditing(false) }
 
   return (
-    <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+    <div className="rounded-xl p-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#888' }}>Reviewer Note</p>
-        {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
+        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.5)' }}>Reviewer Note</p>
+        {saved && <span className="text-xs" style={{ color: '#2F8F5B' }}>Saved</span>}
         {!editing && canScore && scoreId && (
           <button onClick={() => setEditing(true)}
-            className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
-            onMouseEnter={e => e.target.style.color='#FF9780'} onMouseLeave={e => e.target.style.color='#aaa'}>
+            className="text-xs font-medium transition-colors" style={{ color: '#FF9780' }}
+            onMouseEnter={e => e.target.style.color='#B84A2E'} onMouseLeave={e => e.target.style.color='#FF9780'}>
             {note ? 'Edit' : '+ Add note'}
           </button>
         )}
@@ -245,7 +245,7 @@ function NotesSection({ scoreId, initialNote }) {
           <textarea ref={textareaRef} value={note} onChange={e => setNote(e.target.value)}
             placeholder="Add a reviewer note — observations, coaching points, context…"
             rows={3} className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-none outline-none"
-            style={{ background: '#161616', border: '1px solid rgba(255,151,128,0.4)', color: '#ccc' }}
+            style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23' }}
             onKeyDown={e => { if (e.key === 'Escape') cancel() }} />
           <div className="flex gap-2">
             <button onClick={save} disabled={saving} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg"
@@ -254,9 +254,9 @@ function NotesSection({ scoreId, initialNote }) {
           </div>
         </div>
       ) : note ? (
-        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#aaa' }}>{note}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'rgba(26,30,35,.72)' }}>{note}</p>
       ) : (
-        <p className="text-sm" style={{ color: '#888' }}>
+        <p className="text-sm" style={{ color: 'rgba(26,30,35,.5)' }}>
           {canScore && scoreId ? 'No note yet — click "Add note" to leave feedback.' : 'No reviewer note.'}
         </p>
       )}
@@ -298,14 +298,14 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
   const vc = VERDICT[overrideVerdict || verdict] || VERDICT.PASS
 
   return (
-    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.05)' : '#1e1e20', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.10)'}` }}>
+    <div className="rounded-xl p-4" style={{ background: hasOverride ? 'rgba(99,102,241,0.06)' : '#FBF7F3', border: `1px solid ${hasOverride ? 'rgba(99,102,241,0.25)' : '#F0ECE9'}` }}>
       {hasOverride ? (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#818cf8' }}>
               ⊘ Human Override
             </p>
-            {saved && <span className="text-xs" style={{ color: '#10b981' }}>Saved</span>}
+            {saved && <span className="text-xs" style={{ color: '#2F8F5B' }}>Saved</span>}
             <span className="text-xs px-2 py-0.5 rounded-full"
               style={{ color: vc.text, background: vc.bg, border: `1px solid ${vc.border}` }}>
               {vc.icon} {vc.label} · {overrideScore?.toFixed(0)}/100
@@ -313,8 +313,8 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
           </div>
           {canEdit && (
             <button onClick={() => setOpen(v => !v)}
-              className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
-              onMouseEnter={e => e.target.style.color='#818cf8'} onMouseLeave={e => e.target.style.color='#aaa'}>
+              className="text-xs font-medium transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
+              onMouseEnter={e => e.target.style.color='#818cf8'} onMouseLeave={e => e.target.style.color='rgba(26,30,35,.6)'}>
               {open ? 'Cancel' : 'Edit override'}
             </button>
           )}
@@ -322,18 +322,18 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
       ) : canEdit ? (
         <button onClick={() => setOpen(v => !v)}
           className="w-[85%] mx-auto block text-sm font-semibold py-2 rounded-lg transition-all"
-          style={{ color: '#f97316', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)' }}
-          onMouseEnter={e => { e.currentTarget.style.background='rgba(249,115,22,0.15)' }}
-          onMouseLeave={e => { e.currentTarget.style.background='rgba(249,115,22,0.08)' }}>
+          style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFEAE6' }}
+          onMouseEnter={e => { e.currentTarget.style.background='#FFEAE6' }}
+          onMouseLeave={e => { e.currentTarget.style.background='#FFF4F1' }}>
           {open ? 'Cancel' : 'Override Score'}
         </button>
       ) : null}
 
       {hasOverride && !open && overrideNote && (
-        <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{overrideNote}</p>
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{overrideNote}</p>
       )}
       {hasOverride && overrideAt && !open && (
-        <p className="text-xs mt-1" style={{ color: '#555' }}>
+        <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.45)' }}>
           Overridden {new Date(overrideAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       )}
@@ -342,7 +342,7 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
         <div className="mt-3 flex flex-col gap-3">
           {/* Verdict picker */}
           <div>
-            <p className="text-xs mb-1.5" style={{ color: '#777' }}>New verdict</p>
+            <p className="text-xs mb-1.5" style={{ color: 'rgba(26,30,35,.6)' }}>New verdict</p>
             <div className="flex gap-2">
               {VERDICTS.map(v => {
                 const vc2 = VERDICT[v]
@@ -352,7 +352,7 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
                     className="flex-1 text-xs py-1.5 rounded-lg border font-medium transition-all"
                     style={active
                       ? { color: vc2.text, background: vc2.bg, borderColor: vc2.border }
-                      : { color: '#777', borderColor: 'rgba(255,255,255,0.07)' }}>
+                      : { color: 'rgba(26,30,35,.6)', borderColor: '#E7E3DF' }}>
                     {vc2.icon} {vc2.label}
                   </button>
                 )
@@ -363,9 +363,9 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
           {/* Score slider */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs" style={{ color: '#777' }}>Adjusted score</p>
+              <p className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Adjusted score</p>
               <span className="text-sm font-bold tabular-nums"
-                style={{ color: score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444' }}>
+                style={{ color: score >= 80 ? '#2F8F5B' : score >= 60 ? '#C8841E' : '#D14B3D' }}>
                 {parseFloat(score).toFixed(0)}/100
               </span>
             </div>
@@ -376,11 +376,11 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
 
           {/* Reason (required) */}
           <div>
-            <p className="text-xs mb-1.5" style={{ color: '#777' }}>Reason <span style={{ color: '#ef4444' }}>*</span></p>
+            <p className="text-xs mb-1.5" style={{ color: 'rgba(26,30,35,.6)' }}>Reason <span style={{ color: '#D14B3D' }}>*</span></p>
             <textarea value={note} onChange={e => setNote(e.target.value)}
               placeholder="Required — explain why you're overriding the AI score…"
               rows={2} className="w-full rounded-lg px-3 py-2 text-sm resize-none outline-none"
-              style={{ background: '#161616', border: '1px solid rgba(129,140,248,0.3)', color: '#ccc' }} />
+              style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23' }} />
           </div>
 
           <button onClick={save} disabled={!note.trim() || saving}
@@ -406,13 +406,13 @@ function WhatWentWell({ scores, panel }) {
   if (!top.length) return null
 
   return (
-    <div className="rounded-xl p-4" style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)' }}>
-      <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#10b981' }}>What went well</p>
+    <div className="rounded-xl p-4" style={{ background: '#E6F4EC', border: '1px solid #BFE3CD' }}>
+      <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#2F8F5B' }}>What went well</p>
       <div className="flex flex-col gap-2">
         {top.map((c, i) => (
           <div key={i} className="flex items-start gap-2.5">
-            <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color: '#10b981' }}>✓</span>
-            <p className="text-sm leading-relaxed" style={{ color: '#aaa',
+            <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color: '#2F8F5B' }}>✓</span>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)',
               ...(panel ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{c.notes}</p>
           </div>
         ))}
@@ -453,17 +453,17 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
   return (
     <div className="rounded-xl p-4"
-      style={{ background: disputed ? 'rgba(245,158,11,0.05)' : '#1e1e20', border: `1px solid ${disputed ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.10)'}` }}>
+      style={{ background: disputed ? '#FEF6F4' : '#FBF7F3', border: `1px solid ${disputed ? '#F4DDD7' : '#F0ECE9'}` }}>
       {disputed ? (
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#f59e0b' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#C8841E' }}>
             ⚑ Disputed
           </p>
           {isAdmin && (
             <button onClick={clear} disabled={saving}
-              className="text-xs font-medium transition-colors" style={{ color: '#aaa' }}
-              onMouseEnter={e => e.target.style.color='#10b981'}
-              onMouseLeave={e => e.target.style.color='#aaa'}>
+              className="text-xs font-medium transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
+              onMouseEnter={e => e.target.style.color='#2F8F5B'}
+              onMouseLeave={e => e.target.style.color='rgba(26,30,35,.6)'}>
               Clear dispute
             </button>
           )}
@@ -471,18 +471,18 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
       ) : (
         <button onClick={() => setOpen(v => !v)}
           className="w-[85%] mx-auto block text-sm font-semibold py-2 rounded-lg transition-all"
-          style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)' }}
-          onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)' }}
-          onMouseLeave={e => { e.currentTarget.style.background='rgba(239,68,68,0.08)' }}>
+          style={{ color: '#D14B3D', background: '#FEF6F4', border: '1px solid #F4DDD7' }}
+          onMouseEnter={e => { e.currentTarget.style.background='#FDEEEA' }}
+          onMouseLeave={e => { e.currentTarget.style.background='#FEF6F4' }}>
           {open ? 'Cancel' : 'Flag for dispute'}
         </button>
       )}
 
       {disputed && disputeNote && !open && (
-        <p className="text-xs mt-2 leading-relaxed" style={{ color: '#888' }}>{disputeNote}</p>
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{disputeNote}</p>
       )}
       {disputed && disputeAt && (
-        <p className="text-xs mt-1" style={{ color: '#666' }}>
+        <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.45)' }}>
           Flagged {new Date(disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
       )}
@@ -492,10 +492,10 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
           <textarea value={note} onChange={e => setNote(e.target.value)}
             placeholder="Describe why this score is incorrect or unfair…"
             rows={3} className="w-full rounded-lg px-3 py-2 text-sm resize-none outline-none"
-            style={{ background: '#161616', border: '1px solid rgba(245,158,11,0.3)', color: '#ccc' }} />
+            style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23' }} />
           <button onClick={submit} disabled={!note.trim() || saving}
             className="text-sm py-2 rounded-xl font-medium transition-all"
-            style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)', opacity: !note.trim() || saving ? 0.5 : 1 }}>
+            style={{ background: '#FBEFD9', color: '#C8841E', border: '1px solid #EBD3A3', opacity: !note.trim() || saving ? 0.5 : 1 }}>
             {saving ? 'Submitting…' : 'Submit Dispute'}
           </button>
         </div>
@@ -631,23 +631,23 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     <>
     {/* Mark-reviewed confirmation */}
     {confirmReview && (
-      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)' }}
         onClick={() => { if (!reviewing) setConfirmReview(false) }}>
         <div className="rounded-2xl p-6 w-full max-w-sm modal-enter" onClick={e => e.stopPropagation()}
-          style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-          <h3 className="text-white font-semibold mb-1.5">Mark this ticket reviewed?</h3>
-          <p className="text-sm mb-4 leading-relaxed" style={{ color: '#c8c8c8' }}>
+          style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}>
+          <h3 className="font-semibold mb-1.5" style={{ color: '#1A1E23' }}>Mark this ticket reviewed?</h3>
+          <p className="text-sm mb-4 leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>
             It leaves the review queue and releases your claim. Confident in the score
             {displayScore != null && <> — <span style={{ color: vc.text, fontWeight: 600 }}>{Math.round(displayScore)}/100 · {vc.label}</span></>}?
           </p>
           {canNotify ? (
-            <label className="flex items-center gap-2.5 mb-5 cursor-pointer text-sm" style={{ color: '#ccc' }}>
+            <label className="flex items-center gap-2.5 mb-5 cursor-pointer text-sm" style={{ color: 'rgba(26,30,35,.72)' }}>
               <input type="checkbox" checked={notifyOnReview} onChange={e => setNotifyOnReview(e.target.checked)}
                 style={{ accentColor: '#FF9780', width: 15, height: 15 }} />
               Notify {agentNames[0] || 'the agent'} on Slack
             </label>
           ) : (
-            <p className="text-xs mb-5" style={{ color: '#888' }}>No agent email on file — can't send a Slack notification.</p>
+            <p className="text-xs mb-5" style={{ color: 'rgba(26,30,35,.5)' }}>No agent email on file — can't send a Slack notification.</p>
           )}
           <div className="flex gap-2 justify-end">
             <button onClick={() => setConfirmReview(false)} disabled={reviewing} className="g-btn-ghost text-sm px-3 py-2">Cancel</button>
@@ -661,15 +661,15 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     )}
     {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
-          style={{ background: `rgba(20,20,22,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          style={{ background: `rgba(255,255,255,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
 
           {/* Row 1: Ticket ID (left) + Actions (right) */}
           <div className="flex items-center justify-between mb-4">
             <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
               className="text-xs transition-colors"
-              style={{ color: '#777' }}
+              style={{ color: '#B84A2E' }}
               onMouseEnter={e => e.currentTarget.style.color='#FF9780'}
-              onMouseLeave={e => e.currentTarget.style.color='#777'}>
+              onMouseLeave={e => e.currentTarget.style.color='#B84A2E'}>
               Ticket #{s.ticket_id}
             </a>
             <div className="flex items-center gap-2 shrink-0 pl-6">
@@ -678,9 +678,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               {isAdmin && s.scoreId && !confirmDelete && !reviewed && (
                 <button onClick={openReviewConfirm} disabled={reviewing}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.25)', color: reviewing ? '#555' : '#10b981', cursor: reviewing ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!reviewing) { e.currentTarget.style.background = 'rgba(16,185,129,0.18)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.10)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.25)' }}
+                  style={{ background: '#E6F4EC', border: '1px solid #BFE3CD', color: reviewing ? 'rgba(26,30,35,.45)' : '#2F8F5B', cursor: reviewing ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!reviewing) { e.currentTarget.style.background = '#D7EEE0'; e.currentTarget.style.borderColor = '#9FD4B4' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#E6F4EC'; e.currentTarget.style.borderColor = '#BFE3CD' }}
                   title="Mark this ticket reviewed — removes it from the queue and releases your claim">
                   {reviewing ? 'Marking…' : '✓ Mark reviewed'}
                 </button>
@@ -688,22 +688,22 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               {isAdmin && s.scoreId && !confirmDelete && reviewed && (
                 <span className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg"
-                    style={{ background: 'rgba(16,185,129,0.10)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)' }}
+                    style={{ background: '#E6F4EC', color: '#2F8F5B', border: '1px solid #BFE3CD' }}
                     title={record?.reviewedBy === user?.id ? 'Reviewed by you' : 'Reviewed'}>
                     ✓ Reviewed{record?.reviewedAt ? ` · ${new Date(record.reviewedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
                   </span>
-                  <button onClick={() => reopenReview(s.scoreId)} className="text-xs transition-colors" style={{ color: '#888' }}
+                  <button onClick={() => reopenReview(s.scoreId)} className="text-xs transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#FF9780'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#888'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}
                     title="Re-open — puts it back in the queue">Re-open</button>
                 </span>
               )}
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={openNotifyPreview} disabled={notifying}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: notifying ? '#555' : '#ccc', cursor: notifying ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!notifying) { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)' }}
+                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: notifying ? 'rgba(26,30,35,.45)' : 'rgba(26,30,35,.72)', cursor: notifying ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!notifying) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.borderColor='#E1DCD7' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.borderColor='#E7E3DF' }}
                   title="Send score summary to agent via Slack DM">
                   {notifying
                     ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
@@ -715,9 +715,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               {s.scoreId && !confirmDelete && (
                 <button onClick={rescore} disabled={rescoring}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: rescoring ? '#555' : '#ccc', cursor: rescoring ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!rescoring) { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#FF9780'; e.currentTarget.style.borderColor='rgba(255,151,128,0.3)' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color=rescoring?'#555':'#ccc'; e.currentTarget.style.borderColor='rgba(255,255,255,0.12)' }}
+                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: rescoring ? 'rgba(26,30,35,.45)' : 'rgba(26,30,35,.72)', cursor: rescoring ? 'not-allowed' : 'pointer' }}
+                  onMouseEnter={e => { if (!rescoring) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#FF9780'; e.currentTarget.style.borderColor='#FFEAE6' } }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color=rescoring?'rgba(26,30,35,.45)':'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor='#E7E3DF' }}
                   title="Re-run AI scoring on this ticket">
                   {rescoring ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> : <RefreshIcon />}
                   {rescoring ? 'Rescoring…' : 'Re-score'}
@@ -726,33 +726,33 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={() => setConfirmDelete(true)}
                   className="text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#ef4444' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='rgba(239,68,68,0.15)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor='rgba(239,68,68,0.15)' }}>
+                  style={{ background: '#FEF6F4', border: '1px solid #F4DDD7', color: '#D14B3D' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#FDEEEA'; e.currentTarget.style.borderColor='#EFC9C1' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FEF6F4'; e.currentTarget.style.borderColor='#F4DDD7' }}>
                   Delete
                 </button>
               )}
               {confirmDelete && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: '#ef4444' }}>Delete?</span>
+                  <span className="text-xs" style={{ color: '#D14B3D' }}>Delete?</span>
                   <button onClick={async () => {
                     const ok = await deleteScore(s.scoreId)
                     if (ok) { toast.success('Score deleted'); onClose() }
                     else { toast.error('Failed to delete'); setConfirmDelete(false) }
                   }} className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>Yes</button>
+                    style={{ background: '#FDEEEA', color: '#D14B3D', border: '1px solid #F4DDD7' }}>Yes</button>
                   <button onClick={() => setConfirmDelete(false)} className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: 'rgba(255,255,255,0.07)', color: '#aaa', border: '1px solid rgba(255,255,255,0.12)' }}>Cancel</button>
+                    style={{ background: '#FFFFFF', color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF' }}>Cancel</button>
                 </div>
               )}
-              <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.10)', margin: '0 2px' }} />
+              <div style={{ width: '1px', height: '20px', background: '#EEEEEE', margin: '0 2px' }} />
               </>)}
               {panel && onExpand && (
                 <button onClick={onExpand} title="Expand to full view"
                   className="flex items-center justify-center rounded-lg transition-all"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', width: 30, height: 30 }}
-                  onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>
+                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.45)', width: 30, height: 30 }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='rgba(26,30,35,.72)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color='rgba(26,30,35,.45)' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
                     <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
@@ -761,9 +761,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               )}
               <button onClick={onClose} title="Close"
                 className="flex items-center justify-center rounded-lg transition-all"
-                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#aaa', width: 30, height: 30, fontSize: 18, lineHeight: 1 }}
-                onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
-                onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>×</button>
+                style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.45)', width: 30, height: 30, fontSize: 18, lineHeight: 1 }}
+                onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='rgba(26,30,35,.72)' }}
+                onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color='rgba(26,30,35,.45)' }}>×</button>
             </div>
           </div>
 
@@ -774,9 +774,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                 <button key={i}
                   onClick={() => { navigateTo('agents'); onClose() }}
                   className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
-                  style={{ color: '#FF9780', background: 'rgba(255,151,128,0.08)', border: '1px solid rgba(255,151,128,0.15)', cursor: 'pointer' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='rgba(255,151,128,0.15)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.35)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(255,151,128,0.08)'; e.currentTarget.style.borderColor='rgba(255,151,128,0.15)' }}
+                  style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFEAE6', cursor: 'pointer' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#FFEAE6'; e.currentTarget.style.borderColor='#FF9780' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FFF4F1'; e.currentTarget.style.borderColor='#FFEAE6' }}
                   title={`Go to ${name}`}>
                   {name}
                 </button>
@@ -791,10 +791,10 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               {vc.icon} {vc.label}
             </span>
             <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>
-              {animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: '#666' }}>/100</span>
+              {animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.45)' }}>/100</span>
             </span>
             {s.overrideVerdict && (
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)' }}>
                 Human reviewed
               </span>
             )}
@@ -804,9 +804,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
         <div className="px-6 py-6 space-y-4">
           {/* Auto-fail */}
           {s.auto_fail?.triggered && (
-            <div className="rounded-xl p-4" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#ef4444' }}>⚠ Auto-Fail Triggered</p>
-              <ul className="space-y-1">{(s.auto_fail.reasons || []).map((r, i) => <li key={i} className="text-sm" style={{ color: '#fca5a5' }}>• {r}</li>)}</ul>
+            <div className="rounded-xl p-4" style={{ background: '#FEF6F4', border: '1px solid #F4DDD7' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#D14B3D' }}>⚠ Auto-Fail Triggered</p>
+              <ul className="space-y-1">{(s.auto_fail.reasons || []).map((r, i) => <li key={i} className="text-sm" style={{ color: 'rgba(26,30,35,.72)' }}>• {r}</li>)}</ul>
             </div>
           )}
 
@@ -827,15 +827,15 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               />
             </>
           ) : (
-            <p className="text-xs px-1" style={{ color: '#888' }}>Detailed dimension breakdown unavailable for this score.</p>
+            <p className="text-xs px-1" style={{ color: 'rgba(26,30,35,.5)' }}>Detailed dimension breakdown unavailable for this score.</p>
           )}
 
           {/* Summary */}
-          <div className="rounded-xl p-4" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Summary</p>
+          <div className="rounded-xl p-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Summary</p>
             {panel
-              ? <ClampText text={s.summary} lines={3} className="text-sm leading-relaxed" style={{ color: '#ccc' }} />
-              : <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.summary}</p>}
+              ? <ClampText text={s.summary} lines={3} className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }} />
+              : <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{s.summary}</p>}
           </div>
 
           {/* What went well */}
@@ -844,16 +844,16 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
           {/* Coaching cards */}
           {s.key_improvements?.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#777' }}>Key Improvements</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Key Improvements</p>
               <div className="flex flex-col gap-2">
                 {(panel ? s.key_improvements.slice(0, 2) : s.key_improvements).map((imp, i) => (
                   <div key={i} className="rounded-xl p-3.5 flex gap-3"
-                    style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+                    style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
-                      style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
+                      style={{ background: '#FFEAE6', color: '#B84A2E' }}>
                       {i + 1}
                     </div>
-                    <p className="text-sm leading-relaxed" style={{ color: '#bbb',
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)',
                       ...(panel ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{imp}</p>
                   </div>
                 ))}
@@ -875,19 +875,19 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
           {/* Acknowledgment — only agents can mark as seen */}
           {s.scoreId && !isAdmin && (
             <div className="rounded-xl px-4 py-3 flex items-center justify-between"
-              style={{ background: s.acknowledged ? 'rgba(16,185,129,0.05)' : '#1e1e20', border: `1px solid ${s.acknowledged ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.10)'}` }}>
+              style={{ background: s.acknowledged ? '#E6F4EC' : '#FBF7F3', border: `1px solid ${s.acknowledged ? '#BFE3CD' : '#F0ECE9'}` }}>
               {s.acknowledged ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: '#10b981' }}>✓ Acknowledged</span>
+                  <span className="text-xs" style={{ color: '#2F8F5B' }}>✓ Acknowledged</span>
                   {s.acknowledgedAt && (
-                    <span className="text-xs" style={{ color: '#555' }}>
+                    <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>
                       {new Date(s.acknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   )}
                 </div>
               ) : (
                 <>
-                  <p className="text-xs" style={{ color: '#777' }}>Agent hasn't acknowledged this score yet</p>
+                  <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>Agent hasn't acknowledged this score yet</p>
                   <button
                     onClick={async () => {
                       setAcknowledging(true)
@@ -902,9 +902,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                     }}
                     disabled={acknowledging}
                     className="text-xs px-3 py-1.5 rounded-lg transition-colors shrink-0"
-                    style={{ color: '#888', border: '1px solid rgba(255,255,255,0.1)', opacity: acknowledging ? 0.5 : 1 }}
-                    onMouseEnter={e => { if (!acknowledging) e.currentTarget.style.color = '#10b981' }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#888' }}>
+                    style={{ color: 'rgba(26,30,35,.6)', background: '#FFFFFF', border: '1px solid #E7E3DF', opacity: acknowledging ? 0.5 : 1 }}
+                    onMouseEnter={e => { if (!acknowledging) e.currentTarget.style.color = '#2F8F5B' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
                     {acknowledging ? 'Saving…' : 'Mark as seen'}
                   </button>
                 </>
@@ -939,26 +939,26 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
 
   const notifyEl = showNotifyPreview ? (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+        style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(4px)' }}
         onClick={() => !notifying && setShowNotifyPreview(false)}>
         <div className="rounded-2xl w-full max-w-md modal-enter"
-          style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
           onClick={e => e.stopPropagation()}>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
+          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: '#EEEEEE' }}>
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
-              <h3 className="text-white font-semibold text-sm">Send Slack DM</h3>
+              <h3 className="font-semibold text-sm" style={{ color: '#1A1E23' }}>Send Slack DM</h3>
             </div>
-            <button onClick={() => setShowNotifyPreview(false)} className="text-xl leading-none transition-colors" style={{ color: '#555' }}
-              onMouseEnter={e => e.target.style.color = '#fff'} onMouseLeave={e => e.target.style.color = '#555'}>×</button>
+            <button onClick={() => setShowNotifyPreview(false)} className="text-xl leading-none transition-colors" style={{ color: 'rgba(26,30,35,.45)' }}
+              onMouseEnter={e => e.target.style.color = 'rgba(26,30,35,.72)'} onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.45)'}>×</button>
           </div>
 
           <div className="px-5 py-4 flex flex-col gap-4">
             {/* Recipients — click to toggle */}
             <div>
-              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Sending to</p>
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Sending to</p>
               <div className="flex flex-col gap-1.5">
                 {matchedAgents.filter(a => a.email).map(a => {
                   const selected = selectedAgentIds.includes(a.id)
@@ -969,22 +969,22 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                     <button key={a.id} onClick={toggle}
                       className="flex items-center gap-2.5 px-3 py-2 rounded-xl w-full text-left transition-all"
                       style={{
-                        background: selected ? 'rgba(255,151,128,0.08)' : '#161616',
-                        border: `1px solid ${selected ? 'rgba(255,151,128,0.25)' : 'rgba(255,255,255,0.07)'}`,
-                        opacity: selected ? 1 : 0.45,
+                        background: selected ? '#FFF4F1' : '#FBF7F3',
+                        border: `1px solid ${selected ? '#FFEAE6' : '#F0ECE9'}`,
+                        opacity: selected ? 1 : 0.55,
                       }}>
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}>
+                        style={{ background: '#FFEAE6', color: '#B84A2E' }}>
                         {a.name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white">{a.name}</p>
-                        <p className="text-xs truncate" style={{ color: '#777' }}>{a.email}</p>
+                        <p className="text-sm font-medium" style={{ color: '#1A1E23' }}>{a.name}</p>
+                        <p className="text-xs truncate" style={{ color: 'rgba(26,30,35,.5)' }}>{a.email}</p>
                       </div>
                       <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                        style={{ background: selected ? '#FF9780' : 'rgba(255,255,255,0.08)' }}>
+                        style={{ background: selected ? '#FF9780' : '#EEEEEE' }}>
                         {selected && <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2.5 2.5L8 3" stroke="#141416" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 5l2.5 2.5L8 3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>}
                       </div>
                     </button>
@@ -995,15 +995,15 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
 
             {/* Message preview */}
             <div>
-              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: '#666' }}>Message preview</p>
-              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Message preview</p>
+              <div className="rounded-xl px-4 py-3 flex flex-col gap-2.5" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{{'PASS':'✅','NEEDS_REVIEW':'⚠️','FAIL':'❌'}[s.verdict] || '❓'}</span>
                   <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
                     className="text-sm font-semibold transition-colors"
-                    style={{ color: '#fff' }}
+                    style={{ color: '#1A1E23' }}
                     onMouseEnter={e => e.currentTarget.style.color='#FF9780'}
-                    onMouseLeave={e => e.currentTarget.style.color='#fff'}>
+                    onMouseLeave={e => e.currentTarget.style.color='#1A1E23'}>
                     Ticket #{s.ticket_id}
                   </a>
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -1015,20 +1015,20 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                   </span>
                 </div>
                 {s.summary && (
-                  <p className="text-xs leading-relaxed" style={{ color: '#aaa' }}>{s.summary}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{s.summary}</p>
                 )}
                 {s.key_improvements?.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#777' }}>Key Improvements</p>
+                    <p className="text-xs font-medium mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Key Improvements</p>
                     {s.key_improvements.slice(0, 3).map((imp, i) => (
-                      <p key={i} className="text-xs leading-relaxed" style={{ color: '#888' }}>{i + 1}. {imp}</p>
+                      <p key={i} className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{i + 1}. {imp}</p>
                     ))}
                   </div>
                 )}
                 {s.reviewerNote && (
-                  <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: '#777' }}>Reviewer Note</p>
-                    <p className="text-xs leading-relaxed italic" style={{ color: '#888' }}>{s.reviewerNote}</p>
+                  <div className="pt-2" style={{ borderTop: '1px solid #F0ECE9' }}>
+                    <p className="text-xs font-medium mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Reviewer Note</p>
+                    <p className="text-xs leading-relaxed italic" style={{ color: 'rgba(26,30,35,.6)' }}>{s.reviewerNote}</p>
                   </div>
                 )}
               </div>
@@ -1036,7 +1036,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
+          <div className="px-5 py-4 border-t flex gap-2 justify-end" style={{ borderColor: '#EEEEEE' }}>
             <button onClick={() => setShowNotifyPreview(false)} disabled={notifying}
               className="text-sm px-4 py-2 rounded-xl g-btn-ghost">
               Cancel
@@ -1056,10 +1056,10 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   if (panel) return (
     <>
     {/* Dimmed backdrop — click outside panel to close */}
-    <div className="fixed inset-0" style={{ zIndex: 39, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', animation: 'fadeIn 180ms ease' }} onClick={onClose} />
+    <div className="fixed inset-0" style={{ zIndex: 39, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)', animation: 'fadeIn 180ms ease' }} onClick={onClose} />
     <div
       className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
-      style={{ width: 560, background: '#171719', borderLeft: '1px solid rgba(255,255,255,0.08)', boxShadow: '-24px 0 64px rgba(0,0,0,0.5)' }}
+      style={{ width: 560, background: '#FFFFFF', borderTopLeftRadius: 10, borderBottomLeftRadius: 10, borderLeft: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
     >
       {inner}
     </div>
@@ -1071,12 +1071,12 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
-      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+      style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
       <div
-        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto shadow-2xl modal-enter"
-        style={{ background: '#141416', border: '1px solid rgba(255,255,255,0.08)' }}
+        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto modal-enter"
+        style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
         onClick={e => e.stopPropagation()}
       >
         {inner}

@@ -8,38 +8,35 @@ import { useApp } from '../context/AppContext'
 import { isInReviewQueue } from '../lib/queue'
 import { isClaimActive } from '../lib/claims'
 
+// Lucide-style icons, 18px / 2px stroke (per the Gorgias handoff)
+const ic = (children) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+
 const MENU_TABS = [
-  { id: 'dashboard',   label: 'Dashboard',    icon: <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M280-280h80v-200h-80v200Zm320 0h80v-400h-80v400Zm-160 0h80v-120h-80v120Zm0-200h80v-80h-80v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z"/></svg> },
-  { id: 'score',       label: 'Score',        scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M657-121 544-234l56-56 57 57 127-127 56 56-183 183Zm-537 1v-80h360v80H120Zm0-160v-80h360v80H120Zm0-160v-80h720v80H120Zm0-160v-80h720v80H120Zm0-160v-80h720v80H120Z"/></svg> },
-  { id: 'review',      label: 'Review Queue', scorerOnly: true, badge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> },
-  { id: 'myqueue',     label: 'My Queue',     adminOnly: true, myQueueBadge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg> },
-  { id: 'agents',      label: 'Agents',       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-  { id: 'inbox',       label: 'Inbox',        agentOnly: true, inboxBadge: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg> },
-  { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
-  { id: 'teams',       label: 'Teams',        scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> },
-  { id: 'rubric',      label: 'QA Guidance',  adminOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
-  { id: 'calibration', label: 'Calibration',  scorerOnly: true, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg> },
+  { id: 'dashboard',   label: 'Dashboard',    icon: ic(<><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></>) },
+  { id: 'score',       label: 'Score',        scorerOnly: true, icon: ic(<><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></>) },
+  { id: 'review',      label: 'Review Queue', scorerOnly: true, badge: true, icon: ic(<><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="1"/><path d="M18.944 12.33a1 1 0 0 0 0-.66 7.5 7.5 0 0 0-13.888 0 1 1 0 0 0 0 .66 7.5 7.5 0 0 0 13.888 0"/></>) },
+  { id: 'myqueue',     label: 'My Queue',     adminOnly: true, myQueueBadge: true, icon: ic(<><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/></>) },
+  { id: 'agents',      label: 'Agents',       icon: ic(<><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></>) },
+  { id: 'inbox',       label: 'Inbox',        agentOnly: true, inboxBadge: true, icon: ic(<><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></>) },
+  { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: ic(<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>) },
+  { id: 'teams',       label: 'Teams',        scorerOnly: true, icon: ic(<><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></>) },
+  { id: 'rubric',      label: 'QA Guidance',  adminOnly: true, icon: ic(<><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></>) },
+  { id: 'calibration', label: 'Calibration',  scorerOnly: true, icon: ic(<><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/></>) },
 ]
 
-const ROLE_COLOR = { admin: '#FF9780', lead: '#f59e0b', agent: '#888' }
+const ROLE_TEXT = 'rgba(26,30,35,.55)'
 
-const BellIcon   = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-const GearIcon   = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-const SignOutIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-const ChevronLeft  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-const ChevronRight = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+const BellIcon    = () => ic(<><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></>)
+const GearIcon    = () => ic(<><path d="M11 10.27 7 3.34"/><path d="m11 13.73-4 6.93"/><path d="M12 22v-2"/><path d="M12 2v2"/><path d="M14 12h8"/><path d="m17 20.66-1-1.73"/><path d="m17 3.34-1 1.73"/><path d="M2 12h2"/><path d="m20.66 17-1.73-1"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m3.34 7 1.73 1"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="8"/></>)
+const SignOutIcon = () => ic(<><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></>)
+const ChevronLeft  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+const ChevronRight = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
 
-function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger, bright }) {
+function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
   const [hovered, setHovered] = useState(false)
-  const active = isActive
-  const color  = danger ? (hovered ? '#ef4444' : bright ? '#ffffff' : '#888')
-               : active  ? '#FF9780'
-               : bright  ? '#ffffff'
-               : hovered ? '#f0f0f0'
-               : '#b0b0b0'
-  const bg     = active  ? 'rgba(255,151,128,0.10)'
-               : hovered ? 'rgba(255,255,255,0.08)'
-               : 'transparent'
+  const iconColor  = isActive ? '#FF9780' : (danger && hovered) ? '#D14B3D' : 'rgba(26,30,35,.72)'
+  const labelColor = isActive ? '#1A1E23' : (danger && hovered) ? '#D14B3D' : 'rgba(26,30,35,.72)'
+  const bg = isActive ? '#FFEAE6' : hovered ? '#F6F2EF' : 'transparent'
 
   return (
     <button
@@ -48,36 +45,25 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger, bri
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: collapsed ? '9px 0' : '8px 12px',
+        display: 'flex', alignItems: 'center', gap: 10,
+        height: 38, padding: collapsed ? 0 : '0 10px',
         justifyContent: collapsed ? 'center' : 'flex-start',
-        borderRadius: 9,
-        color,
-        background: bg,
-        border: 'none',
+        borderRadius: 8, color: labelColor, background: bg, border: 'none',
         transition: 'color 140ms, background 140ms',
-        fontSize: 14,
-        fontWeight: active ? 600 : 400,
-        whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        width: '100%',
-        textAlign: 'left',
-        position: 'relative',
+        fontSize: 14, fontWeight: isActive ? 600 : 500,
+        whiteSpace: 'nowrap', cursor: 'pointer', width: '100%', textAlign: 'left', position: 'relative',
       }}
     >
-      <span style={{ flexShrink: 0, display: 'flex', opacity: active ? 1 : 0.9 }}>{icon}</span>
+      <span style={{ flexShrink: 0, display: 'flex', color: iconColor, transition: 'color 140ms' }}>{icon}</span>
 
       {!collapsed && (
         <span style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: 0 }}>
           {label}
           {badge != null && badge > 0 && (
             <span style={{
-              background: danger ? 'rgba(239,68,68,0.15)' : 'rgba(255,151,128,0.15)',
-              color: danger ? '#ef4444' : '#FF9780',
-              fontSize: 10, fontWeight: 700,
-              padding: '2px 6px', borderRadius: 999, lineHeight: 1.4,
+              background: '#FFEAE6', color: '#B84A2E',
+              fontSize: 11, fontWeight: 600,
+              padding: '3px 7px', borderRadius: 9999, lineHeight: 1,
             }}>
               {badge > 99 ? '99+' : badge}
             </span>
@@ -85,25 +71,20 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger, bri
         </span>
       )}
 
-      {/* Collapsed dot indicator */}
       {collapsed && badge != null && badge > 0 && (
-        <span style={{
-          position: 'absolute', top: 7, right: 7,
-          width: 6, height: 6, borderRadius: '50%',
-          background: danger ? '#ef4444' : '#FF9780',
-        }} />
+        <span style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: '#FF9780' }} />
       )}
     </button>
   )
 }
 
 function SectionLabel({ label, collapsed }) {
-  if (collapsed) return <div style={{ height: 1, background: 'rgba(255,255,255,0.10)', margin: '8px 10px' }} />
+  if (collapsed) return <div style={{ height: 1, background: '#EEEEEE', margin: '10px 8px' }} />
   return (
     <p style={{
-      fontSize: 12, fontWeight: 600, letterSpacing: '0.10em',
-      textTransform: 'uppercase', color: '#c8c8c8',
-      padding: '4px 12px 6px', margin: 0,
+      fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+      textTransform: 'uppercase', color: 'rgba(26,30,35,.4)',
+      padding: '4px 10px 6px', margin: 0,
     }}>
       {label}
     </p>
@@ -159,10 +140,10 @@ export default function Sidebar({ page, setPage }) {
 
   return (
     <aside style={{
-      width: collapsed ? 56 : 232,
+      width: collapsed ? 56 : 240,
       flexShrink: 0,
-      background: '#141416',
-      borderRight: '1px solid rgba(255,255,255,0.07)',
+      background: '#FFFFFF',
+      borderRight: '1px solid #EEEEEE',
       transition: 'width 220ms cubic-bezier(0.16, 1, 0.3, 1)',
       overflow: 'hidden',
       display: 'flex',
@@ -179,29 +160,29 @@ export default function Sidebar({ page, setPage }) {
         alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'space-between',
         padding: collapsed ? '0 12px' : '0 16px 0 14px',
-        height: 58,
+        height: 60,
         flexShrink: 0,
         gap: 8,
       }}>
         {!collapsed && (
           <button
             onClick={() => setPage('dashboard')}
-            style={{ opacity: 1, transition: 'opacity 150ms', lineHeight: 0 }}
+            style={{ transition: 'opacity 150ms', lineHeight: 0 }}
             onMouseEnter={e => { e.currentTarget.style.opacity = '0.7' }}
             onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
           >
-            <GorgiasLogo />
+            <GorgiasLogo color="#1A1E23" />
           </button>
         )}
         <button
           onClick={() => setCollapsed(v => !v)}
           style={{
-            color: '#444', padding: '5px', borderRadius: 6,
+            color: 'rgba(26,30,35,.45)', padding: '5px', borderRadius: 6,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'color 140ms, background 140ms', flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
           }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.background = 'transparent' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.background = '#F6F2EF' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.45)'; e.currentTarget.style.background = 'transparent' }}
           title={collapsed ? 'Expand' : 'Collapse'}
         >
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
@@ -211,7 +192,7 @@ export default function Sidebar({ page, setPage }) {
       {/* ── Nav ── */}
       <nav style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        padding: '8px 8px 8px', overflowY: 'auto', overflowX: 'hidden', gap: 1,
+        padding: '6px 8px 8px', overflowY: 'auto', overflowX: 'hidden', gap: 2,
       }}>
 
         {/* MENU section */}
@@ -230,7 +211,6 @@ export default function Sidebar({ page, setPage }) {
               null
             }
             collapsed={collapsed}
-            bright
           />
         ))}
 
@@ -244,7 +224,6 @@ export default function Sidebar({ page, setPage }) {
             onClick={() => { setShowNotifications(true); setShowSettings(false); setActiveOverlay('notifications') }}
             badge={unreadCount}
             collapsed={collapsed}
-            bright
           />
           <NavItem
             icon={<GearIcon />}
@@ -253,7 +232,6 @@ export default function Sidebar({ page, setPage }) {
             onClick={() => { setShowSettings(true); setShowNotifications(false); setActiveOverlay('settings') }}
             badge={null}
             collapsed={collapsed}
-            bright
           />
           <NavItem
             icon={<SignOutIcon />}
@@ -263,7 +241,6 @@ export default function Sidebar({ page, setPage }) {
             badge={null}
             collapsed={collapsed}
             danger
-            bright
           />
         </div>
       </nav>
@@ -271,21 +248,20 @@ export default function Sidebar({ page, setPage }) {
       {/* ── User profile ── */}
       {profile && (
         <div style={{
-          padding: '10px 8px 12px',
-          borderTop: '1px solid rgba(255,255,255,0.10)',
+          padding: '10px 8px 14px',
+          borderTop: '1px solid #EEEEEE',
           flexShrink: 0,
         }}>
           <div style={{
             display: 'flex', alignItems: 'center',
-            gap: 10, padding: '6px 10px', borderRadius: 9,
+            gap: 10, padding: '6px 8px', borderRadius: 8,
             justifyContent: collapsed ? 'center' : 'flex-start',
           }}>
             <div style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: 'rgba(255,151,128,0.12)', color: '#FF9780',
+              width: 34, height: 34, borderRadius: '50%',
+              background: '#FF9780', color: '#1A1E23',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, fontWeight: 700, flexShrink: 0,
-              border: '1px solid rgba(255,151,128,0.2)',
+              fontSize: 14, fontWeight: 700, flexShrink: 0,
             }}
               title={collapsed ? `${profile.name} · ${role}` : undefined}
             >
@@ -293,10 +269,10 @@ export default function Sidebar({ page, setPage }) {
             </div>
             {!collapsed && (
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#e0e0e0', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: '#1A1E23', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.name}
                 </div>
-                <div style={{ color: ROLE_COLOR[role] || '#888', fontSize: 13, textTransform: 'capitalize', marginTop: 1 }}>
+                <div style={{ color: ROLE_TEXT, fontSize: 12, textTransform: 'capitalize', marginTop: 1 }}>
                   {role}
                 </div>
               </div>
@@ -309,7 +285,7 @@ export default function Sidebar({ page, setPage }) {
       {showNotifications && (
         <NotificationPanel
           onClose={() => { setShowNotifications(false); setActiveOverlay(o => o === 'notifications' ? null : o); fetchUnread() }}
-          offsetLeft={collapsed ? 56 : 232}
+          offsetLeft={collapsed ? 56 : 240}
         />
       )}
     </aside>

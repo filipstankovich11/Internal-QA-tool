@@ -23,3 +23,23 @@ export const VERDICT_BORDER = { PASS: rgba(SUCCESS, 0.25), NEEDS_REVIEW: rgba(WA
 export const VERDICT_WASH   = { PASS: rgba(SUCCESS, 0.06), NEEDS_REVIEW: rgba(WARNING, 0.06), FAIL: rgba(DANGER, 0.06) }
 export const VERDICT_LABEL  = { PASS: 'PASS', NEEDS_REVIEW: 'REVIEW', FAIL: 'FAIL' }
 export const VERDICTS       = ['PASS', 'NEEDS_REVIEW', 'FAIL']
+
+// ── Grade (traffic-light) colors ─────────────────────────────────────────────
+// For a continuous 0–100 value (an agent's average, a pass rate). This is a
+// deliberately DIFFERENT semantic from the categorical verdict palette above —
+// a grade reads naturally as green→amber→red, so it stays visually distinct from
+// the PASS/REVIEW/FAIL tokens. Bands default to 80/60 but callers pass the live
+// rubric thresholds so the colors track however the rubric is configured.
+export const GRADE = { good: '#2F8F5B', ok: '#C8841E', bad: '#D14B3D', none: 'rgba(26,30,35,.45)' }
+
+export function gradeColor(value, thresholds) {
+  if (value == null) return GRADE.none
+  // Default per-field so a partial/empty thresholds object (e.g. mid-edit rubric)
+  // never produces `value >= undefined` → wrong color.
+  const pass        = thresholds?.pass ?? 80
+  const needsReview = thresholds?.needs_review ?? 60
+  return value >= pass ? GRADE.good : value >= needsReview ? GRADE.ok : GRADE.bad
+}
+
+// Plain-language verdict meanings — single source for the per-ticket status tooltips.
+export const VERDICT_DESC = { PASS: 'Met the bar', NEEDS_REVIEW: 'Needs a human look', FAIL: 'Below standard or auto-fail' }

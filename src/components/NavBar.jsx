@@ -15,7 +15,7 @@ const TABS = [
   { id: 'calibration', label: 'Calibration',  scorerOnly: true, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg> },
 ]
 
-const ROLE_COLOR = { admin: '#FF9780', lead: '#f59e0b', agent: '#888' }
+const ROLE_COLOR = { admin: '#B84A2E', lead: '#C8841E', agent: 'rgba(26,30,35,.6)' }
 
 const SignOutIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,7 +57,7 @@ export default function NavBar({ page, setPage }) {
     .map(t => t.id === 'agents' && isAgent ? { ...t, label: 'My Profile' } : t)
 
   return (
-    <nav className="sticky top-0 z-40 border-b" style={{ background: 'rgba(7,7,7,0.92)', borderColor: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(12px)' }}>
+    <nav className="sticky top-0 z-40 border-b" style={{ background: 'rgba(255,255,255,0.92)', borderColor: '#EEEEEE', backdropFilter: 'blur(12px)' }}>
       <div className="max-w-6xl mx-auto px-4 flex items-center h-14 gap-3">
         {/* Logo — click to go home */}
         <button
@@ -68,10 +68,10 @@ export default function NavBar({ page, setPage }) {
           onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
           title="Dashboard"
         >
-          <GorgiasLogo />
+          <GorgiasLogo color="#1A1E23" />
         </button>
 
-        <div className="h-5 w-px shrink-0" style={{ background: 'rgba(255,255,255,0.10)' }} />
+        <div className="h-5 w-px shrink-0" style={{ background: '#EEEEEE' }} />
 
         {/* Tabs — scrollable so they never clip */}
         <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
@@ -84,7 +84,7 @@ export default function NavBar({ page, setPage }) {
                 className="flex items-center gap-1.5 px-2.5 whitespace-nowrap shrink-0 text-xs font-medium relative"
                 style={{
                   height: '36px',
-                  color: isActive ? '#FF9780' : '#555',
+                  color: isActive ? '#B84A2E' : 'rgba(26,30,35,.6)',
                   transition: 'color 150ms',
                   background: 'transparent',
                   border: 'none',
@@ -92,20 +92,20 @@ export default function NavBar({ page, setPage }) {
                   borderRadius: 0,
                   marginBottom: '-1px',
                 }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#ccc' }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#555' }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#1A1E23' }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}
               >
                 {tab.icon}
                 {tab.label}
                 {tab.badge && reviewCount > 0 && (
                   <span className="text-xs font-bold px-1.5 py-0.5 rounded-full leading-none"
-                    style={{ background: 'rgba(245,158,11,0.2)', color: '#f59e0b', fontSize: '10px' }}>
+                    style={{ background: 'rgba(200,132,30,0.15)', color: '#C8841E', fontSize: '10px' }}>
                     {reviewCount}
                   </span>
                 )}
                 {tab.inboxBadge && inboxUnread > 0 && (
                   <span className="text-xs font-bold px-1.5 py-0.5 rounded-full leading-none"
-                    style={{ background: 'rgba(255,151,128,0.2)', color: '#FF9780', fontSize: '10px' }}>
+                    style={{ background: '#FFEAE6', color: '#B84A2E', fontSize: '10px' }}>
                     {inboxUnread}
                   </span>
                 )}
@@ -119,20 +119,20 @@ export default function NavBar({ page, setPage }) {
           {profile && (
             <div className="flex items-center gap-1.5">
               <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                style={{ background: 'rgba(255,151,128,0.15)', color: '#FF9780' }}
+                style={{ background: '#FFEAE6', color: '#B84A2E' }}
                 title={`${profile.name} · ${role}`}>
                 {(profile.name || '?')[0].toUpperCase()}
               </div>
-              <span className="text-xs capitalize hidden lg:block" style={{ color: ROLE_COLOR[role] || '#888' }}>{role}</span>
+              <span className="text-xs capitalize hidden lg:block" style={{ color: ROLE_COLOR[role] || 'rgba(26,30,35,.6)' }}>{role}</span>
             </div>
           )}
           <button
             onClick={signOut}
             className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
-            style={{ color: '#777', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ color: 'rgba(26,30,35,.6)', border: '1px solid #E7E3DF' }}
             title="Sign out"
-            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.borderColor = 'rgba(209,75,61,0.3)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#E7E3DF' }}
           >
             <SignOutIcon />
           </button>

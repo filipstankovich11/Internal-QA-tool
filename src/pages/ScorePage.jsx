@@ -3,14 +3,16 @@ import ScoreModal from '../components/ScoreModal'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { authFetch, buildFewShotExamples } from '../lib/api'
-import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS } from '../lib/verdict'
+import { authFetchJson, buildFewShotExamples } from '../lib/api'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, gradeColor } from '../lib/verdict'
+import { ScoreInfoPopover } from '../components/ScoreInfo'
+import ScoringProgress from '../components/ScoringProgress'
 
 const HISTORY_PAGE_SIZE = 10 // history rows shown before "Show more"
 
-const inputStyle = { background: '#1e1e20', border: '1px solid rgba(255,255,255,0.07)', color: '#ccc', outline: 'none' }
+const inputStyle = { background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23', outline: 'none' }
 const onFocus    = e => e.target.style.borderColor = '#FF9780'
-const onBlur     = e => e.target.style.borderColor = 'rgba(255,255,255,0.07)'
+const onBlur     = e => e.target.style.borderColor = '#E1DCD7'
 
 // Cache the Gorgias views fetch for the session — ViewPicker remounts every time
 // the user toggles into View mode, so without this it re-hits /api/views each time.
@@ -19,9 +21,9 @@ let viewsPromise = null
 function loadViews() {
   if (viewsCache) return Promise.resolve(viewsCache)
   if (!viewsPromise) {
-    viewsPromise = authFetch('/api/views').then(r => r.json()).then(d => {
-      if (d.error) throw new Error(d.error)
-      viewsCache = d.views || []
+    viewsPromise = authFetchJson('/api/views').then(({ data }) => {
+      if (data.error) throw new Error(data.error)
+      viewsCache = data.views || []
       return viewsCache
     }).catch(e => { viewsPromise = null; throw e }) // allow retry on failure
   }
@@ -29,79 +31,6 @@ function loadViews() {
 }
 
 // ── Scoring progress bar ──────────────────────────────────────────────────────
-
-function ScoringProgress({ loading }) {
-  const [progress, setProgress] = useState(0)
-  const [finishing, setFinishing] = useState(false)
-  const intervalRef = useRef(null)
-
-  useEffect(() => {
-    if (loading) {
-      setProgress(0)
-      setFinishing(false)
-      intervalRef.current = setInterval(() => {
-        setProgress(p => {
-          if (p >= 91) return p
-          // Fast start, exponential slow-down near the ceiling
-          return p + Math.max(0.2, (91 - p) * 0.028)
-        })
-      }, 100)
-      return () => clearInterval(intervalRef.current)
-    } else if (!loading) {
-      clearInterval(intervalRef.current)
-      if (progress > 0) {
-        setProgress(100)
-        setFinishing(true)
-        const t = setTimeout(() => { setProgress(0); setFinishing(false) }, 700)
-        return () => clearTimeout(t)
-      }
-    }
-  }, [loading])
-
-  if (progress === 0 && !finishing) return null
-
-  const pct = Math.min(100, Math.round(progress))
-  const label = finishing ? 'Complete!' : 'Claude is scoring this ticket…'
-
-  return (
-    <div style={{ marginTop: 14, marginBottom: 4 }}>
-      {/* Label + percentage */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: '#888' }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#FF9780', fontVariantNumeric: 'tabular-nums' }}>
-          {pct}%
-        </span>
-      </div>
-
-      {/* Track */}
-      <div style={{
-        width: '100%', height: 7, borderRadius: 999,
-        background: 'rgba(255,255,255,0.08)',
-        overflow: 'hidden', position: 'relative',
-      }}>
-        {/* Fill */}
-        <div style={{
-          height: '100%',
-          width: `${pct}%`,
-          borderRadius: 999,
-          background: 'linear-gradient(90deg, #FF9780 0%, #ff6b4a 60%, #f59e0b 100%)',
-          transition: 'width 100ms linear',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          {/* Shimmer */}
-          <div className="progress-shimmer" />
-        </div>
-      </div>
-
-      {!finishing && (
-        <p style={{ fontSize: 11, color: '#555', textAlign: 'center', marginTop: 7 }}>
-          Usually 15–30 seconds
-        </p>
-      )}
-    </div>
-  )
-}
 
 // ── Mode toggle ───────────────────────────────────────────────────────────────
 
@@ -112,52 +41,17 @@ function ModeToggle({ mode, setMode }) {
     { id: 'view',   label: 'Gorgias View'  },
   ]
   return (
-    <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#F1ECE8' }}>
       {modes.map(({ id, label }) => (
         <button key={id} onClick={() => setMode(id)}
           className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={mode === id ? { background: '#1e1e1e', color: '#fff' } : { color: '#c8c8c8' }}
-          onMouseEnter={e => { if (mode !== id) e.currentTarget.style.color = '#fff' }}
-          onMouseLeave={e => { if (mode !== id) e.currentTarget.style.color = '#c8c8c8' }}>
+          style={mode === id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.06)' } : { color: 'rgba(26,30,35,.6)' }}
+          onMouseEnter={e => { if (mode !== id) e.currentTarget.style.color = '#1A1E23' }}
+          onMouseLeave={e => { if (mode !== id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
           {label}
         </button>
       ))}
     </div>
-  )
-}
-
-// ── Single — history list ─────────────────────────────────────────────────────
-
-function HistoryItem({ item, onClick }) {
-  const color = VERDICT_COLOR[item.effectiveVerdict]
-  return (
-    <button onClick={onClick}
-      className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left"
-      style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}
-      onMouseEnter={e => e.currentTarget.style.background = '#161616'}
-      onMouseLeave={e => e.currentTarget.style.background = '#1e1e20'}>
-      <div className="flex items-center gap-3 min-w-0">
-        <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          className="text-xs font-mono shrink-0 transition-colors" style={{ color: '#FF9780' }}
-          onMouseEnter={e => e.target.style.textDecoration = 'underline'}
-          onMouseLeave={e => e.target.style.textDecoration = 'none'}>
-          #{item.ticketId}
-        </a>
-        <span className="text-sm truncate" style={{ color: '#e8e8e8' }}>
-          {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
-        </span>
-      </div>
-      <div className="flex items-center gap-3 shrink-0 ml-4">
-        <span className="text-xs tabular-nums" style={{ color: '#c8c8c8' }}>{item.effectiveScore?.toFixed(0)}/100</span>
-        <span className="flex items-center gap-1.5">
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8 }} />
-          <span className="text-xs font-medium" style={{ color: '#c8c8c8', letterSpacing: '0.04em' }}>
-            {VERDICT_LABEL[item.effectiveVerdict]}
-          </span>
-        </span>
-      </div>
-    </button>
   )
 }
 
@@ -193,15 +87,15 @@ function CSVUploadZone({ onTickets, disabled }) {
   const clear = () => { setPreview(null); setErr(null); setFileName(null); onTickets([]); if (inputRef.current) inputRef.current.value = '' }
 
   const loaded = preview && preview.length > 0
-  const borderColor = err ? 'rgba(239,68,68,0.4)'
+  const borderColor = err ? 'rgba(209,75,61,0.5)'
                     : dragging ? '#FF9780'
-                    : loaded ? 'rgba(16,185,129,0.4)'
-                    : hover ? 'rgba(255,255,255,0.20)'
-                    : 'rgba(255,255,255,0.10)'
-  const bg = dragging ? 'rgba(255,151,128,0.06)'
-           : loaded ? 'rgba(16,185,129,0.04)'
-           : hover ? 'rgba(255,255,255,0.02)'
-           : 'transparent'
+                    : loaded ? 'rgba(47,143,91,0.5)'
+                    : hover ? '#D6CFC8'
+                    : '#E1DCD7'
+  const bg = dragging ? '#FFEAE6'
+           : loaded ? 'rgba(47,143,91,0.06)'
+           : hover ? '#FBF7F3'
+           : '#FFFFFF'
 
   return (
     <div>
@@ -216,33 +110,33 @@ function CSVUploadZone({ onTickets, disabled }) {
         style={{ borderColor, background: bg, transform: dragging ? 'scale(1.005)' : 'none' }}>
         {loaded ? (
           <>
-            <div className="mx-auto mb-3 w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.12)' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <div className="mx-auto mb-3 w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'rgba(47,143,91,0.12)' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F8F5B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <p className="text-sm font-medium text-white truncate">{fileName}</p>
-            <p className="text-xs mt-1" style={{ color: '#10b981' }}>{preview.length} ticket{preview.length !== 1 ? 's' : ''} ready</p>
+            <p className="text-sm font-medium truncate" style={{ color: '#1A1E23' }}>{fileName}</p>
+            <p className="text-xs mt-1" style={{ color: '#2F8F5B' }}>{preview.length} ticket{preview.length !== 1 ? 's' : ''} ready</p>
             <button onClick={e => { e.stopPropagation(); clear() }}
               className="text-xs mt-3 px-3 py-1 rounded-lg transition-colors"
-              style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.12)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}>
+              style={{ color: 'rgba(26,30,35,.6)', border: '1px solid #E7E3DF' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.borderColor = 'rgba(209,75,61,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
               Remove
             </button>
           </>
         ) : (
           <>
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-              className="mx-auto mb-3" style={{ color: dragging || hover ? '#FF9780' : '#888', transition: 'color 150ms' }}>
+              className="mx-auto mb-3" style={{ color: dragging || hover ? '#FF9780' : 'rgba(26,30,35,.45)', transition: 'color 150ms' }}>
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            <p className="text-sm font-medium text-white">Drop your CSV here</p>
-            <p className="text-xs mt-1" style={{ color: '#999' }}>or click to browse</p>
-            <p className="text-xs mt-3" style={{ color: '#888' }}>Expected column: <code style={{ color: '#c8c8c8' }}>ticket_id</code> or <code style={{ color: '#c8c8c8' }}>ticket_url</code></p>
+            <p className="text-sm font-medium" style={{ color: '#1A1E23' }}>Drop your CSV here</p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>or click to browse</p>
+            <p className="text-xs mt-3" style={{ color: 'rgba(26,30,35,.5)' }}>Expected column: <code style={{ color: 'rgba(26,30,35,.72)' }}>ticket_id</code> or <code style={{ color: 'rgba(26,30,35,.72)' }}>ticket_url</code></p>
           </>
         )}
         <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={e => onFile(e.target.files[0])} />
       </div>
-      {err && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{err}</p>}
+      {err && <p className="text-xs mt-2" style={{ color: '#D14B3D' }}>{err}</p>}
     </div>
   )
 }
@@ -291,40 +185,40 @@ function ViewCombobox({ views, value, onChange, loading, disabled }) {
     <div ref={rootRef} className="relative">
       <button type="button" disabled={disabled || loading} onClick={() => setOpen(o => !o)}
         className="w-full rounded-xl px-4 py-2.5 text-sm flex items-center justify-between gap-2 text-left transition-colors"
-        style={{ background: '#1e1e20', border: `1px solid ${open ? '#FF9780' : 'rgba(255,255,255,0.07)'}`, color: selected ? '#fff' : '#c8c8c8', outline: 'none', opacity: disabled ? 0.5 : 1 }}>
+        style={{ background: '#FFFFFF', border: `1px solid ${open ? '#FF9780' : '#E1DCD7'}`, color: selected ? '#1A1E23' : 'rgba(26,30,35,.45)', outline: 'none', opacity: disabled ? 0.5 : 1 }}>
         <span className="truncate">{loading ? 'Loading views…' : selected ? selected.name : 'Select a view…'}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ color: '#888', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', flexShrink: 0 }}>
+          style={{ color: 'rgba(26,30,35,.45)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
 
       {open && (
         <div className="absolute z-30 mt-1.5 w-full rounded-xl overflow-hidden"
-          style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)', animation: 'fadeIn 120ms ease' }}>
+          style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', animation: 'fadeIn 120ms ease' }}>
           {/* Search */}
-          <div className="p-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="p-2" style={{ borderBottom: '1px solid #EEEEEE' }}>
             <div className="relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#555' }}>
+              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(26,30,35,.45)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown}
                 placeholder="Search views…"
                 className="w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none"
-                style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.07)', color: '#fff' }} />
+                style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23' }} />
             </div>
           </div>
           {/* List */}
           <div ref={listRef} className="max-h-60 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <p className="text-xs text-center py-4 px-3" style={{ color: '#666' }}>No views match “{query}”</p>
+              <p className="text-xs text-center py-4 px-3" style={{ color: 'rgba(26,30,35,.5)' }}>No views match “{query}”</p>
             ) : filtered.map((v, i) => {
               const isSel = String(v.id) === String(value)
               return (
                 <button key={v.id} type="button" onClick={() => choose(v)} onMouseEnter={() => setHighlight(i)}
                   className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors"
-                  style={{ background: i === highlight ? 'rgba(255,255,255,0.06)' : 'transparent', color: isSel ? '#FF9780' : '#ccc' }}>
-                  <span style={{ width: 12, flexShrink: 0, color: '#FF9780' }}>{isSel ? '✓' : ''}</span>
+                  style={{ background: i === highlight ? '#FBF7F3' : 'transparent', color: isSel ? '#B84A2E' : '#1A1E23' }}>
+                  <span style={{ width: 12, flexShrink: 0, color: '#B84A2E' }}>{isSel ? '✓' : ''}</span>
                   <span className="truncate">{v.name}</span>
                 </button>
               )
@@ -361,9 +255,8 @@ function ViewPicker({ onTickets, disabled }) {
     if (!viewId) return
     setFetching(true); setErr(null)
     try {
-      const res  = await authFetch(`/api/view-tickets?view_id=${viewId}&limit=${Math.min(100, Math.max(1, parseInt(limit) || 30))}`)
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const { ok, data } = await authFetchJson(`/api/view-tickets?view_id=${viewId}&limit=${Math.min(100, Math.max(1, parseInt(limit) || 30))}`)
+      if (!ok) throw new Error(data.error)
       setPreview(data.tickets)
       onTickets(data.tickets.map(t => String(t.id)))
     } catch (e) { setErr(e.message); onTickets([]) }
@@ -374,7 +267,7 @@ function ViewPicker({ onTickets, disabled }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-end gap-3">
         <div className="flex-1 min-w-0">
-          <label className="text-xs mb-1.5 block" style={{ color: '#c8c8c8' }}>Gorgias View</label>
+          <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Gorgias View</label>
           <ViewCombobox
             views={views}
             value={viewId}
@@ -384,8 +277,8 @@ function ViewPicker({ onTickets, disabled }) {
           />
         </div>
         <div className="w-28 shrink-0">
-          <label className="text-xs mb-1.5 block" style={{ color: '#c8c8c8' }}>Limit</label>
-          <div className="flex items-center rounded-xl overflow-hidden" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Limit</label>
+          <div className="flex items-center rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E1DCD7' }}>
             <button type="button" aria-label="Decrease"
               onClick={() => setLimit(l => String(Math.max(1, (parseInt(l) || 30) - 5)))}
               disabled={disabled || (parseInt(limit) || 0) <= 1}
@@ -396,7 +289,7 @@ function ViewPicker({ onTickets, disabled }) {
               onFocus={e => e.target.select()}
               disabled={disabled}
               className="no-spinner w-full text-center text-sm py-2.5 bg-transparent outline-none"
-              style={{ color: '#fff' }} />
+              style={{ color: '#1A1E23' }} />
             <button type="button" aria-label="Increase"
               onClick={() => setLimit(l => String(Math.min(100, (parseInt(l) || 30) + 5)))}
               disabled={disabled || (parseInt(limit) || 0) >= 100}
@@ -417,16 +310,16 @@ function ViewPicker({ onTickets, disabled }) {
           )
         })()}
       </div>
-      {err && <p className="text-xs" style={{ color: '#ef4444' }}>{err}</p>}
+      {err && <p className="text-xs" style={{ color: '#D14B3D' }}>{err}</p>}
       {preview && (
-        <div className="rounded-xl p-3" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-          <p className="text-xs mb-2" style={{ color: '#10b981' }}>✓ {preview.length} tickets ready to run</p>
+        <div className="rounded-xl p-3" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+          <p className="text-xs mb-2" style={{ color: '#2F8F5B' }}>✓ {preview.length} tickets ready to run</p>
           <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
             {preview.map(t => (
               <div key={t.id} className="flex items-center gap-2 text-xs">
-                <span className="font-mono" style={{ color: '#777' }}>#{t.id}</span>
-                <span className="truncate" style={{ color: '#888' }}>{t.subject || '(no subject)'}</span>
-                <span className="shrink-0 px-1.5 py-0.5 rounded" style={{ background: '#1a1a1a', color: '#666' }}>{t.status}</span>
+                <span className="font-mono" style={{ color: '#B84A2E' }}>#{t.id}</span>
+                <span className="truncate" style={{ color: 'rgba(26,30,35,.6)' }}>{t.subject || '(no subject)'}</span>
+                <span className="shrink-0 px-1.5 py-0.5 rounded" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', color: 'rgba(26,30,35,.5)' }}>{t.status}</span>
               </div>
             ))}
           </div>
@@ -443,28 +336,28 @@ function ResultRow({ result, onView }) {
   const bg    = VERDICT_BG[result.verdict]
   if (result.error) return (
     <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl"
-      style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.1)' }}>
+      style={{ background: 'rgba(209,75,61,0.06)', border: '1px solid rgba(209,75,61,0.15)' }}>
       <a href={gorgiasTicketUrl(result.ticketId)} target="_blank" rel="noopener noreferrer"
-        className="font-mono text-xs w-24 shrink-0" style={{ color: '#FF9780' }}>#{result.ticketId}</a>
-      <span className="text-xs flex-1 truncate" style={{ color: '#ef4444' }}>{result.error}</span>
+        className="font-mono text-xs w-24 shrink-0" style={{ color: '#B84A2E' }}>#{result.ticketId}</a>
+      <span className="text-xs flex-1 truncate" style={{ color: '#D14B3D' }}>{result.error}</span>
     </div>
   )
   return (
     <button onClick={() => onView(result.fullScore)}
       className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all"
       style={{ border: '1px solid transparent' }}
-      onMouseEnter={e => { e.currentTarget.style.background = '#1e1e20'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#FBF7F3'; e.currentTarget.style.borderColor = '#F0ECE9' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}>
       <a href={gorgiasTicketUrl(result.ticketId)} target="_blank" rel="noopener noreferrer"
         onClick={e => e.stopPropagation()}
-        className="font-mono text-xs w-24 shrink-0" style={{ color: '#FF9780' }}
+        className="font-mono text-xs w-24 shrink-0" style={{ color: '#B84A2E' }}
         onMouseEnter={e => e.target.style.textDecoration = 'underline'}
         onMouseLeave={e => e.target.style.textDecoration = 'none'}>
         #{result.ticketId}
       </a>
-      <span className="text-xs flex-1 truncate" style={{ color: '#e8e8e8' }}>{result.fullScore?.ticket_subject || '—'}</span>
-      {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: '#c8c8c8' }}>{result.agentName}</span>}
-      <span className="text-xs shrink-0 tabular-nums" style={{ color: '#c8c8c8' }}>{result.weightedScore?.toFixed(0)}/100</span>
+      <span className="text-xs flex-1 truncate" style={{ color: '#1A1E23' }}>{result.fullScore?.ticket_subject || '—'}</span>
+      {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'rgba(26,30,35,.6)' }}>{result.agentName}</span>}
+      <span className="text-xs shrink-0 tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{result.weightedScore?.toFixed(0)}/100</span>
       {color && <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>{VERDICT_LABEL[result.verdict]}</span>}
     </button>
   )
@@ -501,6 +394,10 @@ export default function ScorePage() {
 
   const setF = (k, v) => setFilters(f => ({ ...f, [k]: v }))
   const hasFilters = filters.agent || filters.verdicts.length || filters.dateFrom || filters.dateTo || filters.ticketSearch
+  const agentName = (id) => agents.find(a => a.id === id)?.name
+
+  // Shared grid template for the history table header + rows (mirrors the dashboard)
+  const historyGrid = '100px 1fr 120px 80px 90px 80px'
 
   const searchTicketId = useMemo(() => {
     const raw = (filters.ticketSearch || '').trim()
@@ -535,13 +432,12 @@ export default function ScorePage() {
     if (!url || loading || urlError) return
     setLoading(true); setError(null)
     try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Something went wrong.'); return }
+      const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
+      if (!ok) { setError(data.error || 'Something went wrong.'); return }
       addScore(data)
       openPanel(data)
       setTicketUrl('')
-    } catch { setError('Could not reach the server.') }
+    } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
 
@@ -552,13 +448,12 @@ export default function ScorePage() {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//, '').trim()
       try {
-        const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
-        const data = await res.json()
-        if (!res.ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
+        const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
+        if (!ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
         addScore(data)
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
         setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
-      } catch { setResults(p => [...p, { ticketId, error: 'Network error' }]) }
+      } catch (e) { setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
     }
     setRunning(false)
   }
@@ -576,8 +471,8 @@ export default function ScorePage() {
     <div className="max-w-2xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white mb-1">Score</h1>
-        <p className="text-sm" style={{ color: '#c8c8c8' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
+        <h1 className="text-2xl font-bold mb-1" style={{ color: '#1A1E23' }}>Score</h1>
+        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
       </div>
 
       {/* Mode toggle */}
@@ -590,8 +485,8 @@ export default function ScorePage() {
         <>
           {!canScore && (
             <div className="rounded-xl px-4 py-3 mb-4 text-sm text-center"
-              style={{ background: 'rgba(255,151,128,0.06)', border: '1px solid rgba(255,151,128,0.15)', color: '#888' }}>
-              Your role is <strong style={{ color: '#FF9780' }}>read-only</strong>. Contact an admin to score tickets.
+              style={{ background: '#FFEAE6', border: '1px solid #FFD2C9', color: 'rgba(26,30,35,.6)' }}>
+              Your role is <strong style={{ color: '#B84A2E' }}>read-only</strong>. Contact an admin to score tickets.
             </div>
           )}
 
@@ -602,10 +497,15 @@ export default function ScorePage() {
               onKeyDown={e => e.key === 'Enter' && analyze()}
               disabled={loading || !canScore}
               placeholder="https://yourcompany.gorgias.com/app/ticket/…"
-              className="flex-1 rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors g-input disabled:opacity-50"
+              className="flex-1 rounded-xl px-4 py-3 text-sm outline-none transition-colors g-input disabled:opacity-50"
+              style={{ color: '#1A1E23' }}
             />
-            <button onClick={analyze} disabled={loading || !ticketUrl.trim() || !!urlError || !canScore}
-              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap disabled:opacity-40">
+            {(() => {
+              const disabled = loading || !ticketUrl.trim() || !!urlError || !canScore
+              return (
+            <button onClick={analyze} disabled={disabled}
+              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap"
+              style={disabled && !loading ? { background: '#FFD2C9', color: 'rgba(26,30,35,.5)' } : undefined}>
               {loading
                 ? <span className="flex items-center gap-2">
                     <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -615,35 +515,42 @@ export default function ScorePage() {
                   </span>
                 : 'Analyze'}
             </button>
+              )
+            })()}
           </div>
 
-          {urlError && <p className="text-xs mt-2 ml-1" style={{ color: '#f59e0b' }}>⚠ {urlError}</p>}
+          {urlError && <p className="text-xs mt-2 ml-1" style={{ color: '#C8841E' }}>⚠ {urlError}</p>}
           <ScoringProgress loading={loading} />
-          {error && <p className="text-xs text-center mt-2" style={{ color: '#ef4444' }}>{error}</p>}
+          {error && <p className="text-xs text-center mt-2" style={{ color: '#D14B3D' }}>{error}</p>}
 
           {scoreHistory.length > 0 && (
             <div className="mt-10">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-wider" style={{ color: '#c8c8c8' }}>
-                  History <span style={{ color: '#c8c8c8' }}>· showing {Math.min(historyCount, filteredHistory.length)} of {filteredHistory.length}</span>
-                  {hasFilters && <span style={{ color: '#FF9780' }}> match</span>}
+                <p className="text-xs uppercase tracking-wider flex items-center" style={{ color: 'rgba(26,30,35,.5)', fontWeight: 600, letterSpacing: '0.06em' }}>
+                  History<ScoreInfoPopover rubric={rubric} />
                 </p>
-                {hasFilters && (
-                  <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
-                    className="text-xs transition-colors" style={{ color: '#777' }}
-                    onMouseEnter={e => e.target.style.color = '#ef4444'}
-                    onMouseLeave={e => e.target.style.color = '#555'}>
-                    Clear filters
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+                    Showing {Math.min(historyCount, filteredHistory.length)} of {filteredHistory.length}
+                    {hasFilters && <span style={{ color: '#B84A2E' }}> · filtered</span>}
+                  </span>
+                  {hasFilters && (
+                    <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
+                      className="text-xs transition-colors" style={{ color: 'rgba(26,30,35,.5)' }}
+                      onMouseEnter={e => e.target.style.color = '#D14B3D'}
+                      onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>
+                      Clear filters
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
-                style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.08)' }}>
+                style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
                 <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-xs" style={{ color: '#c8c8c8' }}>Ticket URL or ID</label>
+                  <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Ticket URL or ID</label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: filters.ticketSearch ? '#FF9780' : '#444' }}>
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: filters.ticketSearch ? '#FF9780' : 'rgba(26,30,35,.45)' }}>
                       <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input
@@ -653,24 +560,24 @@ export default function ScorePage() {
                       placeholder="Paste ticket URL or ID…"
                       className="w-full rounded-xl pl-9 pr-8 py-2 text-sm outline-none transition-all"
                       style={{
-                        background: '#1c1c1e',
-                        border: `1px solid ${filters.ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                        color: '#ccc',
+                        background: '#FFFFFF',
+                        border: `1px solid ${filters.ticketSearch ? 'rgba(255,151,128,0.6)' : '#E1DCD7'}`,
+                        color: '#1A1E23',
                       }}
                     />
                     {filters.ticketSearch && (
                       <button onClick={() => setF('ticketSearch', '')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors"
-                        style={{ color: '#666', background: 'rgba(255,255,255,0.10)' }}
-                        onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
-                        onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.10)' }}>
+                        style={{ color: 'rgba(26,30,35,.5)', background: '#F1ECE8' }}
+                        onMouseEnter={e => { e.currentTarget.style.color='#1A1E23'; e.currentTarget.style.background='#E7E3DF' }}
+                        onMouseLeave={e => { e.currentTarget.style.color='rgba(26,30,35,.5)'; e.currentTarget.style.background='#F1ECE8' }}>
                         ×
                       </button>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-                  <label className="text-xs" style={{ color: '#c8c8c8' }}>Agent</label>
+                  <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Agent</label>
                   <select value={filters.agent} onChange={e => setF('agent', e.target.value)}
                     className="rounded-xl px-3 py-2 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
                     <option value="">All agents</option>
@@ -678,17 +585,17 @@ export default function ScorePage() {
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: '#c8c8c8' }}>From</label>
+                  <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>From</label>
                   <input type="date" value={filters.dateFrom} onChange={e => setF('dateFrom', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'dark' }} onFocus={onFocus} onBlur={onBlur} />
+                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'light' }} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: '#c8c8c8' }}>To</label>
+                  <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>To</label>
                   <input type="date" value={filters.dateTo} onChange={e => setF('dateTo', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'dark' }} onFocus={onFocus} onBlur={onBlur} />
+                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'light' }} onFocus={onFocus} onBlur={onBlur} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: '#c8c8c8' }}>Status</label>
+                  <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Status</label>
                   <div className="flex gap-1.5">
                     {VERDICTS.map(v => {
                       const active = filters.verdicts.includes(v)
@@ -698,7 +605,7 @@ export default function ScorePage() {
                           className="text-xs px-2.5 py-2 rounded-xl border transition-all font-medium"
                           style={active
                             ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                            : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)' }}>
+                            : { color: 'rgba(26,30,35,.72)', borderColor: '#E1DCD7', background: '#FFFFFF' }}>
                           {VERDICT_LABEL[v]}
                         </button>
                       )
@@ -707,31 +614,91 @@ export default function ScorePage() {
                 </div>
               </div>
 
-              {filteredHistory.length === 0
-                ? <p className="text-xs text-center py-8" style={{ color: '#555' }}>No tickets match your filters.</p>
-                : <div className="flex flex-col gap-2">
-                    {filteredHistory.slice(0, historyCount).map((item, i) => (
-                      <div key={item.id} className="stagger-item" style={{ '--i': i }}>
-                        <HistoryItem item={item} onClick={() => openPanel({
-                          ...item.fullScore,
-                          scoreId: item.id,
-                          reviewerNote: item.notes,
-                          acknowledged: item.acknowledged,
-                          acknowledgedAt: item.acknowledgedAt,
-                        })} />
+              {filteredHistory.length === 0 ? (
+                <p className="text-xs text-center py-8" style={{ color: 'rgba(26,30,35,.5)' }}>No tickets match your filters.</p>
+              ) : (
+                <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+                  {/* Column headers — classify each section, same as the dashboard table */}
+                  <div className="grid px-4 py-3" style={{
+                    gridTemplateColumns: historyGrid,
+                    background: '#FBF7F3',
+                    borderBottom: '1px solid #F0ECE9',
+                    fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: 'rgba(26,30,35,.5)',
+                  }}>
+                    <span>Ticket</span><span>Subject</span><span className="text-center">Agents</span>
+                    <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
+                  </div>
+
+                  {filteredHistory.slice(0, historyCount).map(item => (
+                    <div key={item.id} className="grid items-center px-4 py-3 transition-colors"
+                      style={{ gridTemplateColumns: historyGrid, borderBottom: '1px solid #EEEEEE' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+
+                      <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
+                        className="font-mono text-xs" style={{ color: '#B84A2E' }}
+                        onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={e => e.target.style.textDecoration = 'none'}>
+                        #{item.ticketId}
+                      </a>
+
+                      <button onClick={() => openPanel({
+                        ...item.fullScore,
+                        scoreId: item.id,
+                        reviewerNote: item.notes,
+                        acknowledged: item.acknowledged,
+                        acknowledgedAt: item.acknowledgedAt,
+                      })}
+                        className="text-sm text-left truncate pr-3 transition-colors"
+                        style={{ color: '#1A1E23' }}
+                        onMouseEnter={e => e.target.style.color = '#B84A2E'}
+                        onMouseLeave={e => e.target.style.color = '#1A1E23'}>
+                        {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
+                      </button>
+
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {item.agentIds?.length > 0
+                          ? item.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
+                            <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[110px]"
+                              style={{ background: '#FBF7F3', border: '1px solid #F0ECE9', color: 'rgba(26,30,35,.72)' }}>{name}</span>
+                          ))
+                          : <span style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
                       </div>
-                    ))}
-                    {historyCount < filteredHistory.length && (
+
+                      <span className="text-sm tabular-nums text-right" style={{ color: gradeColor(item.effectiveScore) }}>
+                        {item.effectiveScore?.toFixed(0)}/100
+                        {item.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
+                      </span>
+
+                      <div className="flex justify-center">
+                        <span className="flex items-center gap-1.5">
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[item.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
+                          <span className="text-xs font-medium" style={{ color: 'rgba(26,30,35,.72)', letterSpacing: '0.04em' }}>
+                            {VERDICT_LABEL[item.effectiveVerdict] || item.effectiveVerdict}
+                          </span>
+                        </span>
+                      </div>
+
+                      <span className="text-xs text-right" style={{ color: 'rgba(26,30,35,.5)' }}>
+                        {new Date(item.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+
+                  {historyCount < filteredHistory.length && (
+                    <div className="flex items-center justify-center px-4 py-3" style={{ background: '#FBF7F3' }}>
                       <button onClick={() => setHistoryCount(c => c + HISTORY_PAGE_SIZE)}
-                        className="text-xs mx-auto mt-2 px-4 py-1.5 rounded-lg transition-colors"
-                        style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                        className="text-xs px-4 py-1.5 rounded-lg transition-colors"
+                        style={{ color: '#1A1E23', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#D6CFC8' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#E7E3DF' }}>
                         Show more · {Math.min(HISTORY_PAGE_SIZE, filteredHistory.length - historyCount)} of {filteredHistory.length - historyCount} remaining
                       </button>
-                    )}
-                  </div>
-              }
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -760,9 +727,9 @@ export default function ScorePage() {
             </button>
             {running && (
               <button onClick={() => { abortRef.current = true }}
-                className="text-sm transition-colors" style={{ color: '#666' }}
-                onMouseEnter={e => e.target.style.color = '#ef4444'}
-                onMouseLeave={e => e.target.style.color = '#555'}>
+                className="text-sm transition-colors" style={{ color: 'rgba(26,30,35,.5)' }}
+                onMouseEnter={e => e.target.style.color = '#D14B3D'}
+                onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>
                 Stop
               </button>
             )}
@@ -774,20 +741,20 @@ export default function ScorePage() {
           {(running || results.length > 0) && (
             <div>
               <div className="mb-5">
-                <div className="flex justify-between text-xs mb-1.5" style={{ color: '#888' }}>
+                <div className="flex justify-between text-xs mb-1.5" style={{ color: 'rgba(26,30,35,.5)' }}>
                   <span>{batchDone} / {ticketIds.length} scored</span>
                   <span>{Math.round(ticketIds.length > 0 ? (batchDone / ticketIds.length) * 100 : 0)}%</span>
                 </div>
-                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: '#1a1a1a' }}>
+                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: '#F1ECE8' }}>
                   <div className="h-full rounded-full transition-all duration-300"
                     style={{ width: `${ticketIds.length > 0 ? (batchDone / ticketIds.length) * 100 : 0}%`, background: '#FF9780' }} />
                 </div>
                 {batchAvg && (
                   <div className="flex items-center gap-4 mt-3 text-xs">
-                    <span style={{ color: '#888' }}>Average: <span className="text-white font-medium">{batchAvg}/100</span></span>
-                    <span style={{ color: '#10b981' }}>{results.filter(r => r.verdict === 'PASS').length} pass</span>
-                    <span style={{ color: '#f59e0b' }}>{results.filter(r => r.verdict === 'NEEDS_REVIEW').length} review</span>
-                    <span style={{ color: '#ef4444' }}>{results.filter(r => r.verdict === 'FAIL').length} fail</span>
+                    <span style={{ color: 'rgba(26,30,35,.5)' }}>Average: <span className="font-medium" style={{ color: '#1A1E23' }}>{batchAvg}/100</span></span>
+                    <span style={{ color: '#2F8F5B' }}>{results.filter(r => r.verdict === 'PASS').length} pass</span>
+                    <span style={{ color: '#C8841E' }}>{results.filter(r => r.verdict === 'NEEDS_REVIEW').length} review</span>
+                    <span style={{ color: '#D14B3D' }}>{results.filter(r => r.verdict === 'FAIL').length} fail</span>
                   </div>
                 )}
               </div>
@@ -796,11 +763,11 @@ export default function ScorePage() {
                 {results.map((r, i) => <ResultRow key={i} result={r} onView={openPanel} />)}
                 {running && batchDone < ticketIds.length && (
                   <div className="flex items-center gap-2 py-2 px-3">
-                    <svg className="animate-spin h-3 w-3" style={{ color: '#333' }} viewBox="0 0 24 24" fill="none">
+                    <svg className="animate-spin h-3 w-3" style={{ color: '#FF9780' }} viewBox="0 0 24 24" fill="none">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>
-                    <span className="text-xs" style={{ color: '#555' }}>Scoring next ticket…</span>
+                    <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>Scoring next ticket…</span>
                   </div>
                 )}
               </div>

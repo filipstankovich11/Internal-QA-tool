@@ -19,6 +19,30 @@ export async function authFetch(url, options = {}) {
 }
 
 /**
+ * authFetch + safe JSON parse. Returns { ok, status, data }. Throws an Error with
+ * a clear, human-readable message instead of the cryptic "Unexpected end of JSON
+ * input" when the API returns an empty/non-JSON body — almost always because the
+ * Python API server (:5001) isn't running.
+ */
+export async function authFetchJson(url, options = {}) {
+  let res
+  try {
+    res = await authFetch(url, options)
+  } catch {
+    throw new Error('Could not reach the API server — is it running on :5001? (run `npm run dev`)')
+  }
+  const text = await res.text()
+  if (!text) {
+    throw new Error(`API server returned an empty response (HTTP ${res.status}) — is it running on :5001?`)
+  }
+  try {
+    return { ok: res.ok, status: res.status, data: JSON.parse(text) }
+  } catch {
+    throw new Error(`API server returned an unexpected response (HTTP ${res.status}).`)
+  }
+}
+
+/**
  * Build few-shot calibration examples from human-overridden scores.
  * Takes the most recent 8 overridden scores and extracts the fields the
  * Python scorer needs to inject as calibration context into the prompt.

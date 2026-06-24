@@ -11,9 +11,9 @@ const CRITERIA = [
   { key: 'communication_clarity',     name: 'Communication Clarity',  dimension: 'Customer Perception', dimKey: 'customer_perception', weight: '25%' },
 ]
 
-const scoreColor = v => v >= 4 ? '#10b981' : v >= 3 ? '#f59e0b' : '#ef4444'
-const scoreBg    = v => v >= 4 ? 'rgba(16,185,129,0.08)' : v >= 3 ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)'
-const scoreBorder = v => v >= 4 ? 'rgba(16,185,129,0.2)' : v >= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'
+const scoreColor = v => v >= 4 ? '#2F8F5B' : v >= 3 ? '#C8841E' : '#D14B3D'
+const scoreBg    = v => v >= 4 ? '#E6F4EC' : v >= 3 ? '#FBF1E0' : '#FEF6F4'
+const scoreBorder = v => v >= 4 ? '#BFE3CD' : v >= 3 ? '#EAD3AE' : '#F4DDD7'
 
 function ScorePips({ score }) {
   const color = scoreColor(score)
@@ -21,7 +21,7 @@ function ScorePips({ score }) {
     <div className="flex items-center gap-1">
       {[1,2,3,4,5].map(i => (
         <div key={i} className="rounded-full"
-          style={{ width: 7, height: 7, background: i <= Math.round(score) ? color : '#222' }} />
+          style={{ width: 7, height: 7, background: i <= Math.round(score) ? color : '#F0ECE9' }} />
       ))}
     </div>
   )
@@ -33,14 +33,14 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
 
   return (
     <div className="rounded-2xl overflow-hidden"
-      style={{ background: isWeak ? scoreBg(avg) : '#1e1e20', border: `1px solid ${isWeak ? scoreBorder(avg) : 'rgba(255,255,255,0.10)'}` }}>
+      style={{ background: isWeak ? scoreBg(avg) : '#FFFFFF', border: `1px solid ${isWeak ? scoreBorder(avg) : '#EEEEEE'}`, boxShadow: isWeak ? 'none' : '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
       <button
         className="w-full flex items-center gap-4 px-5 py-4 text-left"
         onClick={() => notes.length > 0 && setExpanded(v => !v)}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-white">{criterion.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: '#777', background: '#161616' }}>
+            <span className="text-sm font-medium" style={{ color: '#1A1E23' }}>{criterion.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'rgba(26,30,35,.6)', background: '#FBF7F3' }}>
               {criterion.dimension}
             </span>
           </div>
@@ -48,22 +48,22 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span className="text-lg font-bold tabular-nums" style={{ color }}>
-            {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: '#666' }}>/5</span>
+            {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>/5</span>
           </span>
           {notes.length > 0 && (
-            <span className="text-xs" style={{ color: '#666', transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
+            <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)', transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
           )}
         </div>
       </button>
 
       {expanded && notes.length > 0 && (
         <div className="px-5 pb-4 flex flex-col gap-2.5"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <p className="text-xs pt-3" style={{ color: '#666' }}>Recent AI feedback on this area:</p>
+          style={{ borderTop: '1px solid #F0ECE9' }}>
+          <p className="text-xs pt-3" style={{ color: 'rgba(26,30,35,.5)' }}>Recent AI feedback on this area:</p>
           {notes.slice(0, 4).map((note, i) => (
             <div key={i} className="flex gap-2.5">
-              <span className="text-xs mt-0.5 shrink-0" style={{ color: '#555' }}>•</span>
-              <p className="text-sm leading-relaxed" style={{ color: '#888' }}>{note}</p>
+              <span className="text-xs mt-0.5 shrink-0" style={{ color: 'rgba(26,30,35,.45)' }}>•</span>
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{note}</p>
             </div>
           ))}
         </div>
@@ -75,12 +75,12 @@ function CriterionCard({ criterion, avg, notes, isWeak }) {
 function ImprovementCard({ text, index }) {
   return (
     <div className="flex gap-3 rounded-2xl px-5 py-4"
-      style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+      style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
       <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
-        style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
+        style={{ background: '#FFEAE6', color: '#B84A2E' }}>
         {index + 1}
       </div>
-      <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{text}</p>
+      <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{text}</p>
     </div>
   )
 }
@@ -142,7 +142,7 @@ export default function CoachingPage() {
 
   if (scores.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: '#555' }}>
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: 'rgba(26,30,35,.5)' }}>
         <p className="text-4xl mb-4">📋</p>
         <p className="text-sm">No scored tickets yet — coaching insights will appear once tickets are evaluated.</p>
       </div>
@@ -154,9 +154,9 @@ export default function CoachingPage() {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Coaching</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#888' }}>
-          Insights based on <span style={{ color: '#FF9780' }}>{scores.length}</span> scored ticket{scores.length !== 1 ? 's' : ''}
+        <h1 className="text-2xl font-bold" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Coaching</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'rgba(26,30,35,.6)' }}>
+          Insights based on <span style={{ color: '#B84A2E' }}>{scores.length}</span> scored ticket{scores.length !== 1 ? 's' : ''}
         </p>
       </div>
 
@@ -164,12 +164,12 @@ export default function CoachingPage() {
       {focusAreas.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-white font-semibold">Focus Areas</h2>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)' }}>
+            <h2 className="font-semibold" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Focus Areas</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#D14B3D', background: '#FEF6F4' }}>
               Needs attention
             </span>
           </div>
-          <p className="text-xs mb-4" style={{ color: '#777' }}>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
             These are your lowest-scoring areas. Click a card to see AI feedback from recent tickets.
           </p>
           <div className="flex flex-col gap-3">
@@ -183,8 +183,8 @@ export default function CoachingPage() {
       {/* Key improvements */}
       {improvements.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-white font-semibold mb-3">Key Improvements</h2>
-          <p className="text-xs mb-4" style={{ color: '#777' }}>
+          <h2 className="font-semibold mb-3" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Key Improvements</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
             Recurring suggestions from your most recent scores.
           </p>
           <div className="flex flex-col gap-2">
@@ -198,16 +198,16 @@ export default function CoachingPage() {
       {/* Reviewer notes */}
       {reviewerNotes.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-white font-semibold mb-3">Reviewer Notes</h2>
-          <p className="text-xs mb-4" style={{ color: '#777' }}>
+          <h2 className="font-semibold mb-3" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Reviewer Notes</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
             Coaching notes left by your QA reviewer.
           </p>
           <div className="flex flex-col gap-3">
             {reviewerNotes.map(s => (
               <div key={s.id} className="rounded-2xl px-5 py-4"
-                style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-                <p className="text-sm leading-relaxed" style={{ color: '#ccc' }}>{s.notes}</p>
-                <p className="text-xs mt-2" style={{ color: '#666' }}>
+                style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+                <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{s.notes}</p>
+                <p className="text-xs mt-2" style={{ color: 'rgba(26,30,35,.5)' }}>
                   Ticket #{s.ticketId} · {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
@@ -220,12 +220,12 @@ export default function CoachingPage() {
       {strengths.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-white font-semibold">Strengths</h2>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#10b981', background: 'rgba(16,185,129,0.08)' }}>
+            <h2 className="font-semibold" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Strengths</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#2F8F5B', background: '#E6F4EC' }}>
               Keep it up
             </span>
           </div>
-          <p className="text-xs mb-4" style={{ color: '#777' }}>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
             Areas where you consistently perform well.
           </p>
           <div className="flex flex-col gap-3">
