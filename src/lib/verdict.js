@@ -30,7 +30,7 @@ export const VERDICTS       = ['PASS', 'NEEDS_REVIEW', 'FAIL']
 // a grade reads naturally as green→amber→red, so it stays visually distinct from
 // the PASS/REVIEW/FAIL tokens. Bands default to 80/60 but callers pass the live
 // rubric thresholds so the colors track however the rubric is configured.
-export const GRADE = { good: '#10b981', ok: '#f59e0b', bad: '#ef4444', none: '#888' }
+export const GRADE = { good: '#2F8F5B', ok: '#C8841E', bad: '#D14B3D', none: 'rgba(26,30,35,.45)' }
 
 export function gradeColor(value, thresholds) {
   if (value == null) return GRADE.none

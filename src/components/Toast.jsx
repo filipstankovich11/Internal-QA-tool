@@ -3,9 +3,9 @@ import { createContext, useContext, useState, useCallback } from 'react'
 const ToastCtx = createContext(null)
 
 const STYLES = {
-  success: { color: '#10b981', border: 'rgba(16,185,129,0.25)',  bg: 'rgba(16,185,129,0.07)',  icon: '✓' },
-  error:   { color: '#ef4444', border: 'rgba(239,68,68,0.25)',   bg: 'rgba(239,68,68,0.07)',   icon: '✗' },
-  info:    { color: '#FF9780', border: 'rgba(255,151,128,0.25)', bg: 'rgba(255,151,128,0.07)', icon: 'i' },
+  success: { color: '#2F8F5B', border: '#EEEEEE', bg: '#FFFFFF', icon: '✓' },
+  error:   { color: '#D14B3D', border: '#EEEEEE', bg: '#FFFFFF', icon: '✗' },
+  info:    { color: '#B84A2E', border: '#EEEEEE', bg: '#FFFFFF', icon: 'i' },
 }
 
 export function ToastProvider({ children }) {
@@ -31,9 +31,9 @@ export function ToastProvider({ children }) {
           const s = STYLES[t.type] || STYLES.info
           return (
             <div key={t.id} className="toast-enter"
-              style={{ background: '#1c1c1e', border: `1px solid ${s.border}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 220, maxWidth: 340 }}>
+              style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 220, maxWidth: 340, boxShadow: '0 20px 48px rgba(0,0,0,.12)' }}>
               <span style={{ color: s.color, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{s.icon}</span>
-              <span style={{ color: '#ccc', fontSize: 13, lineHeight: 1.4 }}>{t.message}</span>
+              <span style={{ color: '#1A1E23', fontSize: 13, lineHeight: 1.4 }}>{t.message}</span>
             </div>
           )
         })}

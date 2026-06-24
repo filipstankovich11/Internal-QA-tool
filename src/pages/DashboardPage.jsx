@@ -46,10 +46,10 @@ function StatCard({ label, value, format, sub, color, icon, onClick }) {
   const animated = useCountUp(typeof value === 'number' ? value : 0)
   const display  = value == null ? '—' : format ? format(animated) : Math.round(animated)
   const [hovered, setHovered] = useState(false)
-  const accent = color || '#FF9780'
+  const accent = color || '#1A1E23'
   const clickable = !!onClick
   return (
-    <div className="rounded-2xl p-5"
+    <div className="p-5"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onClick}
@@ -58,9 +58,10 @@ function StatCard({ label, value, format, sub, color, icon, onClick }) {
       onKeyDown={clickable ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }) : undefined}
       title={clickable ? 'Show all scored tickets below' : undefined}
       style={{
-        background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)',
-        border: `1px solid ${hovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,${hovered ? '0.10' : '0.07'})`,
+        background: '#FFFFFF',
+        border: `1px solid ${hovered ? '#E4E0DC' : '#EEEEEE'}`,
+        borderRadius: 14,
+        boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)',
         transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
         cursor: clickable ? 'pointer' : 'default',
@@ -74,9 +75,9 @@ function StatCard({ label, value, format, sub, color, icon, onClick }) {
           </span>
         )}
       </div>
-      <p className="text-3xl font-bold" style={{ color: color || '#fff' }}>{display}</p>
+      <p className="text-3xl" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{display}</p>
       {sub && (
-        <p className="text-xs mt-1" style={{ color: clickable && hovered ? '#FF9780' : '#999', transition: 'color 150ms' }}>
+        <p className="text-xs mt-1" style={{ color: clickable && hovered ? '#B84A2E' : 'rgba(26,30,35,.5)', transition: 'color 150ms' }}>
           {sub}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
         </p>
       )}
@@ -125,7 +126,7 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
     : null
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+    <div className="p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
 
       {/* Header — shows back pill when a day is selected */}
       <div className="flex items-center justify-between mb-4">
@@ -134,9 +135,9 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
           <button
             onClick={() => onDayClick(null)}
             className="flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-1 transition-all"
-            style={{ color: '#aaa', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
-            onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.color='#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.07)'; e.currentTarget.style.color='#aaa' }}>
+            style={{ color: 'rgba(26,30,35,.6)', background: '#F1ECE8', border: '1px solid #E7E3DF' }}
+            onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#1A1E23' }}
+            onMouseLeave={e => { e.currentTarget.style.background='#F1ECE8'; e.currentTarget.style.color='rgba(26,30,35,.6)' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6"/>
             </svg>
@@ -150,14 +151,14 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
           const isSelected = selectedDay === d.dateStr
           const isHovered  = hoveredBar === i && d.count > 0
           const isDimmed   = hasSelection && !isSelected
-          const barColor   = d.count === 0   ? '#242426'
-                           : isSelected      ? '#ffffff'
+          const barColor   = d.count === 0   ? '#F0ECE9'
+                           : isSelected      ? '#B84A2E'
                            : isHovered       ? '#ffb39a'
                            : '#FF9780'
-          // Glossy gradient fill + inset top highlight, with a glow on hover/select
-          const barBg     = d.count === 0 ? '#242426' : `linear-gradient(180deg, ${barColor} 0%, ${barColor}cc 100%)`
-          const barGlow   = isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 10px rgba(255,151,128,0.45)' : null
-          const barShadow = d.count > 0 ? `inset 0 1px 0 rgba(255,255,255,0.22)${barGlow ? `, ${barGlow}` : ''}` : 'none'
+          // Solid coral fill, with a soft glow on hover/select
+          const barBg     = d.count === 0 ? '#F0ECE9' : barColor
+          const barGlow   = isSelected ? '0 0 12px rgba(184,74,46,0.20)' : isHovered ? '0 0 10px rgba(255,151,128,0.40)' : null
+          const barShadow = d.count > 0 && barGlow ? barGlow : 'none'
           return (
             <div key={i}
               className="flex-1 flex flex-col items-center gap-1"
@@ -180,14 +181,14 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
                 <div className="relative w-full rounded-t-md"
                   style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 24 : 0)}px`, background: barBg, transition: 'background 150ms, height 200ms, box-shadow 150ms', boxShadow: barShadow }}>
                   {d.count > 0 && (
-                    <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                      style={{ color: 'rgba(0,0,0,0.6)' }}>
+                    <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
+                      style={{ color: '#1A1E23' }}>
                       {d.count}
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-xs" style={{ color: isSelected ? '#fff' : isHovered ? '#fff' : '#c8c8c8', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
+              <span className="text-xs" style={{ color: isSelected ? '#1A1E23' : isHovered ? '#1A1E23' : 'rgba(26,30,35,.5)', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
             </div>
           )
         })}
@@ -197,9 +198,9 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
 }
 
 const selectStyle = {
-  background: '#1e1e20',
-  border: '1px solid rgba(255,255,255,0.07)',
-  color: '#fff',
+  background: '#FFFFFF',
+  border: '1px solid #E1DCD7',
+  color: '#1A1E23',
   outline: 'none',
 }
 
@@ -248,7 +249,7 @@ export default function DashboardPage() {
 
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
-  const blur  = e => e.target.style.borderColor = 'rgba(255,255,255,0.07)'
+  const blur  = e => e.target.style.borderColor = '#E1DCD7'
 
   const agentName = (id) => agents.find(a => a.id === id)?.name
 
@@ -297,24 +298,24 @@ export default function DashboardPage() {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#888' }}>
+        <h1 className="text-2xl" style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'rgba(26,30,35,.6)' }}>
           {hasFilters
-            ? <><span style={{ color: '#FF9780' }}>{total}</span> ticket{total !== 1 ? 's' : ''} match your filters</>
-            : <>{role === 'agent' ? 'Your QA scores' : 'QA performance overview'}{profile?.name && <> · <span style={{ color: '#FF9780' }}>{profile.name}</span></>}</>
+            ? <><span style={{ color: '#B84A2E' }}>{total}</span> ticket{total !== 1 ? 's' : ''} match your filters</>
+            : <>{role === 'agent' ? 'Your QA scores' : 'QA performance overview'}{profile?.name && <> · <span style={{ color: '#B84A2E' }}>{profile.name}</span></>}</>
           }
           <span className="ml-2 text-xs px-2 py-0.5 rounded-full capitalize"
-            style={{ background: 'rgba(255,151,128,0.08)', color: '#FF9780' }}>{role}</span>
+            style={{ background: '#FFEAE6', color: '#B84A2E' }}>{role}</span>
         </p>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Total Scored',  value: total,                      format: n => Math.round(n),        sub: `${thisWeek} this week`, icon: STAT_ICONS.total, onClick: showAllTickets },
-          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#FF9780', icon: STAT_ICONS.avg },
-          { label: 'Pass Rate',     value: passRate,                   format: n => `${Math.round(n)}%`,  sub: `${pass} tickets`, color: VERDICT_COLOR.PASS, icon: STAT_ICONS.pass },
-          { label: 'Need Review',   value: review + fail,              format: n => Math.round(n),        sub: `${review} review · ${fail} fail`, color: review + fail > 0 ? VERDICT_COLOR.NEEDS_REVIEW : '#555', icon: STAT_ICONS.review },
+          { label: 'Total Scored',  value: total,                      format: n => Math.round(n),        sub: `${thisWeek} this week`, color: '#1A1E23', icon: STAT_ICONS.total, onClick: showAllTickets },
+          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#C8841E', icon: STAT_ICONS.avg },
+          { label: 'Pass Rate',     value: passRate,                   format: n => `${Math.round(n)}%`,  sub: `${pass} tickets`, color: '#3B7DD8', icon: STAT_ICONS.pass },
+          { label: 'Need Review',   value: review + fail,              format: n => Math.round(n),        sub: `${review} review · ${fail} fail`, color: review + fail > 0 ? '#C8841E' : 'rgba(26,30,35,.45)', icon: STAT_ICONS.review },
         ].map((p, i) => (
           <div key={p.label} className="stagger-item" style={{ '--i': i }}>
             <StatCard {...p} />
@@ -324,12 +325,12 @@ export default function DashboardPage() {
 
       {/* Distribution + Trend */}
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
-        <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+        <div className="p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-4">
             <p className="g-label" style={{ margin: 0 }}>Score distribution<ScoreInfoPopover rubric={rubric} /></p>
-            <span className="text-xs" style={{ color: '#888' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
+            <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
           </div>
-          {total === 0 ? <p className="text-xs" style={{ color: '#555' }}>No tickets scored yet</p> : (() => {
+          {total === 0 ? <p className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>No tickets scored yet</p> : (() => {
             const vt = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
             const range = { PASS: `≥${vt.pass}`, NEEDS_REVIEW: `${vt.needs_review}–${vt.pass - 1}`, FAIL: `<${vt.needs_review}` }
             const rows = [['PASS', pass], ['NEEDS_REVIEW', review], ['FAIL', fail]]
@@ -337,7 +338,7 @@ export default function DashboardPage() {
             const passRate = Math.round((pass / total) * 100)
             const segCount = rows.filter(([, n]) => n > 0).length
             const GAP = segCount > 1 ? 12 : 0  // crisp separation between arcs (none if a single verdict)
-            const labelStyle = { fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#777' }
+            const labelStyle = { fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' }
             let acc = 0
             const segs = rows.filter(([, n]) => n > 0).map(([v, n]) => {
               const frac = n / total
@@ -356,13 +357,13 @@ export default function DashboardPage() {
                 <div className="relative shrink-0" style={{ width: 116, height: 116 }}>
                   <svg width="116" height="116" viewBox="0 0 100 100">
                     <g transform="rotate(-90 50 50)">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="11" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="#F0ECE9" strokeWidth="11" />
                       {segs}
                     </g>
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold tabular-nums" style={{ color: VERDICT_COLOR.PASS, lineHeight: 1 }}>{passRate}%</span>
-                    <span className="text-xs mt-0.5" style={{ color: '#888' }}>pass rate</span>
+                    <span className="text-2xl tabular-nums" style={{ color: VERDICT_COLOR.PASS, lineHeight: 1, fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{passRate}%</span>
+                    <span className="text-xs mt-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>pass rate</span>
                   </div>
                 </div>
                 {/* Legend — labelled columns so each number is clear */}
@@ -380,8 +381,8 @@ export default function DashboardPage() {
                           <span style={{ width: 8, height: 8, borderRadius: '50%', background: VERDICT_COLOR[v], flexShrink: 0 }} />
                           <span className="text-xs font-medium" style={{ color: VERDICT_COLOR[v] }}>{VERDICT_LABEL[v]}</span>
                         </div>
-                        <span className="w-12 text-right text-xs tabular-nums" style={{ color: '#e8e8e8' }}>{n}</span>
-                        <span className="w-12 text-right text-xs tabular-nums" style={{ color: '#c8c8c8' }}>{pct}%</span>
+                        <span className="w-12 text-right text-xs tabular-nums" style={{ color: '#1A1E23' }}>{n}</span>
+                        <span className="w-12 text-right text-xs tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{pct}%</span>
                       </div>
                     )
                   })}
@@ -396,9 +397,9 @@ export default function DashboardPage() {
       {/* ── Ticket table with filters ── */}
       <div ref={tableRef}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white font-semibold">{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
+          <h2 style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs" style={{ color: '#c8c8c8' }}>
+            <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
               Showing {Math.min(visibleCount, filteredScores.length)} of {filteredScores.length}
               {filteredScores.length !== total && ` · ${total} total`}
             </span>
@@ -425,9 +426,9 @@ export default function DashboardPage() {
                   a.click(); URL.revokeObjectURL(url)
                 }}
                 className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.07)' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
+                style={{ color: '#1A1E23', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF'; e.currentTarget.style.borderColor = '#E4E0DC' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
                 ↓ Export CSV
               </button>
             )}
@@ -437,7 +438,7 @@ export default function DashboardPage() {
         {/* Ticket search — admin/lead only */}
         {role !== 'agent' && (
           <div className="relative mb-3">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: ticketSearch ? '#FF9780' : '#444' }}>
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: ticketSearch ? '#FF9780' : 'rgba(26,30,35,.45)' }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input
@@ -445,26 +446,26 @@ export default function DashboardPage() {
               value={ticketSearch}
               onChange={e => setTicketSearch(e.target.value)}
               placeholder="Search by ticket URL or ID…"
-              className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none transition-all"
+              className="w-full rounded-lg pl-11 pr-10 py-3 text-sm outline-none transition-all"
               style={{
-                background: '#1c1c1e',
-                border: `1px solid ${ticketSearch ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                color: '#fff',
-                boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.06)' : 'none',
+                background: '#FFFFFF',
+                border: `1px solid ${ticketSearch ? '#FF9780' : '#E1DCD7'}`,
+                color: '#1A1E23',
+                boxShadow: ticketSearch ? '0 0 0 3px rgba(255,151,128,0.18)' : 'none',
               }}
             />
             {ticketSearch && (
               <button onClick={() => setTicketSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors"
-                style={{ color: '#666', background: 'rgba(255,255,255,0.10)' }}
-                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.color='#666'; e.currentTarget.style.background='rgba(255,255,255,0.10)' }}>
+                style={{ color: 'rgba(26,30,35,.5)', background: '#F1ECE8' }}
+                onMouseEnter={e => { e.currentTarget.style.color='#1A1E23'; e.currentTarget.style.background='#F6F2EF' }}
+                onMouseLeave={e => { e.currentTarget.style.color='rgba(26,30,35,.5)'; e.currentTarget.style.background='#F1ECE8' }}>
                 ×
               </button>
             )}
             {ticketSearch && searchTicketId && (
               <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
-                style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>
+                style={{ color: '#B84A2E', background: '#FFEAE6' }}>
                 #{searchTicketId}
               </span>
             )}
@@ -472,12 +473,12 @@ export default function DashboardPage() {
         )}
 
         {/* Filters */}
-        <div className="rounded-2xl p-4 mb-4" style={{ background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+        <div className="p-4 mb-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
           <div className="flex flex-wrap gap-3 items-end">
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#c8c8c8' }}>Agent</label>
+                <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Agent</label>
                 <select value={filters.agent} onChange={e => set('agent', e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">All agents</option>
@@ -488,7 +489,7 @@ export default function DashboardPage() {
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
-                <label className="text-xs" style={{ color: '#c8c8c8' }}>Team</label>
+                <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Team</label>
                 <select value={filters.team} onChange={e => set('team', e.target.value)}
                   className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
                   <option value="">All teams</option>
@@ -498,19 +499,19 @@ export default function DashboardPage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#c8c8c8' }}>From</label>
+              <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>From</label>
               <input type="date" value={filters.dateFrom} onChange={e => set('dateFrom', e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
+                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'light' }} onFocus={focus} onBlur={blur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#c8c8c8' }}>To</label>
+              <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>To</label>
               <input type="date" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'dark' }} onFocus={focus} onBlur={blur} />
+                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'light' }} onFocus={focus} onBlur={blur} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#c8c8c8' }}>Quick range</label>
+              <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Quick range</label>
               <div className="flex gap-1.5">
                 {[['7d', 7], ['30d', 30], ['90d', 90]].map(([label, days]) => {
                   const isActive = activeRange === label
@@ -522,12 +523,12 @@ export default function DashboardPage() {
                       setFilters(f => ({ ...f, dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) }))
                       setActiveRange(label)
                     }}
-                      className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
+                      className="text-xs px-3 py-2 rounded-lg border transition-all font-medium"
                       style={isActive
-                        ? { color: '#FF9780', borderColor: 'rgba(255,151,128,0.4)', background: 'rgba(255,151,128,0.08)' }
-                        : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)', background: 'transparent' }}
-                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.2)' } }}
-                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' } }}>
+                        ? { color: '#B84A2E', borderColor: '#FF9780', background: '#FFEAE6' }
+                        : { color: '#1A1E23', borderColor: '#E7E3DF', background: '#FFFFFF' }}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.borderColor='#E4E0DC' } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.borderColor='#E7E3DF' } }}>
                       {label}
                     </button>
                   )
@@ -536,16 +537,17 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs" style={{ color: '#c8c8c8' }}>Status</label>
+              <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Status</label>
               <div className="flex gap-1.5">
                 {VERDICTS.map(v => {
                   const active = filters.verdicts.includes(v)
                   return (
                     <button key={v} onClick={() => set('verdicts', active ? filters.verdicts.filter(x => x !== v) : [...filters.verdicts, v])}
-                      className="text-xs px-3 py-2 rounded-xl border transition-all font-medium"
+                      className="text-xs px-3 py-2 rounded-lg border transition-all font-medium flex items-center gap-1.5"
                       style={active
                         ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
-                        : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)' }}>
+                        : { color: '#1A1E23', borderColor: '#E7E3DF', background: '#FFFFFF' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[v], flexShrink: 0 }} />
                       {VERDICT_LABEL[v]}
                     </button>
                   )
@@ -555,10 +557,10 @@ export default function DashboardPage() {
 
             {hasFilters && (
               <button onClick={() => { setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' }); setActiveRange(null); setTicketSearch(''); setSelectedDay(null) }}
-                className="text-xs px-3 py-2 rounded-xl self-end transition-colors"
-                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.07)' }}
-                onMouseEnter={e => { e.currentTarget.style.color='#ef4444'; e.currentTarget.style.borderColor='rgba(239,68,68,0.3)' }}
-                onMouseLeave={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(255,255,255,0.07)' }}>
+                className="text-xs px-3 py-2 rounded-lg self-end transition-colors"
+                style={{ color: '#1A1E23', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                onMouseEnter={e => { e.currentTarget.style.color='#D14B3D'; e.currentTarget.style.borderColor='rgba(209,75,61,0.4)' }}
+                onMouseLeave={e => { e.currentTarget.style.color='#1A1E23'; e.currentTarget.style.borderColor='#E7E3DF' }}>
                 Clear
               </button>
             )}
@@ -567,20 +569,20 @@ export default function DashboardPage() {
 
         {/* Table */}
         {dataLoading && scoreHistory.length === 0 ? (
-          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+          <div className="overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
             <div className="grid px-4 py-3" style={{
               gridTemplateColumns: '100px 1fr 120px 80px 90px 80px',
-              background: 'rgba(255,255,255,0.03)',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              background: '#FBF7F3',
+              borderBottom: '1px solid #F0ECE9',
               fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: '#c8c8c8',
+              textTransform: 'uppercase', color: 'rgba(26,30,35,.5)',
             }}>
               <span>Ticket</span><span>Subject</span><span className="text-center">Agents</span>
               <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
             </div>
             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
               <div key={i} className="grid items-center px-4 py-3"
-                style={{ gridTemplateColumns: '100px 1fr 120px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                style={{ gridTemplateColumns: '100px 1fr 120px 80px 90px 80px', borderBottom: '1px solid #F0ECE9' }}>
                 <span className="skeleton-bar" style={{ width: 56 }} />
                 <span className="skeleton-bar" style={{ width: '70%' }} />
                 <span className="skeleton-bar" style={{ width: 80 }} />
@@ -591,17 +593,17 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : filteredScores.length === 0 ? (
-          <div className="text-center py-16" style={{ color: '#555' }}>
+          <div className="text-center py-16" style={{ color: 'rgba(26,30,35,.45)' }}>
             <p className="text-sm">{total === 0 ? 'No tickets scored yet.' : 'No tickets match your filters.'}</p>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+          <div className="overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
             <div className="grid px-4 py-3" style={{
               gridTemplateColumns: '100px 1fr 120px 80px 90px 80px',
-              background: 'rgba(255,255,255,0.03)',
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              background: '#FBF7F3',
+              borderBottom: '1px solid #F0ECE9',
               fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: '#c8c8c8',
+              textTransform: 'uppercase', color: 'rgba(26,30,35,.5)',
             }}>
               <span>Ticket</span><span>Subject</span><span className="text-center">Agents</span>
               <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
@@ -609,12 +611,12 @@ export default function DashboardPage() {
 
             {filteredScores.slice(0, visibleCount).map(s => (
               <div key={s.id} className="grid items-center px-4 py-3 transition-colors"
-                style={{ gridTemplateColumns: '100px 1fr 120px 80px 90px 80px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
+                style={{ gridTemplateColumns: '100px 1fr 120px 80px 90px 80px', borderBottom: '1px solid #F0ECE9' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 
                 <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
-                  className="font-mono text-xs" style={{ color: '#FF9780' }}
+                  className="font-mono text-xs" style={{ color: '#B84A2E' }}
                   onMouseEnter={e => e.target.style.textDecoration='underline'}
                   onMouseLeave={e => e.target.style.textDecoration='none'}>
                   #{s.ticketId}
@@ -622,9 +624,9 @@ export default function DashboardPage() {
 
                 <button onClick={() => openPanel({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
                   className="text-sm text-left truncate pr-3 transition-colors"
-                  style={{ color: '#e8e8e8' }}
-                  onMouseEnter={e => e.target.style.color='#fff'}
-                  onMouseLeave={e => e.target.style.color='#e8e8e8'}>
+                  style={{ color: '#1A1E23' }}
+                  onMouseEnter={e => e.target.style.color='#B84A2E'}
+                  onMouseLeave={e => e.target.style.color='#1A1E23'}>
                   {s.fullScore?.ticket_subject || '—'}
                 </button>
 
@@ -632,39 +634,39 @@ export default function DashboardPage() {
                   {s.agentIds?.length > 0
                     ? s.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
                       <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[110px]"
-                        style={{ background: '#1a1a1a', color: '#c8c8c8' }}>{name}</span>
+                        style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.72)' }}>{name}</span>
                     ))
-                    : <span style={{ color: '#888' }}>—</span>}
+                    : <span style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
                 </div>
 
-                <span className="text-sm tabular-nums text-right" style={{ color: '#e8e8e8' }}>
+                <span className="text-sm tabular-nums text-right" style={{ color: '#1A1E23' }}>
                   {s.effectiveScore?.toFixed(0)}/100
-                  {s.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
+                  {s.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#3B7DD8' }}>*</span>}
                 </span>
 
                 <div className="flex justify-center">
                   <span className="flex items-center gap-1.5">
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[s.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
-                    <span className="text-xs font-medium" style={{ color: '#c8c8c8', letterSpacing: '0.04em' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[s.effectiveVerdict], flexShrink: 0 }} />
+                    <span className="text-xs font-medium" style={{ color: 'rgba(26,30,35,.72)', letterSpacing: '0.04em' }}>
                       {VERDICT_LABEL[s.effectiveVerdict] || s.effectiveVerdict}
                     </span>
                   </span>
                 </div>
 
-                <span className="text-xs text-right" style={{ color: '#c8c8c8' }}>
+                <span className="text-xs text-right" style={{ color: 'rgba(26,30,35,.5)' }}>
                   {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
             ))}
 
             {visibleCount < filteredScores.length && (
-              <div className="flex items-center justify-center px-4 py-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <div className="flex items-center justify-center px-4 py-3" style={{ background: '#FBF7F3' }}>
                 <button
                   onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
                   className="text-xs px-4 py-1.5 rounded-lg transition-colors"
-                  style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                  style={{ color: '#1A1E23', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF'; e.currentTarget.style.borderColor = '#E4E0DC' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
                   Show more · {Math.min(PAGE_SIZE, filteredScores.length - visibleCount)} of {filteredScores.length - visibleCount} remaining
                 </button>
               </div>

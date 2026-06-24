@@ -27,7 +27,7 @@ const LIST_THRESHOLD  = 20  // auto-switch to compact list above this many agent
 const agentRowCols = (canEdit) => canEdit
   ? 'minmax(0,1fr) 120px 56px 64px 64px 132px'
   : 'minmax(0,1fr) 120px 56px 64px 64px'
-const agentColLabel = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c8c8c8' }
+const agentColLabel = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' }
 
 function GoalProgress({ avg, goal }) {
   if (!goal || avg == null) return null
@@ -39,15 +39,15 @@ function GoalProgress({ avg, goal }) {
   const fill    = reached ? 'rgba(16,185,129,0.55)' : close ? 'rgba(245,158,11,0.55)' : 'rgba(239,68,68,0.5)'
 
   return (
-    <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="mt-3 pt-3" style={{ borderTop: '1px solid #F0ECE9' }}>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs" style={{ color: '#c8c8c8' }}>Score goal</span>
+        <span className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Score goal</span>
         <span className="text-xs font-semibold tabular-nums" style={{ color }}>
-          {avg.toFixed(1)} <span style={{ color: '#888' }}>/ {goal}</span>
+          {avg.toFixed(1)} <span style={{ color: 'rgba(26,30,35,.5)' }}>/ {goal}</span>
           {reached && <span className="ml-1.5">✓</span>}
         </span>
       </div>
-      <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
+      <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: '#F1ECE8' }}>
         <div className="h-full rounded-full transition-all"
           style={{ width: `${pct}%`, background: fill, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
       </div>
@@ -70,7 +70,7 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
   const verdictRange = { PASS: `≥${t.pass}`, NEEDS_REVIEW: `${t.needs_review}–${t.pass - 1}`, FAIL: `<${t.needs_review}` }
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+    <div className="rounded-2xl p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
       {editing ? (
         <div className="mb-4">
           <AgentEditForm agent={agent} profiles={profiles} onSave={onEdit} onCancel={() => setEditing(false)} />
@@ -80,30 +80,30 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
           <div className="flex items-start gap-3 min-w-0">
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-              style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780', border: '1px solid rgba(255,151,128,0.2)' }}>
+              style={{ background: '#FFD2C9', color: '#B84A2E' }}>
               {agent.name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="min-w-0">
               <button onClick={() => onViewAll(agent)}
                 className="text-left transition-colors"
-                onMouseEnter={e=>e.currentTarget.querySelector('h3').style.color='#FF9780'}
-                onMouseLeave={e=>e.currentTarget.querySelector('h3').style.color='#fff'}>
+                onMouseEnter={e=>e.currentTarget.querySelector('h3').style.color='#B84A2E'}
+                onMouseLeave={e=>e.currentTarget.querySelector('h3').style.color='#1A1E23'}>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-white font-semibold transition-colors truncate">{agent.name}</h3>
+                  <h3 className="font-semibold transition-colors truncate" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>{agent.name}</h3>
                   {unack > 0 && (
                     <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0"
-                      style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', lineHeight: 1 }}
+                      style={{ background: '#FFEAE6', color: '#B84A2E', lineHeight: 1 }}
                       title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>
                       {unack}
                     </span>
                   )}
                 </div>
               </button>
-              {agent.email && <p className="text-xs mt-0.5 truncate" style={{ color: '#c8c8c8' }}>{agent.email}</p>}
+              {agent.email && <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(26,30,35,.5)' }}>{agent.email}</p>}
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {team && <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>}
-                <span className="text-xs inline-flex items-center gap-1" style={{ color: agent.user_id ? '#10b981' : '#888' }}>
-                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: agent.user_id ? '#10b981' : '#666' }} />
+                {team && <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#B84A2E', background: '#FFEAE6' }}>{team.name}</span>}
+                <span className="text-xs inline-flex items-center gap-1" style={{ color: agent.user_id ? '#2F8F5B' : 'rgba(26,30,35,.5)' }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: agent.user_id ? '#2F8F5B' : 'rgba(26,30,35,.45)' }} />
                   {agent.user_id ? 'Linked' : 'No account'}
                 </span>
               </div>
@@ -113,21 +113,21 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
             {avg != null
               ? <div className="flex items-baseline gap-1" title={`Agent's average across all scored tickets. ${scoreHelp}`}>
                   <span className="text-sm font-bold tabular-nums" style={{ color: avgColor }}>{avg.toFixed(1)}</span>
-                  <span className="text-xs" style={{ color: '#888' }}>avg</span>
+                  <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>avg</span>
                 </div>
-              : <span className="text-xs" style={{ color: '#888' }}>No avg yet</span>}
+              : <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>No avg yet</span>}
             {canEdit && !confirmDelete && (
               <div className="flex items-center gap-2">
                 <button onClick={() => setEditing(true)} className="g-btn-ghost text-xs">Edit</button>
-                <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#888' }}
-                  onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#888'}>Delete</button>
+                <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}
+                  onMouseEnter={e=>e.target.style.color='#D14B3D'} onMouseLeave={e=>e.target.style.color='rgba(26,30,35,.5)'}>Delete</button>
               </div>
             )}
             {confirmDelete && (
               <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: '#ef4444' }}>Delete?</span>
+                <span className="text-xs" style={{ color: '#D14B3D' }}>Delete?</span>
                 <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md"
-                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
+                  style={{ background: '#FEF6F4', color: '#D14B3D', border: '1px solid #F4DDD7' }}>Yes</button>
                 <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">No</button>
               </div>
             )}
@@ -138,15 +138,15 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
       {!editing && (n > 0 ? (
         <>
           <div className="flex items-center justify-between text-xs">
-            <span style={{ color: '#e8e8e8' }}>
+            <span style={{ color: 'rgba(26,30,35,.72)' }}>
               {n} scored
               <span className="ml-2 font-semibold tabular-nums" style={{ color: passColor }}>{passRate}% pass</span>
             </span>
-            <span style={{ color: '#888' }}>{pass} pass · {rev} review · {fail} fail</span>
+            <span style={{ color: 'rgba(26,30,35,.5)' }}>{pass} pass · {rev} review · {fail} fail</span>
           </div>
           <GoalProgress avg={avg} goal={agent.goal_score} />
           <div className="mt-3">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#777', letterSpacing: '0.08em', fontSize: '10px' }}>Recent tickets</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'rgba(26,30,35,.5)', letterSpacing: '0.08em', fontSize: '11px' }}>Recent tickets</p>
             {/* Column labels — visible explanation of each cell */}
             <div className="grid items-center gap-2 px-2 mb-1" style={{ gridTemplateColumns: recentCols }}>
               <span style={agentColLabel} title="Gorgias ticket ID — opens in Gorgias">Ticket</span>
@@ -160,35 +160,35 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
                   className="grid items-center gap-2 py-1.5 px-2 rounded-lg text-left transition-colors"
                   style={{ gridTemplateColumns: recentCols }}
                   onClick={() => onViewScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
-                  onMouseEnter={e=>e.currentTarget.style.background='#161616'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  onMouseEnter={e=>e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                   <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
                     onClick={e => e.stopPropagation()}
                     className="text-xs font-mono transition-colors truncate"
-                    style={{ color: '#FF9780' }}
+                    style={{ color: '#B84A2E' }}
                     onMouseEnter={e => e.target.style.textDecoration='underline'}
                     onMouseLeave={e => e.target.style.textDecoration='none'}>
                     #{s.ticketId}
                   </a>
-                  <span className="text-xs truncate" style={{ color: '#aaa' }}
+                  <span className="text-xs truncate" style={{ color: 'rgba(26,30,35,.72)' }}
                     title={s.fullScore?.ticket_subject ? `Subject — ${s.fullScore.ticket_subject}` : 'Ticket subject'}>
                     {s.fullScore?.ticket_subject || '—'}
                   </span>
-                  <span className="text-xs tabular-nums text-right" style={{ color: '#c8c8c8' }}
+                  <span className="text-xs tabular-nums text-right" style={{ color: gradeColor(s.effectiveScore, thresholds) }}
                     title="Grade — weighted QA score (0–100) for this ticket">{s.effectiveScore?.toFixed(0)}/100</span>
-                  <div className="justify-self-center w-2 h-2 rounded-full" style={{ background: VERDICT_COLOR[s.effectiveVerdict] || '#555' }}
+                  <div className="justify-self-center w-2 h-2 rounded-full" style={{ background: VERDICT_COLOR[s.effectiveVerdict] || 'rgba(26,30,35,.45)' }}
                     title={`Status — ${VERDICT_DESC[s.effectiveVerdict] || ''} · grade ${verdictRange[s.effectiveVerdict] || ''}`} />
                 </button>
               ))}
             </div>
           </div>
           <button onClick={() => onViewAll(agent)} className="mt-2 text-xs w-full text-center py-1.5 rounded-lg transition-colors"
-            style={{ color: '#FF9780' }}
-            onMouseEnter={e=>e.currentTarget.style.background='rgba(255,151,128,0.06)'}
+            style={{ color: '#B84A2E' }}
+            onMouseEnter={e=>e.currentTarget.style.background='#FFEAE6'}
             onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
             View all {n} ticket{n !== 1 ? 's' : ''} →
           </button>
         </>
-      ) : <p className="text-xs" style={{ color: '#888' }}>No tickets scored yet</p>)}
+      ) : <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>No tickets scored yet</p>)}
     </div>
   )
 })
@@ -196,9 +196,9 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
 // ── Roster summary tile ───────────────────────────────────────────────────────
 function SummaryTile({ label, value, color }) {
   return (
-    <div className="rounded-xl p-3 text-center" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-      <p className="text-xl font-bold tabular-nums" style={{ color: color || '#fff' }}>{value}</p>
-      <p className="mt-0.5 text-xs" style={{ color: '#c8c8c8' }}>{label}</p>
+    <div className="rounded-2xl p-3 text-center" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+      <p className="text-xl font-bold tabular-nums" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight'" }}>{value}</p>
+      <p className="mt-0.5 text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{label}</p>
     </div>
   )
 }
@@ -213,48 +213,48 @@ const AgentRow = memo(function AgentRow({ stat, thresholds, onOpen, onEditAgent,
 
   return (
     <div className="grid items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
-      style={{ gridTemplateColumns: agentRowCols(canEdit), background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}
+      style={{ gridTemplateColumns: agentRowCols(canEdit), background: '#FFFFFF', border: '1px solid #EEEEEE' }}
       onClick={() => onOpen(agent)}
-      onMouseEnter={e => e.currentTarget.style.background = '#161616'}
-      onMouseLeave={e => e.currentTarget.style.background = '#1e1e20'}>
+      onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
+      onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}>
       {/* Agent */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-          style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780', border: '1px solid rgba(255,151,128,0.2)' }}>
+          style={{ background: '#FFD2C9', color: '#B84A2E' }}>
           {agent.name?.[0]?.toUpperCase() || '?'}
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-white truncate">{agent.name}</span>
-            {unack > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', lineHeight: 1 }} title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>{unack}</span>}
+            <span className="text-sm font-medium truncate" style={{ color: '#1A1E23' }}>{agent.name}</span>
+            {unack > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: '#FFEAE6', color: '#B84A2E', lineHeight: 1 }} title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>{unack}</span>}
           </div>
-          {agent.email && <span className="text-xs truncate block" style={{ color: '#888' }}>{agent.email}</span>}
+          {agent.email && <span className="text-xs truncate block" style={{ color: 'rgba(26,30,35,.5)' }}>{agent.email}</span>}
         </div>
       </div>
       {/* Team */}
       <div className="min-w-0">
         {team
-          ? <span className="text-xs px-2 py-0.5 rounded-full truncate inline-block max-w-full" style={{ color: '#FF9780', background: 'rgba(255,151,128,0.1)' }}>{team.name}</span>
-          : <span className="text-xs" style={{ color: '#666' }}>—</span>}
+          ? <span className="text-xs px-2 py-0.5 rounded-full truncate inline-block max-w-full" style={{ color: '#B84A2E', background: '#FFEAE6' }}>{team.name}</span>
+          : <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
       </div>
       {/* Avg */}
       <span className="text-sm font-bold tabular-nums text-right" style={{ color: avgColor }}>{avg != null ? avg.toFixed(1) : '—'}</span>
       {/* Pass rate */}
-      <span className="text-xs tabular-nums text-right font-semibold" style={{ color: n ? passColor : '#666' }}>{n ? `${passRate}%` : '—'}</span>
+      <span className="text-xs tabular-nums text-right font-semibold" style={{ color: n ? passColor : 'rgba(26,30,35,.45)' }}>{n ? `${passRate}%` : '—'}</span>
       {/* Tickets */}
-      <span className="text-xs tabular-nums text-right" style={{ color: '#c8c8c8' }}>{n}</span>
+      <span className="text-xs tabular-nums text-right" style={{ color: 'rgba(26,30,35,.72)' }}>{n}</span>
       {/* Actions */}
       {canEdit && (
         <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
           {!confirmDelete ? (
             <>
               <button onClick={() => onEditAgent(agent)} className="g-btn-ghost text-xs">Edit</button>
-              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: '#888' }}
-                onMouseEnter={e=>e.target.style.color='#ef4444'} onMouseLeave={e=>e.target.style.color='#888'}>Delete</button>
+              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}
+                onMouseEnter={e=>e.target.style.color='#D14B3D'} onMouseLeave={e=>e.target.style.color='rgba(26,30,35,.5)'}>Delete</button>
             </>
           ) : (
             <>
-              <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>Yes</button>
+              <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#FEF6F4', color: '#D14B3D', border: '1px solid #F4DDD7' }}>Yes</button>
               <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">No</button>
             </>
           )}
@@ -378,15 +378,15 @@ export default function AgentsPage() {
   // Reset the progressive reveal whenever the result set or layout changes
   useEffect(() => { setVisibleCount(AGENT_PAGE_SIZE) }, [search, sortKey, belowGoalOnly, teamFilter, layout])
 
-  const selectStyle = { background: '#1e1e20', border: '1px solid rgba(255,255,255,0.07)', color: '#fff', outline: 'none' }
+  const selectStyle = { background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23', outline: 'none' }
 
   return (
     <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
     <div className="max-w-5xl mx-auto px-4 pt-10 pb-16">
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-white">Agents</h1>
-          <p className="text-sm mt-0.5 flex items-center" style={{ color: '#c8c8c8' }}>
+          <h1 className="text-2xl font-bold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>Agents</h1>
+          <p className="text-sm mt-0.5 flex items-center" style={{ color: 'rgba(26,30,35,.6)' }}>
             Track individual agent performance<ScoreInfoPopover rubric={rubric} />
           </p>
         </div>
@@ -396,16 +396,16 @@ export default function AgentsPage() {
                 stays the filled primary but at the same compact size. */}
             <button onClick={() => setShowImportModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.12)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}>
+              style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
               Import from Gorgias
             </button>
             <button onClick={() => setShowAssignModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.12)' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}>
+              style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
               Assign Teams
             </button>
             <button onClick={() => setShowAddModal(true)} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg whitespace-nowrap">
@@ -420,8 +420,8 @@ export default function AgentsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <SummaryTile label={teamFilter === 'all' ? 'Agents' : 'In team'} value={summary.count} />
           <SummaryTile label="Avg score" value={summary.avg != null ? summary.avg.toFixed(1) : '—'} color={gradeColor(summary.avg, vt)} />
-          <SummaryTile label="Below goal" value={summary.below} color={summary.below > 0 ? '#ef4444' : '#10b981'} />
-          <SummaryTile label="Unacknowledged" value={summary.unack} color={summary.unack > 0 ? '#f59e0b' : '#fff'} />
+          <SummaryTile label="Below goal" value={summary.below} color={summary.below > 0 ? '#D14B3D' : '#2F8F5B'} />
+          <SummaryTile label="Unacknowledged" value={summary.unack} color={summary.unack > 0 ? '#C8841E' : '#1A1E23'} />
         </div>
       )}
 
@@ -429,31 +429,31 @@ export default function AgentsPage() {
       {agents.length > 0 && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: search ? '#FF9780' : '#555' }}>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: search ? '#FF9780' : 'rgba(26,30,35,.45)' }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search agents by name or email…"
-              className="w-full rounded-xl pl-9 pr-3 py-2 text-sm outline-none"
-              style={{ background: '#1c1c1e', border: `1px solid ${search ? 'rgba(255,151,128,0.4)' : 'rgba(255,255,255,0.07)'}`, color: '#fff' }} />
+              className="w-full rounded-lg pl-9 pr-3 py-2 text-sm outline-none g-input"
+              style={{ border: `1px solid ${search ? '#FF9780' : '#E1DCD7'}` }} />
           </div>
           <select value={sortKey} onChange={e => setSortKey(e.target.value)}
-            className="rounded-xl px-3 py-2 text-sm" style={selectStyle}>
+            className="rounded-lg px-3 py-2 text-sm" style={selectStyle}>
             {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>Sort: {o.label}</option>)}
           </select>
           <button onClick={() => setBelowGoalOnly(v => !v)}
-            className="text-xs px-3 py-2 rounded-xl border transition-all font-medium whitespace-nowrap"
+            className="text-xs px-3 py-2 rounded-lg border transition-all font-medium whitespace-nowrap"
             style={belowGoalOnly
-              ? { color: '#ef4444', background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.4)' }
-              : { color: '#fff', borderColor: 'rgba(255,255,255,0.07)' }}>
+              ? { color: '#D14B3D', background: '#FEF6F4', borderColor: '#F4DDD7' }
+              : { color: 'rgba(26,30,35,.72)', background: '#FFFFFF', borderColor: '#E7E3DF' }}>
             Below goal
           </button>
           {/* Layout toggle — Cards vs compact List */}
-          <div className="flex rounded-xl overflow-hidden shrink-0" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="flex rounded-lg overflow-hidden shrink-0 p-0.5" style={{ background: '#F1ECE8' }}>
             {[['cards', 'Cards'], ['list', 'List']].map(([id, label]) => (
               <button key={id} onClick={() => setLayoutOverride(id)}
-                className="text-xs px-3 py-2 transition-colors font-medium"
-                style={layout === id ? { background: 'rgba(255,151,128,0.12)', color: '#FF9780' } : { color: '#c8c8c8', background: 'transparent' }}>
+                className="text-xs px-3 py-1.5 rounded-md transition-colors font-medium"
+                style={layout === id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.06)' } : { color: 'rgba(26,30,35,.6)', background: 'transparent' }}>
                 {label}
               </button>
             ))}
@@ -470,10 +470,10 @@ export default function AgentsPage() {
               <button key={id} onClick={() => setTeamFilter(id)}
                 className="text-xs px-3 py-1.5 rounded-full border transition-all"
                 style={active
-                  ? { background: 'rgba(255,151,128,0.1)', borderColor: 'rgba(255,151,128,0.3)', color: '#FF9780' }
-                  : { borderColor: 'rgba(255,255,255,0.07)', color: '#c8c8c8' }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.color='#fff' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.color='#c8c8c8' }}
+                  ? { background: '#FFEAE6', borderColor: '#FFEAE6', color: '#B84A2E' }
+                  : { background: '#FFFFFF', borderColor: '#E7E3DF', color: 'rgba(26,30,35,.72)' }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background='#F6F2EF' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background='#FFFFFF' }}
               >
                 {id === 'all' ? 'All' : t?.name}
               </button>
@@ -485,7 +485,7 @@ export default function AgentsPage() {
       {dataLoading && agents.length === 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
+            <div key={i} className="rounded-2xl p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
               <div className="flex items-center gap-3 mb-4">
                 <span className="skeleton-bar" style={{ width: 40, height: 40, borderRadius: '50%' }} />
                 <div className="flex-1 flex flex-col gap-2">
@@ -499,12 +499,12 @@ export default function AgentsPage() {
           ))}
         </div>
       ) : agents.length === 0 ? (
-        <div className="text-center py-20" style={{ color: '#888' }}>
+        <div className="text-center py-20" style={{ color: 'rgba(26,30,35,.5)' }}>
           <p className="text-4xl mb-3">🧑‍💻</p>
           <p className="text-sm">No agents yet. Add one to start tracking performance.</p>
         </div>
       ) : view.length === 0 ? (
-        <div className="text-center py-16" style={{ color: '#888' }}>
+        <div className="text-center py-16" style={{ color: 'rgba(26,30,35,.5)' }}>
           <p className="text-sm">No agents match {belowGoalOnly ? 'the “below goal” filter' : 'your search'}.</p>
         </div>
       ) : (
@@ -550,9 +550,9 @@ export default function AgentsPage() {
             <div className="flex justify-center mt-4">
               <button onClick={() => setVisibleCount(c => c + AGENT_PAGE_SIZE)}
                 className="text-xs px-4 py-1.5 rounded-lg transition-colors"
-                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
                 Show more · {Math.min(AGENT_PAGE_SIZE, view.length - visibleCount)} of {view.length - visibleCount} remaining
               </button>
             </div>

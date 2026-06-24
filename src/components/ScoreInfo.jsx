@@ -38,41 +38,41 @@ export function ScoreInfoPopover({ rubric }) {
         className="inline-flex items-center justify-center transition-colors"
         style={{
           width: 18, height: 18, borderRadius: 5,
-          border: `1px solid ${open ? '#FF9780' : 'rgba(255,255,255,0.18)'}`,
-          background: open ? 'rgba(255,151,128,0.10)' : 'transparent',
-          color: open ? '#FF9780' : '#999',
+          border: `1px solid ${open ? '#FF9780' : '#E1DCD7'}`,
+          background: open ? '#FFEAE6' : 'transparent',
+          color: open ? '#B84A2E' : 'rgba(26,30,35,.6)',
         }}
-        onMouseEnter={e => { if (!open) { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' } }}
-        onMouseLeave={e => { if (!open) { e.currentTarget.style.color = '#999'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)' } }}>
+        onMouseEnter={e => { if (!open) { e.currentTarget.style.color = '#B84A2E'; e.currentTarget.style.borderColor = '#FF9780' } }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#E1DCD7' } }}>
         <svg height="13" width="13" viewBox="0 -960 960 960" fill="currentColor">
           <path d="M423.5-703.5Q400-727 400-760t23.5-56.5Q447-840 480-840t56.5 23.5Q560-793 560-760t-23.5 56.5Q513-680 480-680t-56.5-23.5ZM420-120v-480h120v480H420Z"/>
         </svg>
       </button>
       {open && (
         <div className="absolute z-30 mt-2 left-0 rounded-xl p-4 text-left"
-          style={{ width: 300, background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 12px 32px rgba(0,0,0,0.5)', animation: 'fadeIn 120ms ease' }}>
-          <p className="text-xs font-semibold text-white mb-2">How the QA score works</p>
-          <p className="text-xs leading-relaxed mb-3" style={{ color: '#aaa' }}>
+          style={{ width: 300, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', animation: 'fadeIn 120ms ease' }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: '#1A1E23' }}>How the QA score works</p>
+          <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(26,30,35,.6)' }}>
             Each ticket gets a 0–100 score — a weighted blend of the rubric dimensions:
           </p>
           <div className="flex flex-col gap-1.5 mb-3">
             {dims.map(d => (
               <div key={d.id} className="flex items-center justify-between text-xs">
-                <span style={{ color: '#ccc' }}>{d.name}</span>
-                <span className="tabular-nums font-semibold" style={{ color: '#FF9780' }}>{d.weight}%</span>
+                <span style={{ color: 'rgba(26,30,35,.72)' }}>{d.name}</span>
+                <span className="tabular-nums font-semibold" style={{ color: '#B84A2E' }}>{d.weight}%</span>
               </div>
             ))}
           </div>
-          <div className="flex flex-col gap-1 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex flex-col gap-1 pt-2" style={{ borderTop: '1px solid #F0ECE9' }}>
             {verdicts.map(v => (
               <div key={v.label} className="flex items-center gap-2 text-xs">
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: v.c, flexShrink: 0 }} />
-                <span style={{ color: '#aaa' }}>{v.label}</span>
+                <span style={{ color: 'rgba(26,30,35,.6)' }}>{v.label}</span>
               </div>
             ))}
           </div>
           {autoFails.length > 0 && (
-            <p className="text-xs mt-3 pt-2 leading-relaxed" style={{ color: '#888', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="text-xs mt-3 pt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.5)', borderTop: '1px solid #F0ECE9' }}>
               Any of the {autoFails.length} auto-fail conditions forces a FAIL regardless of score.
             </p>
           )}

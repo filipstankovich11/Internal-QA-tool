@@ -6,12 +6,12 @@ import { gorgiasTicketUrl } from '../lib/gorgias'
 import { useToast } from '../components/Toast'
 import { isClaimActive, CLAIM_TTL_MS } from '../lib/claims'
 import { isInReviewQueue } from '../lib/queue'
-import { VERDICT_COLOR, VERDICT_BG } from '../lib/verdict'
+import { VERDICT_COLOR, VERDICT_BG, gradeColor } from '../lib/verdict'
 
 function statusOf(s) {
-  if (s.disputed)                      return { label: 'DISPUTED', color: '#fb923c', bg: 'rgba(251,146,60,0.1)' }
-  if (s.effectiveVerdict === 'FAIL')   return { label: 'FAIL',     color: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL }
-  return { label: 'REVIEW', color: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW }
+  if (s.disputed)                      return { label: 'DISPUTED', color: '#C8841E', bg: '#FFEAE6' }
+  if (s.effectiveVerdict === 'FAIL')   return { label: 'FAIL',     color: '#D14B3D', bg: '#FCE9E6' }
+  return { label: 'REVIEW', color: '#C8841E', bg: '#FBEBD3' }
 }
 
 function timeSince(ts) {
@@ -25,7 +25,7 @@ function timeSince(ts) {
 
 // Shared column template so the header and every row line up
 const QUEUE_COLS = '88px minmax(0,1fr) 120px 88px 64px 44px 152px'
-const colLabel   = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c8c8c8' }
+const colLabel   = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' }
 
 function QueueHeader() {
   return (
@@ -47,9 +47,9 @@ function QueueRow({ s, onOpen, onRelease, onComplete, agentNames, muted }) {
   const expiresIn = Math.max(0, Math.ceil((CLAIM_TTL_MS - claimAge) / 86400000))
   return (
     <div className="grid items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
-      style={{ gridTemplateColumns: QUEUE_COLS, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)', opacity: muted ? 0.6 : 1 }}
-      onMouseEnter={e => e.currentTarget.style.background = '#161616'}
-      onMouseLeave={e => e.currentTarget.style.background = '#1e1e20'}>
+      style={{ gridTemplateColumns: QUEUE_COLS, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', opacity: muted ? 0.6 : 1 }}
+      onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
+      onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}>
       {/* Ticket */}
       <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
         className="text-xs font-mono truncate transition-colors" style={{ color: '#FF9780' }}
@@ -59,24 +59,24 @@ function QueueRow({ s, onOpen, onRelease, onComplete, agentNames, muted }) {
       </a>
       {/* Subject */}
       <button onClick={() => onOpen(s)} className="text-left truncate text-sm transition-colors min-w-0"
-        style={{ color: '#e8e8e8' }}
+        style={{ color: '#1A1E23' }}
         title={s.fullScore?.ticket_subject || undefined}
-        onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-        onMouseLeave={e => e.currentTarget.style.color = '#e8e8e8'}>
+        onMouseEnter={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}
+        onMouseLeave={e => e.currentTarget.style.color = '#1A1E23'}>
         {s.fullScore?.ticket_subject || '—'}
       </button>
       {/* Agents */}
-      <span className="text-xs truncate" style={{ color: agentNames ? '#c8c8c8' : '#666' }} title={agentNames || undefined}>
+      <span className="text-xs truncate" style={{ color: agentNames ? 'rgba(26,30,35,.6)' : 'rgba(26,30,35,.45)' }} title={agentNames || undefined}>
         {agentNames || '—'}
       </span>
       {/* Status */}
       {!muted
         ? <span className="text-xs font-medium px-2 py-0.5 rounded-full justify-self-start" style={{ color: st.color, background: st.bg }}>{st.label}</span>
-        : <span className="text-xs" style={{ color: '#666' }}>—</span>}
+        : <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
       {/* Grade */}
-      <span className="text-sm tabular-nums text-right" style={{ color: '#c8c8c8' }}>{s.effectiveScore?.toFixed(0)}/100</span>
+      <span className="text-sm tabular-nums text-right" style={{ color: gradeColor(s.effectiveScore) }}>{s.effectiveScore?.toFixed(0)}/100</span>
       {/* Age */}
-      <span className="text-xs tabular-nums text-right" style={{ color: '#888' }}
+      <span className="text-xs tabular-nums text-right" style={{ color: muted ? 'rgba(26,30,35,.5)' : '#B84A2E' }}
         title={muted ? undefined : `Auto-releases in ~${expiresIn} day${expiresIn !== 1 ? 's' : ''} if untouched`}>
         {timeSince(s.scoredAt)}
       </span>
@@ -84,17 +84,17 @@ function QueueRow({ s, onOpen, onRelease, onComplete, agentNames, muted }) {
       <div className="flex items-center justify-end gap-2">
         {onComplete && (
           <button onClick={() => onComplete(s.id)}
-            className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.08)' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.16)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.08)'}
+            className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#2F8F5B', border: '1px solid #BFE3CD', background: '#E6F4EC' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#D8EDDF'}
+            onMouseLeave={e => e.currentTarget.style.background = '#E6F4EC'}
             title="Mark reviewed — removes it from the queue and releases the claim">
             ✓ Reviewed
           </button>
         )}
         <button onClick={() => onRelease(s.id)}
-          className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+          className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: 'rgba(26,30,35,.6)', border: '1px solid #E7E3DF' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.borderColor = 'rgba(209,75,61,0.4)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#E7E3DF' }}
           title="Release this claim back to the Review Queue">
           Release
         </button>
@@ -141,20 +141,20 @@ export default function MyQueuePage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">My Queue</h1>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>My queue</h1>
           {open.length > 0 && (
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(255,151,128,0.12)', color: '#FF9780' }}>
+            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E' }}>
               {open.length} to review
             </span>
           )}
         </div>
-        <p className="text-sm mt-0.5" style={{ color: '#c8c8c8' }}>
+        <p className="text-sm mt-0.5" style={{ color: 'rgba(26,30,35,.6)' }}>
           Tickets you've claimed from the Review Queue. Claims auto-release after {Math.round(CLAIM_TTL_MS / 86400000)} days if untouched.
         </p>
       </div>
 
       {mine.length === 0 ? (
-        <div className="text-center py-20" style={{ color: '#888' }}>
+        <div className="text-center py-20" style={{ color: 'rgba(26,30,35,.5)' }}>
           <p className="text-4xl mb-3">🗂️</p>
           <p className="text-sm">Nothing claimed yet. Claim tickets from the Review Queue to build your worklist.</p>
         </div>
@@ -162,9 +162,9 @@ export default function MyQueuePage() {
         <div className="flex flex-col gap-6">
           {/* To review */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#c8c8c8' }}>To review</p>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>To review</p>
             {open.length === 0 ? (
-              <p className="text-sm py-4 text-center" style={{ color: '#888' }}>All caught up — nothing left to review in your claims.</p>
+              <p className="text-sm py-4 text-center" style={{ color: 'rgba(26,30,35,.5)' }}>All caught up — nothing left to review in your claims.</p>
             ) : (
               <div className="flex flex-col gap-2">
                 <QueueHeader />
@@ -178,8 +178,8 @@ export default function MyQueuePage() {
           {/* Resolved (claimed, already reviewed) */}
           {done.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#888' }}>
-                Resolved <span style={{ color: '#666' }}>· release to clear from your queue</span>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>
+                Resolved <span style={{ color: 'rgba(26,30,35,.45)' }}>· release to clear from your queue</span>
               </p>
               <div className="flex flex-col gap-2">
                 <QueueHeader />

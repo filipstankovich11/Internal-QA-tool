@@ -10,7 +10,7 @@ import { isClaimActive } from '../lib/claims'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER } from '../lib/verdict'
 
 const QUEUE_PAGE_SIZE = 10 // queue rows shown before "Show more"
-const colLabel = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c8c8c8' }
+const colLabel = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' }
 // Shared grid template for the header + every row, so columns line up like the dashboard table.
 // Columns: [checkbox] Status · Ticket · Subject · Agents · Score · Waiting · Actions
 const gridCols = (isAdmin) => (isAdmin ? '16px ' : '') + '88px 84px minmax(0,1fr) 120px 56px 60px 130px'
@@ -28,9 +28,9 @@ function timeInQueue(ts) {
 
 function urgencyColor(ts) {
   const days = (Date.now() - ts) / 86400000
-  if (days > 3) return '#ef4444'
-  if (days > 1) return '#f59e0b'
-  return '#666'
+  if (days > 3) return '#D14B3D'
+  if (days > 1) return '#C8841E'
+  return '#B84A2E'
 }
 
 // Priority: disputed=0, fail=1, review=2 — then oldest
@@ -41,10 +41,10 @@ function priorityOf(item) {
 }
 
 const BADGES = {
-  // DISPUTED is its own status (not a verdict) — keeps a distinct orange
-  DISPUTED:     { label: '⚑ DISPUTED', color: '#fb923c',                 bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.15)',     hoverBorder: 'rgba(251,146,60,0.3)' },
-  NEEDS_REVIEW: { label: '~ REVIEW',   color: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW, border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
-  FAIL:         { label: '✕ FAIL',     color: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL,         border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
+  // DISPUTED is its own status (not a verdict) — coral tint / coral text
+  DISPUTED:     { label: '⚑ DISPUTED', color: '#B84A2E',                  bg: '#FFEAE6',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
+  NEEDS_REVIEW: { label: '~ REVIEW',   color: '#C8841E',                  bg: '#FBEBD3',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
+  FAIL:         { label: '✕ FAIL',     color: '#D14B3D',                  bg: '#FCE9E6',               border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
 }
 
 function badgeFor(item) {
@@ -64,17 +64,17 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 
   return (
     <div className="rounded-xl transition-all"
-      style={{ background: selected ? '#161616' : '#1e1e20', border: `1px solid ${selected ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}` }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#161616' }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = '#1e1e20' }}>
+      style={{ background: selected ? '#FBF7F3' : '#FFFFFF', border: `1px solid ${selected ? '#E1DCD7' : '#EEEEEE'}`, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}
+      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#FBF7F3' }}
+      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = '#FFFFFF' }}>
 
       <div className="grid items-center gap-3 px-3 py-3" style={{ gridTemplateColumns: gridCols(isAdmin) }}>
         {/* Checkbox */}
         {isAdmin && (
           <button onClick={() => onSelect(item.id)}
             className="w-4 h-4 rounded flex items-center justify-center transition-colors"
-            style={{ background: selected ? '#FF9780' : 'transparent', border: `1.5px solid ${selected ? '#FF9780' : '#444'}` }}>
-            {selected && <span style={{ color: '#000', fontSize: 9, fontWeight: 'bold', lineHeight: 1 }}>✓</span>}
+            style={{ background: selected ? '#FF9780' : '#FFFFFF', border: `1.5px solid ${selected ? '#FF9780' : '#E1DCD7'}` }}>
+            {selected && <span style={{ color: '#FFFFFF', fontSize: 9, fontWeight: 'bold', lineHeight: 1 }}>✓</span>}
           </button>
         )}
 
@@ -87,7 +87,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
         {/* Ticket */}
         <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
           className="text-xs font-mono transition-colors truncate"
-          style={{ color: '#FF9780' }}
+          style={{ color: '#B84A2E' }}
           onMouseEnter={e => e.target.style.textDecoration = 'underline'}
           onMouseLeave={e => e.target.style.textDecoration = 'none'}>
           #{item.ticketId}
@@ -95,9 +95,9 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 
         {/* Subject — click to open */}
         <button onClick={onClick} className="text-sm truncate text-left transition-colors min-w-0"
-          style={{ color: '#e8e8e8' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#e8e8e8'}>
+          style={{ color: '#1A1E23' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'}
+          onMouseLeave={e => e.currentTarget.style.color = '#1A1E23'}>
           {item.fullScore?.ticket_subject || '—'}
         </button>
 
@@ -106,9 +106,9 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
           {item.agentIds?.length > 0
             ? item.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
               <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate"
-                style={{ background: '#1a1a1a', color: '#c8c8c8' }}>{name}</span>
+                style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.6)' }}>{name}</span>
             ))
-            : <span className="text-xs" style={{ color: '#555' }}>—</span>}
+            : <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
         </div>
 
         {/* Score */}
@@ -130,17 +130,17 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
           {isAdmin && (
             claimedBy
               ? <span className="text-xs px-2 py-1 rounded-lg truncate"
-                  style={{ background: 'rgba(255,151,128,0.08)', color: '#FF9780', border: '1px solid rgba(255,151,128,0.2)' }}
+                  style={{ background: '#FFEAE6', color: '#B84A2E', border: '1px solid #FFEAE6' }}
                   title={`Claimed by ${claimedBy}`}>
                   ● {claimedBy.split(' ')[0]}
                   <button onClick={() => onUnclaim(item.id)}
-                    className="ml-1.5 opacity-60 hover:opacity-100" style={{ color: '#FF9780' }}>✕</button>
+                    className="ml-1.5 opacity-60 hover:opacity-100" style={{ color: '#B84A2E' }}>✕</button>
                 </span>
               : <button onClick={() => onClaim(item.id)}
                   className="text-xs px-2 py-1 rounded-lg transition-colors"
-                  style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.07)' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#FF9780'; e.currentTarget.style.borderColor = 'rgba(255,151,128,0.2)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
+                  style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#B84A2E'; e.currentTarget.style.borderColor = '#FF9780' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
                   Claim
                 </button>
           )}
@@ -149,11 +149,11 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 
       {/* Dispute note */}
       {item.disputed && item.disputeNote && (
-        <div className="px-4 pb-3.5" style={{ borderTop: '1px solid rgba(245,158,11,0.1)' }}>
-          <p className="text-xs pt-2.5 mb-1" style={{ color: '#c8c8c8' }}>Agent's dispute reason:</p>
-          <p className="text-sm leading-relaxed" style={{ color: '#bbb' }}>{item.disputeNote}</p>
+        <div className="px-4 pb-3.5" style={{ borderTop: '1px solid #F0ECE9' }}>
+          <p className="text-xs pt-2.5 mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Agent's dispute reason:</p>
+          <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{item.disputeNote}</p>
           {item.disputeAt && (
-            <p className="text-xs mt-1.5" style={{ color: '#666' }}>
+            <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.5)' }}>
               Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
@@ -275,15 +275,15 @@ export default function ReviewQueuePage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-white">Review Queue</h1>
+            <h1 className="text-2xl font-bold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'", fontWeight: 600 }}>Review queue</h1>
             {totalCount > 0 && (
               <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
+                style={{ background: '#FBEBD3', color: '#C8841E' }}>
                 {totalCount}
               </span>
             )}
           </div>
-          <p className="text-sm" style={{ color: '#c8c8c8' }}>
+          <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>
             Tickets requiring human attention — reviews, disputes and fails
           </p>
         </div>
@@ -291,52 +291,53 @@ export default function ReviewQueuePage() {
 
       {totalCount === 0 ? (
         <div className="text-center py-20">
-          <p className="text-4xl mb-4">✓</p>
-          <p className="text-white font-semibold mb-1">Queue is clear</p>
-          <p className="text-sm" style={{ color: '#777' }}>No pending reviews, disputes or unacknowledged fails.</p>
+          <p className="text-4xl mb-4" style={{ color: '#2F8F5B' }}>✓</p>
+          <p className="font-semibold mb-1" style={{ color: '#1A1E23' }}>Queue is clear</p>
+          <p className="text-sm" style={{ color: 'rgba(26,30,35,.5)' }}>No pending reviews, disputes or unacknowledged fails.</p>
         </div>
       ) : (
         <>
           {/* Stats bar */}
           <div className="grid grid-cols-4 gap-3 mb-5">
             {[
-              { label: 'Needs Review',         value: needsReview.length, color: '#f59e0b', filter: 'needs_review' },
-              { label: 'Disputed',             value: disputed.length,    color: '#fb923c', filter: 'disputed'     },
-              { label: 'Unacknowledged Fails', value: failed.length,      color: '#ef4444', filter: 'fails', small: true },
-            ].map(({ label, value, color, filter, small }) => {
+              { label: 'Needs Review',         value: needsReview.length, color: '#C8841E', tint: '#FBEBD3', filter: 'needs_review' },
+              { label: 'Disputed',             value: disputed.length,    color: '#B84A2E', tint: '#FFEAE6', filter: 'disputed'     },
+              { label: 'Unacknowledged Fails', value: failed.length,      color: '#D14B3D', tint: '#FCE9E6', filter: 'fails', small: true },
+            ].map(({ label, value, color, tint, filter, small }) => {
               const active = statusFilter === filter
               return (
                 <button key={label} onClick={() => setStatusFilter(active ? null : filter)}
                   className="rounded-xl p-3 text-center transition-all"
                   style={{
-                    background: active ? `rgba(${color === '#f59e0b' ? '245,158,11' : color === '#fb923c' ? '251,146,60' : '239,68,68'},0.08)` : '#1e1e20',
-                    border: `1px solid ${active ? color : 'rgba(255,255,255,0.10)'}`,
+                    background: active ? tint : '#FFFFFF',
+                    border: `1px solid ${active ? color : '#EEEEEE'}`,
+                    boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = `${color}66` }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = color }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = '#EEEEEE' }}>
                   <p className="text-xl font-bold" style={{ color }}>{value}</p>
-                  <p className="mt-0.5" style={{ color: active ? '#fff' : '#c8c8c8', fontSize: small ? '10px' : '12px' }}>{label}</p>
+                  <p className="mt-0.5" style={{ color: active ? '#1A1E23' : 'rgba(26,30,35,.6)', fontSize: small ? '10px' : '12px' }}>{label}</p>
                 </button>
               )
             })}
             <div className="rounded-xl p-3 text-center"
-              style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
-              <p className="text-xl font-bold" style={{ color: +avgWaitDays > 2 ? '#ef4444' : '#aaa' }}>{avgWaitDays ? `${avgWaitDays}d` : '—'}</p>
-              <p className="mt-0.5 text-xs" style={{ color: '#c8c8c8' }}>Avg wait</p>
+              style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+              <p className="text-xl font-bold" style={{ color: +avgWaitDays > 2 ? '#D14B3D' : 'rgba(26,30,35,.6)' }}>{avgWaitDays ? `${avgWaitDays}d` : '—'}</p>
+              <p className="mt-0.5 text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Avg wait</p>
             </div>
           </div>
 
           {/* Toolbar */}
-          <div className="flex items-center gap-2 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center gap-2 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid #EEEEEE' }}>
             {/* Sort */}
-            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#F1ECE8', border: '1px solid #EEEEEE' }}>
               {[{ id: 'priority', label: 'Priority' }, { id: 'oldest', label: 'Oldest' }, { id: 'newest', label: 'Newest' }].map(o => (
                 <button key={o.id} onClick={() => setSortOrder(o.id)}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={sortOrder === o.id ? { background: '#1e1e1e', color: '#fff' } : { color: '#aaa' }}
-                  onMouseEnter={e => { if (sortOrder !== o.id) e.currentTarget.style.color = '#fff' }}
-                  onMouseLeave={e => { if (sortOrder !== o.id) e.currentTarget.style.color = '#aaa' }}>
+                  style={sortOrder === o.id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' } : { color: 'rgba(26,30,35,.6)' }}
+                  onMouseEnter={e => { if (sortOrder !== o.id) e.currentTarget.style.color = '#1A1E23' }}
+                  onMouseLeave={e => { if (sortOrder !== o.id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
                   {o.label}
                 </button>
               ))}
@@ -346,7 +347,7 @@ export default function ReviewQueuePage() {
             {queueAgents.length > 0 && (
               <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
                 className="rounded-xl px-3 py-2 text-xs"
-                style={{ background: '#171719', border: '1px solid rgba(255,255,255,0.07)', color: agentFilter ? '#fff' : '#aaa', outline: 'none' }}>
+                style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: agentFilter ? '#1A1E23' : 'rgba(26,30,35,.6)', outline: 'none' }}>
                 <option value="">All agents</option>
                 {queueAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
@@ -358,32 +359,32 @@ export default function ReviewQueuePage() {
                 {statusFilter && (
                   <button onClick={() => setStatusFilter(null)}
                     className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ color: '#aaa', border: '1px solid rgba(255,255,255,0.12)' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}>
+                    style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#1A1E23'; e.currentTarget.style.borderColor = '#E1DCD7' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
                     Show all
                   </button>
                 )}
                 {selected.size === 0 ? (
                   <button onClick={selectAll}
                     className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}>
+                    style={{ color: 'rgba(26,30,35,.6)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#1A1E23'; e.currentTarget.style.borderColor = '#E1DCD7' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
                     Select all
                   </button>
                 ) : (
                   <>
-                    <span className="text-xs" style={{ color: '#aaa' }}>{selected.size} selected</span>
+                    <span className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>{selected.size} selected</span>
                     <button onClick={bulkAcknowledge} disabled={bulkWorking}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-                      style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', opacity: bulkWorking ? 0.6 : 1 }}>
+                      style={{ background: '#E7F3EC', color: '#2F8F5B', border: '1px solid #CDE6D8', opacity: bulkWorking ? 0.6 : 1 }}>
                       {bulkWorking ? 'Working…' : '✓ Acknowledge all'}
                     </button>
                     <button onClick={clearSelect}
-                      className="text-xs transition-colors" style={{ color: '#666' }}
-                      onMouseEnter={e => e.target.style.color = '#ccc'}
-                      onMouseLeave={e => e.target.style.color = '#666'}>
+                      className="text-xs transition-colors" style={{ color: 'rgba(26,30,35,.5)' }}
+                      onMouseEnter={e => e.target.style.color = '#1A1E23'}
+                      onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>
                       Clear
                     </button>
                   </>
@@ -424,14 +425,14 @@ export default function ReviewQueuePage() {
             {visibleCount < sorted.length && (
               <button onClick={() => setVisibleCount(c => c + QUEUE_PAGE_SIZE)}
                 className="text-xs mx-auto mt-2 px-4 py-1.5 rounded-lg transition-colors"
-                style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+                style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#E1DCD7' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#E7E3DF' }}>
                 Show more · {Math.min(QUEUE_PAGE_SIZE, sorted.length - visibleCount)} of {sorted.length - visibleCount} remaining
               </button>
             )}
             {sorted.length === 0 && agentFilter && (
-              <p className="text-sm text-center py-10" style={{ color: '#555' }}>No queue items for this agent.</p>
+              <p className="text-sm text-center py-10" style={{ color: 'rgba(26,30,35,.45)' }}>No queue items for this agent.</p>
             )}
           </div>
         </>

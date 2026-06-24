@@ -40,8 +40,8 @@ export default function ScoringProgress({ loading }) {
     <div style={{ marginTop: 14, marginBottom: 4 }}>
       {/* Label + percentage */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: '#888' }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#FF9780', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 12, color: 'rgba(26,30,35,.6)' }}>{label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#B84A2E', fontVariantNumeric: 'tabular-nums' }}>
           {pct}%
         </span>
       </div>
@@ -49,7 +49,7 @@ export default function ScoringProgress({ loading }) {
       {/* Track */}
       <div style={{
         width: '100%', height: 7, borderRadius: 999,
-        background: 'rgba(255,255,255,0.08)',
+        background: '#F0ECE9',
         overflow: 'hidden', position: 'relative',
       }}>
         {/* Fill */}
@@ -68,7 +68,7 @@ export default function ScoringProgress({ loading }) {
       </div>
 
       {!finishing && (
-        <p style={{ fontSize: 11, color: '#555', textAlign: 'center', marginTop: 7 }}>
+        <p style={{ fontSize: 11, color: 'rgba(26,30,35,.45)', textAlign: 'center', marginTop: 7 }}>
           Usually 15–30 seconds
         </p>
       )}

@@ -78,7 +78,7 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
     <>
       {/* Backdrop — closes panel when clicking content area */}
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 45 }}
+        style={{ position: 'fixed', inset: 0, zIndex: 45, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)' }}
         onClick={onClose}
       />
 
@@ -91,11 +91,11 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
           width: 320,
           height: '100vh',
           zIndex: 46,
-          background: '#141414',
-          borderRight: '1px solid rgba(255,255,255,0.10)',
+          background: '#FFFFFF',
+          borderRight: '1px solid #EEEEEE',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '4px 0 24px rgba(0,0,0,0.4)',
+          boxShadow: '0 20px 48px rgba(0,0,0,.12)',
           animation: 'slideInLeft 180ms cubic-bezier(0.16,1,0.3,1)',
         }}
         onClick={e => e.stopPropagation()}
@@ -104,12 +104,12 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 16px', height: 56, flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid #F0ECE9',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="text-white font-semibold text-sm">Notifications</span>
+            <span className="font-semibold text-sm" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>Notifications</span>
             {unreadCount > 0 && (
-              <span style={{ background: '#FF9780', color: '#141416', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999 }}>
+              <span style={{ background: '#FF9780', color: '#FFFFFF', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999 }}>
                 {unreadCount}
               </span>
             )}
@@ -119,9 +119,9 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
               <button
                 onClick={markAllRead}
                 className="text-xs transition-colors"
-                style={{ color: '#666' }}
-                onMouseEnter={e => e.target.style.color = '#FF9780'}
-                onMouseLeave={e => e.target.style.color = '#666'}
+                style={{ color: 'rgba(26,30,35,.6)' }}
+                onMouseEnter={e => e.target.style.color = '#B84A2E'}
+                onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.6)'}
               >
                 Mark all read
               </button>
@@ -129,9 +129,9 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
             <button
               onClick={onClose}
               className="text-xl leading-none transition-colors"
-              style={{ color: '#555' }}
-              onMouseEnter={e => e.target.style.color = '#fff'}
-              onMouseLeave={e => e.target.style.color = '#555'}
+              style={{ color: 'rgba(26,30,35,.45)' }}
+              onMouseEnter={e => e.target.style.color = '#1A1E23'}
+              onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.45)'}
             >×</button>
           </div>
         </div>
@@ -139,15 +139,25 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
         {/* List */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#555', fontSize: 13 }}>Loading…</div>
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(26,30,35,.5)', fontSize: 13 }}>Loading…</div>
           ) : notifications.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <p style={{ fontSize: 28, marginBottom: 8 }}>🔔</p>
-              <p style={{ color: '#555', fontSize: 13 }}>No notifications yet</p>
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%', background: '#FBEBD3',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 12px',
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8841E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                </svg>
+              </div>
+              <p style={{ color: '#1A1E23', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No notifications yet</p>
+              <p style={{ color: 'rgba(26,30,35,.5)', fontSize: 12 }}>You'll see disputes, overrides, and notes here</p>
             </div>
           ) : (
             notifications.map(n => {
-              const meta = TYPE_META[n.type] || { icon: '•', color: '#888', label: '' }
+              const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
               return (
                 <button
                   key={n.id}
@@ -158,19 +168,19 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
                     alignItems: 'flex-start',
                     gap: 12,
                     padding: '14px 16px',
-                    borderBottom: '1px solid rgba(255,255,255,0.07)',
-                    background: n.read ? 'transparent' : 'rgba(255,151,128,0.04)',
+                    borderBottom: '1px solid #F0ECE9',
+                    background: n.read ? 'transparent' : '#FFEAE6',
                     textAlign: 'left',
                     transition: 'background 150ms',
                     cursor: 'default',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
-                  onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(255,151,128,0.04)'}
+                  onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
+                  onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'}
                 >
                   {/* Type icon */}
                   <span style={{
                     width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                    background: `${meta.color}18`,
+                    background: `${meta.color}22`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 13, marginTop: 1,
                   }}>
@@ -178,15 +188,15 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
                   </span>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ color: n.read ? '#888' : '#ccc', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>
+                    <p style={{ color: n.read ? 'rgba(26,30,35,.6)' : '#1A1E23', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>
                       {n.message}
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 10, color: meta.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         {meta.label}
                       </span>
-                      <span style={{ fontSize: 10, color: '#555' }}>·</span>
-                      <span style={{ fontSize: 10, color: '#555' }}>{timeAgo(n.created_at)}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
+                      <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>{timeAgo(n.created_at)}</span>
                     </div>
                   </div>
 
