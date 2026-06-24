@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { authFetch } from '../lib/api'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { isClaimActive } from '../lib/claims'
@@ -56,7 +55,7 @@ function badgeFor(item) {
 
 // ── Queue item row ─────────────────────────────────────────────────────────────
 
-function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUnclaim, onNotify, notifying, isAdmin }) {
+function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUnclaim, isAdmin }) {
   const { agents } = useApp()
   const agentName  = (id) => agents.find(a => a.id === id)?.name
   const badge      = badgeFor(item)
@@ -145,19 +144,6 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
                   Claim
                 </button>
           )}
-
-          {/* Notify */}
-          {item.agentIds?.length > 0 && (
-            <button onClick={() => onNotify(item)}
-              disabled={notifying}
-              className="text-xs px-2 py-1 rounded-lg transition-colors"
-              style={{ color: '#c8c8c8', border: '1px solid rgba(255,255,255,0.07)', opacity: notifying ? 0.5 : 1 }}
-              onMouseEnter={e => { if (!notifying) { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' } }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#c8c8c8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
-              title="Notify agent via Slack DM">
-              {notifying ? '…' : '↗ Notify'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -191,7 +177,6 @@ export default function ReviewQueuePage() {
   const [selected,     setSelected]     = useState(new Set())
   const [statusFilter, setStatusFilter] = useState(null) // null | 'needs_review' | 'disputed' | 'fails'
   const [bulkWorking,  setBulkWorking]  = useState(false)
-  const [notifying,    setNotifying]    = useState(null) // scoreId being notified
   const [visibleCount, setVisibleCount] = useState(QUEUE_PAGE_SIZE) // progressive reveal
   const [profiles,     setProfiles]     = useState({})   // id → name, for "claimed by" display
 
@@ -263,37 +248,6 @@ export default function ReviewQueuePage() {
   }
   const unclaimTicket = (id) => unclaimScore(id)
 
-  // Quick notify (no preview — direct send)
-  const quickNotify = async (item) => {
-    const agent = agents.find(a => item.agentIds?.includes(a.id) && a.email)
-    if (!agent?.email) { toast.error('No email found for this agent'); return }
-    setNotifying(item.id)
-    try {
-      const res  = await authFetch('/api/notify-agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_email:   agent.email,
-          reviewer_note: '',
-          score: {
-            verdict:        item.effectiveVerdict,
-            weighted_score: item.effectiveScore,
-            ticket_id:      item.ticketId,
-            ticket_subject: item.fullScore?.ticket_subject,
-            summary:        item.fullScore?.summary,
-            key_improvements: item.fullScore?.key_improvements,
-          },
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      toast.success(`Slack DM sent to ${agent.name}`)
-    } catch (e) {
-      toast.error(e.message || 'Failed to send notification')
-    } finally {
-      setNotifying(null)
-    }
-  }
 
   // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
   // other overlays (notifications/settings), expandable to the full modal.
@@ -464,8 +418,6 @@ export default function ReviewQueuePage() {
                 claimedBy={claimedName(item)}
                 onClaim={claimTicket}
                 onUnclaim={unclaimTicket}
-                onNotify={quickNotify}
-                notifying={notifying === item.id}
                 isAdmin={isAdmin}
               />
             ))}

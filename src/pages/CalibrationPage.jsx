@@ -5,9 +5,7 @@ import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL } from '../lib/verdict'
-
-const scoreColor     = v => v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
 
 // ── New session modal ─────────────────────────────────────────────────────────
 function NewSessionModal({ onCreated, onClose }) {
@@ -164,7 +162,7 @@ function SubmitForm({ session, onSubmitted }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-medium" style={{ color: '#888' }}>Score</p>
-          <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(score) }}>{score}/100</span>
+          <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(score) }}>{score}/100</span>
         </div>
         <input type="range" min="0" max="100" step="1" value={score} onChange={e => setScore(+e.target.value)}
           className="w-full" style={{ accentColor: '#FF9780' }} />
@@ -303,7 +301,7 @@ function RevealedView({ session, entries }) {
           {allCols.map(col => (
             <div key={col.key} className="px-4 py-3 text-center">
               {col.score != null
-                ? <span className="text-sm font-bold tabular-nums" style={{ color: scoreColor(col.score) }}>{Math.round(col.score)}/100</span>
+                ? <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(col.score) }}>{Math.round(col.score)}/100</span>
                 : <span style={{ color: '#555' }}>—</span>}
             </div>
           ))}

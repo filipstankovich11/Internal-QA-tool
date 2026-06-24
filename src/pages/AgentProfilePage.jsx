@@ -5,10 +5,7 @@ import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL } from '../lib/verdict'
-
-// ── colour helpers (score-health gradient — separate from verdict palette) ─────
-const scoreColor  = v => v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, gradeColor } from '../lib/verdict'
 const dimColor    = v => v >= 4  ? '#10b981' : v >= 3  ? '#f59e0b' : '#ef4444'
 
 // ── trend chart ───────────────────────────────────────────────────────────────
@@ -153,7 +150,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       {/* Score */}
       <ScoreBreakdownHover scores={s.fullScore?.scores} align="right">
         <span className="text-sm font-bold tabular-nums w-16 text-right shrink-0 cursor-default"
-          style={{ color: scoreColor(s.effectiveScore) }}>
+          style={{ color: gradeColor(s.effectiveScore) }}>
           {s.effectiveScore?.toFixed(0)}/100
           {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: '#818cf8' }}>*</span>}
         </span>
@@ -274,7 +271,7 @@ export default function AgentProfilePage() {
         {/* Avg Score */}
         <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
           <p className="text-xs mb-2" style={{ color: '#777' }}>Avg Score</p>
-          <p className="text-3xl font-bold" style={{ color: avg != null ? scoreColor(avg) : '#555' }}>{avg != null ? avg.toFixed(1) : '—'}</p>
+          <p className="text-3xl font-bold" style={{ color: avg != null ? gradeColor(avg) : '#555' }}>{avg != null ? avg.toFixed(1) : '—'}</p>
           <p className="text-xs mt-1" style={{ color: '#666' }}>out of 100</p>
         </div>
 

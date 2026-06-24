@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, Component } from 'react'
+import { useState, useEffect, lazy, Suspense, Component } from 'react'
 import { AppProvider }    from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
@@ -65,8 +65,24 @@ function Router({ page, role }) {
 }
 
 function AppShell() {
-  const { user, loading, isPasswordReset, role } = useAuth()
+  const { user, loading, isPasswordReset, role, canScore, isAdmin } = useAuth()
   const [page, setPage] = useState('dashboard')
+
+  // Role guard: the Router renders whatever `page` holds, and `page` survives a
+  // role/account switch. If the current page isn't permitted for this role
+  // (e.g. an agent landing on a scorer-only page like Calibration), fall back
+  // to the dashboard. Mirrors the access rules in the Sidebar's MENU_TABS.
+  const isAgent = role === 'agent'
+  useEffect(() => {
+    // Wait until auth has settled and the role is known — otherwise the transient
+    // pre-profile state (or a token refresh) would bounce a permitted user off their page.
+    if (loading || !role) return
+    const blocked =
+      (['score', 'review', 'teams', 'calibration'].includes(page) && !canScore) ||
+      (['myqueue', 'rubric'].includes(page) && !isAdmin) ||
+      (['inbox', 'coaching'].includes(page) && !isAgent)
+    if (blocked) setPage('dashboard')
+  }, [page, canScore, isAdmin, isAgent, loading, role])
 
   if (loading) return <Spinner />
   if (isPasswordReset) return <ResetPasswordPage />

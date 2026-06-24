@@ -4,10 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS } from '../lib/verdict'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, VERDICT_DESC } from '../lib/verdict'
 
-// What each verdict means — paired with the rubric's score range at render
-const VERDICT_DESC = { PASS: 'Met the bar', NEEDS_REVIEW: 'Needs a human look', FAIL: 'Below standard or auto-fail' }
 const PAGE_SIZE     = 10 // ticket rows shown before "Show more"
 
 function useCountUp(target, duration = 650) {
@@ -35,24 +33,53 @@ function useCountUp(target, duration = 650) {
   return display
 }
 
-function StatCard({ label, value, format, sub, color }) {
+// Stat-card icons (stroke, inherit color from the accent chip)
+const svg = (children) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+const STAT_ICONS = {
+  total:  svg(<><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></>),
+  avg:    svg(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>),
+  pass:   svg(<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>),
+  review: svg(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>),
+}
+
+function StatCard({ label, value, format, sub, color, icon, onClick }) {
   const animated = useCountUp(typeof value === 'number' ? value : 0)
   const display  = value == null ? '—' : format ? format(animated) : Math.round(animated)
   const [hovered, setHovered] = useState(false)
+  const accent = color || '#FF9780'
+  const clickable = !!onClick
   return (
     <div className="rounded-2xl p-5"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }) : undefined}
+      title={clickable ? 'Show all scored tickets below' : undefined}
       style={{
         background: 'linear-gradient(180deg, #222 0%, #1e1e1e 100%)',
         border: `1px solid ${hovered ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)'}`,
         boxShadow: `inset 0 1px 0 rgba(255,255,255,${hovered ? '0.10' : '0.07'})`,
         transform: hovered ? 'translateY(-2px)' : 'none',
         transition: 'transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
+        cursor: clickable ? 'pointer' : 'default',
       }}>
-      <p className="g-label mb-2">{label}</p>
+      <div className="flex items-start justify-between mb-2">
+        <p className="g-label" style={{ margin: 0 }}>{label}</p>
+        {icon && (
+          <span className="flex items-center justify-center rounded-lg shrink-0"
+            style={{ width: 28, height: 28, background: `${accent}1f`, color: accent, transition: 'background 150ms' }}>
+            {icon}
+          </span>
+        )}
+      </div>
       <p className="text-3xl font-bold" style={{ color: color || '#fff' }}>{display}</p>
-      {sub && <p className="text-xs mt-1" style={{ color: '#999' }}>{sub}</p>}
+      {sub && (
+        <p className="text-xs mt-1" style={{ color: clickable && hovered ? '#FF9780' : '#999', transition: 'color 150ms' }}>
+          {sub}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
+        </p>
+      )}
     </div>
   )
 }
@@ -124,9 +151,13 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
           const isHovered  = hoveredBar === i && d.count > 0
           const isDimmed   = hasSelection && !isSelected
           const barColor   = d.count === 0   ? '#242426'
-                           : isSelected      ? '#fff'
+                           : isSelected      ? '#ffffff'
                            : isHovered       ? '#ffb39a'
                            : '#FF9780'
+          // Glossy gradient fill + inset top highlight, with a glow on hover/select
+          const barBg     = d.count === 0 ? '#242426' : `linear-gradient(180deg, ${barColor} 0%, ${barColor}cc 100%)`
+          const barGlow   = isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 10px rgba(255,151,128,0.45)' : null
+          const barShadow = d.count > 0 ? `inset 0 1px 0 rgba(255,255,255,0.22)${barGlow ? `, ${barGlow}` : ''}` : 'none'
           return (
             <div key={i}
               className="flex-1 flex flex-col items-center gap-1"
@@ -146,8 +177,8 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
                       transition: 'opacity 150ms',
                     }} />
                 )}
-                <div className="relative w-full rounded-t-sm"
-                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 24 : 0)}px`, background: barColor, transition: 'background 150ms, height 200ms', boxShadow: isSelected ? '0 0 12px rgba(255,255,255,0.25)' : isHovered ? '0 0 8px rgba(255,151,128,0.4)' : 'none' }}>
+                <div className="relative w-full rounded-t-md"
+                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 24 : 0)}px`, background: barBg, transition: 'background 150ms, height 200ms, box-shadow 150ms', boxShadow: barShadow }}>
                   {d.count > 0 && (
                     <span className="absolute top-1 left-0 right-0 text-center text-xs font-semibold tabular-nums"
                       style={{ color: 'rgba(0,0,0,0.6)' }}>
@@ -207,11 +238,18 @@ export default function DashboardPage() {
     }
   }
 
+  // Total Scored card → clear every filter (so the table shows all scored tickets,
+  // matching the count) and scroll down to the list.
+  const showAllTickets = () => {
+    setFilters({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
+    setActiveRange(null); setTicketSearch(''); setSelectedDay(null)
+    setTimeout(() => tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
   const set = (key, val) => setFilters(f => ({ ...f, [key]: val }))
   const focus = e => e.target.style.borderColor = '#FF9780'
   const blur  = e => e.target.style.borderColor = 'rgba(255,255,255,0.07)'
 
-  const avgColor = (v) => v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
   const agentName = (id) => agents.find(a => a.id === id)?.name
 
   const teamAgentMap = useMemo(() => {
@@ -273,10 +311,10 @@ export default function DashboardPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Total Scored',  value: total,                      format: n => Math.round(n),        sub: `${thisWeek} this week` },
-          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: avg ? avgColor(parseFloat(avg)) : null },
-          { label: 'Pass Rate',     value: passRate,                   format: n => `${Math.round(n)}%`,  sub: `${pass} tickets`, color: '#10b981' },
-          { label: 'Need Review',   value: review + fail,              format: n => Math.round(n),        sub: `${review} review · ${fail} fail`, color: review + fail > 0 ? '#f59e0b' : '#555' },
+          { label: 'Total Scored',  value: total,                      format: n => Math.round(n),        sub: `${thisWeek} this week`, icon: STAT_ICONS.total, onClick: showAllTickets },
+          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#FF9780', icon: STAT_ICONS.avg },
+          { label: 'Pass Rate',     value: passRate,                   format: n => `${Math.round(n)}%`,  sub: `${pass} tickets`, color: VERDICT_COLOR.PASS, icon: STAT_ICONS.pass },
+          { label: 'Need Review',   value: review + fail,              format: n => Math.round(n),        sub: `${review} review · ${fail} fail`, color: review + fail > 0 ? VERDICT_COLOR.NEEDS_REVIEW : '#555', icon: STAT_ICONS.review },
         ].map((p, i) => (
           <div key={p.label} className="stagger-item" style={{ '--i': i }}>
             <StatCard {...p} />

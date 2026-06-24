@@ -3,8 +3,9 @@ import ScoreModal from '../components/ScoreModal'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { authFetch, buildFewShotExamples } from '../lib/api'
+import { authFetchJson, buildFewShotExamples } from '../lib/api'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS } from '../lib/verdict'
+import { ScoreInfoPopover } from '../components/ScoreInfo'
 
 const HISTORY_PAGE_SIZE = 10 // history rows shown before "Show more"
 
@@ -19,9 +20,9 @@ let viewsPromise = null
 function loadViews() {
   if (viewsCache) return Promise.resolve(viewsCache)
   if (!viewsPromise) {
-    viewsPromise = authFetch('/api/views').then(r => r.json()).then(d => {
-      if (d.error) throw new Error(d.error)
-      viewsCache = d.views || []
+    viewsPromise = authFetchJson('/api/views').then(({ data }) => {
+      if (data.error) throw new Error(data.error)
+      viewsCache = data.views || []
       return viewsCache
     }).catch(e => { viewsPromise = null; throw e }) // allow retry on failure
   }
@@ -123,41 +124,6 @@ function ModeToggle({ mode, setMode }) {
         </button>
       ))}
     </div>
-  )
-}
-
-// ── Single — history list ─────────────────────────────────────────────────────
-
-function HistoryItem({ item, onClick }) {
-  const color = VERDICT_COLOR[item.effectiveVerdict]
-  return (
-    <button onClick={onClick}
-      className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all text-left"
-      style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}
-      onMouseEnter={e => e.currentTarget.style.background = '#161616'}
-      onMouseLeave={e => e.currentTarget.style.background = '#1e1e20'}>
-      <div className="flex items-center gap-3 min-w-0">
-        <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
-          onClick={e => e.stopPropagation()}
-          className="text-xs font-mono shrink-0 transition-colors" style={{ color: '#FF9780' }}
-          onMouseEnter={e => e.target.style.textDecoration = 'underline'}
-          onMouseLeave={e => e.target.style.textDecoration = 'none'}>
-          #{item.ticketId}
-        </a>
-        <span className="text-sm truncate" style={{ color: '#e8e8e8' }}>
-          {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
-        </span>
-      </div>
-      <div className="flex items-center gap-3 shrink-0 ml-4">
-        <span className="text-xs tabular-nums" style={{ color: '#c8c8c8' }}>{item.effectiveScore?.toFixed(0)}/100</span>
-        <span className="flex items-center gap-1.5">
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, opacity: 0.8 }} />
-          <span className="text-xs font-medium" style={{ color: '#c8c8c8', letterSpacing: '0.04em' }}>
-            {VERDICT_LABEL[item.effectiveVerdict]}
-          </span>
-        </span>
-      </div>
-    </button>
   )
 }
 
@@ -361,9 +327,8 @@ function ViewPicker({ onTickets, disabled }) {
     if (!viewId) return
     setFetching(true); setErr(null)
     try {
-      const res  = await authFetch(`/api/view-tickets?view_id=${viewId}&limit=${Math.min(100, Math.max(1, parseInt(limit) || 30))}`)
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const { ok, data } = await authFetchJson(`/api/view-tickets?view_id=${viewId}&limit=${Math.min(100, Math.max(1, parseInt(limit) || 30))}`)
+      if (!ok) throw new Error(data.error)
       setPreview(data.tickets)
       onTickets(data.tickets.map(t => String(t.id)))
     } catch (e) { setErr(e.message); onTickets([]) }
@@ -501,6 +466,10 @@ export default function ScorePage() {
 
   const setF = (k, v) => setFilters(f => ({ ...f, [k]: v }))
   const hasFilters = filters.agent || filters.verdicts.length || filters.dateFrom || filters.dateTo || filters.ticketSearch
+  const agentName = (id) => agents.find(a => a.id === id)?.name
+
+  // Shared grid template for the history table header + rows (mirrors the dashboard)
+  const historyGrid = '100px 1fr 120px 80px 90px 80px'
 
   const searchTicketId = useMemo(() => {
     const raw = (filters.ticketSearch || '').trim()
@@ -535,13 +504,12 @@ export default function ScorePage() {
     if (!url || loading || urlError) return
     setLoading(true); setError(null)
     try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Something went wrong.'); return }
+      const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
+      if (!ok) { setError(data.error || 'Something went wrong.'); return }
       addScore(data)
       openPanel(data)
       setTicketUrl('')
-    } catch { setError('Could not reach the server.') }
+    } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
 
@@ -552,13 +520,12 @@ export default function ScorePage() {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//, '').trim()
       try {
-        const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
-        const data = await res.json()
-        if (!res.ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
+        const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
+        if (!ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
         addScore(data)
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
         setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
-      } catch { setResults(p => [...p, { ticketId, error: 'Network error' }]) }
+      } catch (e) { setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
     }
     setRunning(false)
   }
@@ -624,18 +591,23 @@ export default function ScorePage() {
           {scoreHistory.length > 0 && (
             <div className="mt-10">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-wider" style={{ color: '#c8c8c8' }}>
-                  History <span style={{ color: '#c8c8c8' }}>· showing {Math.min(historyCount, filteredHistory.length)} of {filteredHistory.length}</span>
-                  {hasFilters && <span style={{ color: '#FF9780' }}> match</span>}
+                <p className="text-xs uppercase tracking-wider flex items-center" style={{ color: '#c8c8c8' }}>
+                  History<ScoreInfoPopover rubric={rubric} />
                 </p>
-                {hasFilters && (
-                  <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
-                    className="text-xs transition-colors" style={{ color: '#777' }}
-                    onMouseEnter={e => e.target.style.color = '#ef4444'}
-                    onMouseLeave={e => e.target.style.color = '#555'}>
-                    Clear filters
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs" style={{ color: '#c8c8c8' }}>
+                    Showing {Math.min(historyCount, filteredHistory.length)} of {filteredHistory.length}
+                    {hasFilters && <span style={{ color: '#FF9780' }}> · filtered</span>}
+                  </span>
+                  {hasFilters && (
+                    <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
+                      className="text-xs transition-colors" style={{ color: '#777' }}
+                      onMouseEnter={e => e.target.style.color = '#ef4444'}
+                      onMouseLeave={e => e.target.style.color = '#555'}>
+                      Clear filters
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
@@ -707,31 +679,91 @@ export default function ScorePage() {
                 </div>
               </div>
 
-              {filteredHistory.length === 0
-                ? <p className="text-xs text-center py-8" style={{ color: '#555' }}>No tickets match your filters.</p>
-                : <div className="flex flex-col gap-2">
-                    {filteredHistory.slice(0, historyCount).map((item, i) => (
-                      <div key={item.id} className="stagger-item" style={{ '--i': i }}>
-                        <HistoryItem item={item} onClick={() => openPanel({
-                          ...item.fullScore,
-                          scoreId: item.id,
-                          reviewerNote: item.notes,
-                          acknowledged: item.acknowledged,
-                          acknowledgedAt: item.acknowledgedAt,
-                        })} />
+              {filteredHistory.length === 0 ? (
+                <p className="text-xs text-center py-8" style={{ color: '#555' }}>No tickets match your filters.</p>
+              ) : (
+                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07)' }}>
+                  {/* Column headers — classify each section, same as the dashboard table */}
+                  <div className="grid px-4 py-3" style={{
+                    gridTemplateColumns: historyGrid,
+                    background: 'rgba(255,255,255,0.03)',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: '#c8c8c8',
+                  }}>
+                    <span>Ticket</span><span>Subject</span><span className="text-center">Agents</span>
+                    <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
+                  </div>
+
+                  {filteredHistory.slice(0, historyCount).map(item => (
+                    <div key={item.id} className="grid items-center px-4 py-3 transition-colors"
+                      style={{ gridTemplateColumns: historyGrid, borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#1e1e20'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+
+                      <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
+                        className="font-mono text-xs" style={{ color: '#FF9780' }}
+                        onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={e => e.target.style.textDecoration = 'none'}>
+                        #{item.ticketId}
+                      </a>
+
+                      <button onClick={() => openPanel({
+                        ...item.fullScore,
+                        scoreId: item.id,
+                        reviewerNote: item.notes,
+                        acknowledged: item.acknowledged,
+                        acknowledgedAt: item.acknowledgedAt,
+                      })}
+                        className="text-sm text-left truncate pr-3 transition-colors"
+                        style={{ color: '#e8e8e8' }}
+                        onMouseEnter={e => e.target.style.color = '#fff'}
+                        onMouseLeave={e => e.target.style.color = '#e8e8e8'}>
+                        {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
+                      </button>
+
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {item.agentIds?.length > 0
+                          ? item.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
+                            <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[110px]"
+                              style={{ background: '#1a1a1a', color: '#c8c8c8' }}>{name}</span>
+                          ))
+                          : <span style={{ color: '#888' }}>—</span>}
                       </div>
-                    ))}
-                    {historyCount < filteredHistory.length && (
+
+                      <span className="text-sm tabular-nums text-right" style={{ color: '#e8e8e8' }}>
+                        {item.effectiveScore?.toFixed(0)}/100
+                        {item.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
+                      </span>
+
+                      <div className="flex justify-center">
+                        <span className="flex items-center gap-1.5">
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[item.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
+                          <span className="text-xs font-medium" style={{ color: '#c8c8c8', letterSpacing: '0.04em' }}>
+                            {VERDICT_LABEL[item.effectiveVerdict] || item.effectiveVerdict}
+                          </span>
+                        </span>
+                      </div>
+
+                      <span className="text-xs text-right" style={{ color: '#c8c8c8' }}>
+                        {new Date(item.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+
+                  {historyCount < filteredHistory.length && (
+                    <div className="flex items-center justify-center px-4 py-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
                       <button onClick={() => setHistoryCount(c => c + HISTORY_PAGE_SIZE)}
-                        className="text-xs mx-auto mt-2 px-4 py-1.5 rounded-lg transition-colors"
+                        className="text-xs px-4 py-1.5 rounded-lg transition-colors"
                         style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.10)' }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)' }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
                         Show more · {Math.min(HISTORY_PAGE_SIZE, filteredHistory.length - historyCount)} of {filteredHistory.length - historyCount} remaining
                       </button>
-                    )}
-                  </div>
-              }
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

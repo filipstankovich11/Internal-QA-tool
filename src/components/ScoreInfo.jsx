@@ -35,9 +35,18 @@ export function ScoreInfoPopover({ rubric }) {
   return (
     <span ref={ref} className="relative inline-block align-middle ml-1">
       <button onClick={() => setOpen(o => !o)} aria-label="How the QA score works"
-        className="inline-flex items-center justify-center rounded-full transition-colors"
-        style={{ width: 15, height: 15, border: `1px solid ${open ? '#FF9780' : 'rgba(255,255,255,0.25)'}`, color: open ? '#FF9780' : '#999', fontSize: 10, lineHeight: 1, fontStyle: 'italic', fontWeight: 700 }}>
-        i
+        className="inline-flex items-center justify-center transition-colors"
+        style={{
+          width: 18, height: 18, borderRadius: 5,
+          border: `1px solid ${open ? '#FF9780' : 'rgba(255,255,255,0.18)'}`,
+          background: open ? 'rgba(255,151,128,0.10)' : 'transparent',
+          color: open ? '#FF9780' : '#999',
+        }}
+        onMouseEnter={e => { if (!open) { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' } }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.color = '#999'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)' } }}>
+        <svg height="13" width="13" viewBox="0 -960 960 960" fill="currentColor">
+          <path d="M423.5-703.5Q400-727 400-760t23.5-56.5Q447-840 480-840t56.5 23.5Q560-793 560-760t-23.5 56.5Q513-680 480-680t-56.5-23.5ZM420-120v-480h120v480H420Z"/>
+        </svg>
       </button>
       {open && (
         <div className="absolute z-30 mt-2 left-0 rounded-xl p-4 text-left"

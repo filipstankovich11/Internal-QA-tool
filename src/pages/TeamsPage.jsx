@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import { TrendChart } from '../components/TrendChart'
 import ScoreModal from '../components/ScoreModal'
-import { VERDICT_COLOR } from '../lib/verdict'
+import { VERDICT_COLOR, gradeColor } from '../lib/verdict'
 
 const SORT_OPTIONS   = [
   { id: 'avg',    label: 'Avg score' },
@@ -17,11 +17,6 @@ const PERIOD_OPTIONS = [
   { id: 'month', label: 'This month' },
   { id: 'all',   label: 'All time'   },
 ]
-
-function scoreColor(v) {
-  if (v === null || v === undefined) return '#555'
-  return v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
-}
 
 function windowMs(period) {
   if (period === 'week')  return 7  * 86400000
@@ -95,7 +90,7 @@ function SummaryTile({ label, value, color }) {
 
 // ── Comparison bar chart ───────────────────────────────────────────────────────
 
-function ComparisonView({ rows }) {
+function ComparisonView({ rows, thresholds }) {
   return (
     <div className="rounded-2xl p-5" style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)' }}>
       <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: '#c8c8c8' }}>Team comparison</p>
@@ -110,14 +105,14 @@ function ComparisonView({ rows }) {
               <div className="flex items-center gap-3 text-xs">
                 <span style={{ color: '#888' }}>{agg.n} tickets</span>
                 {agg.passRate !== null && <span style={{ color: '#10b981' }}>{agg.passRate}% pass</span>}
-                <span className="font-bold" style={{ color: scoreColor(agg.avg) }}>
+                <span className="font-bold" style={{ color: gradeColor(agg.avg, thresholds) }}>
                   {agg.avg !== null ? `${agg.avg}/100` : '—'}
                 </span>
               </div>
             </div>
             <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: '#1a1a1a' }}>
               <div className="h-full rounded-full transition-all duration-500"
-                style={{ width: agg.avg !== null ? `${agg.avg}%` : '0%', background: scoreColor(agg.avg), opacity: 0.85 }} />
+                style={{ width: agg.avg !== null ? `${agg.avg}%` : '0%', background: gradeColor(agg.avg, thresholds), opacity: 0.85 }} />
             </div>
           </div>
         ))}
@@ -197,7 +192,7 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
 
 // ── Team card ──────────────────────────────────────────────────────────────────
 
-function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, onEdit, onDelete, canEdit, onAssign, onUnassign, onOpen }) {
+function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, thresholds, onEdit, onDelete, canEdit, onAssign, onUnassign, onOpen }) {
   const [editing,       setEditing]       = useState(false)
   const [name,          setName]          = useState(team.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -229,7 +224,6 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, o
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3 min-w-0">
-          <div style={{ width: 4, height: 28, background: '#FF9780', borderRadius: 2, flexShrink: 0 }} />
           <div className="min-w-0">
             {editing ? (
               <input autoFocus value={name}
@@ -380,7 +374,7 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, o
                   {m.n > 0 ? (
                     <>
                       <span style={{ color: '#888' }}>{m.n} tickets</span>
-                      <span style={{ color: scoreColor(m.avg), fontWeight: 500 }}>{m.avg}/100</span>
+                      <span style={{ color: gradeColor(m.avg, thresholds), fontWeight: 500 }}>{m.avg}/100</span>
                       {m.passRate !== null && <span style={{ color: '#10b981' }}>{m.passRate}% pass</span>}
                     </>
                   ) : (
@@ -409,14 +403,14 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, o
 
 // ── Team detail side-panel ───────────────────────────────────────────────────
 
-function TeamDetailPanel({ stat, onClose, onViewScore }) {
+function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
   const { team, agg, members, memberStats, dims, allScores } = stat
   const [expanded, setExpanded] = useState(null)
   const scoredDims = dims.filter(d => d.avg != null)
   const weakestId = scoredDims.length > 1 ? scoredDims.reduce((a, b) => b.avg < a.avg ? b : a).id : null
 
   const metrics = [
-    { label: 'Avg',       value: agg.avg !== null ? agg.avg : '—',          color: scoreColor(agg.avg) },
+    { label: 'Avg',       value: agg.avg !== null ? agg.avg : '—',          color: gradeColor(agg.avg, thresholds) },
     { label: 'Pass rate', value: agg.passRate !== null ? `${agg.passRate}%` : '—', color: '#10b981' },
     { label: 'Tickets',   value: agg.n,     color: '#fff' },
     { label: 'Pending',   value: agg.unack, color: agg.unack > 0 ? '#FF9780' : '#fff' },
@@ -550,7 +544,7 @@ function TeamDetailPanel({ stat, onClose, onViewScore }) {
                           {m.n > 0 ? (
                             <>
                               <span style={{ color: '#888' }}>{m.n} tickets</span>
-                              <span className="tabular-nums font-semibold" style={{ color: scoreColor(m.avg) }}>{m.avg}/100</span>
+                              <span className="tabular-nums font-semibold" style={{ color: gradeColor(m.avg, thresholds) }}>{m.avg}/100</span>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                                 style={{ color: '#888', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
                                 <polyline points="6 9 12 15 18 9" />
@@ -571,7 +565,7 @@ function TeamDetailPanel({ stat, onClose, onViewScore }) {
                               <span className="font-mono shrink-0" style={{ color: '#FF9780' }}>#{s.ticketId}</span>
                               <span className="flex-1 truncate" style={{ color: '#aaa' }}>{s.fullScore?.ticket_subject || '—'}</span>
                               <span className="tabular-nums shrink-0" style={{ color: '#c8c8c8' }}>{s.effectiveScore?.toFixed(0)}/100</span>
-                              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: scoreColor(s.effectiveScore) }} />
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: gradeColor(s.effectiveScore, thresholds) }} />
                             </button>
                           ))}
                         </div>
@@ -715,14 +709,11 @@ export default function TeamsPage() {
       <div className="flex items-center justify-between mb-4 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Teams</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#c8c8c8' }}>Group agents and track collective performance</p>
-          <p className="text-xs mt-1 max-w-xl" style={{ color: '#888' }}>
-            Scores are a weighted <span style={{ color: '#aaa' }}>QA score (0–100)</span> across the rubric —
-            higher is better. <span style={{ color: '#10b981' }}>≥{vt.pass} pass</span> · <span style={{ color: '#f59e0b' }}>{vt.needs_review}–{vt.pass - 1} review</span> · <span style={{ color: '#ef4444' }}>&lt;{vt.needs_review} fail</span>.
-            <ScoreInfoPopover rubric={rubric} />
+          <p className="text-sm mt-0.5 flex items-center" style={{ color: '#c8c8c8' }}>
+            Group agents and track collective performance<ScoreInfoPopover rubric={rubric} />
           </p>
         </div>
-        {isAdmin && <button onClick={() => setAdding(true)} className="g-btn-primary text-sm px-4 py-2 rounded-xl shrink-0">+ Add Team</button>}
+        {isAdmin && <button onClick={() => setAdding(true)} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg shrink-0 whitespace-nowrap">+ Add Team</button>}
       </div>
 
       {/* Roster summary */}
@@ -730,7 +721,7 @@ export default function TeamsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <SummaryTile label="Teams" value={summary.teams} />
           <SummaryTile label="Agents" value={summary.agents} />
-          <SummaryTile label="Overall avg" value={summary.overall != null ? summary.overall : '—'} color={scoreColor(summary.overall)} />
+          <SummaryTile label="Overall avg" value={summary.overall != null ? summary.overall : '—'} color={gradeColor(summary.overall, vt)} />
           <SummaryTile label="Unassigned" value={summary.unassigned} color={summary.unassigned > 0 ? '#f59e0b' : '#10b981'} />
         </div>
       )}
@@ -835,7 +826,7 @@ export default function TeamsPage() {
           <p className="text-sm">No teams yet. Add one to start grouping agents.</p>
         </div>
       ) : view === 'compare' ? (
-        <ComparisonView rows={sortedTeams} />
+        <ComparisonView rows={sortedTeams} thresholds={vt} />
       ) : (
         <div className="flex flex-col gap-3">
           {sortedTeams.map(({ team, agg, prevAvg, members, memberStats, dims }) => (
@@ -846,6 +837,7 @@ export default function TeamsPage() {
               memberStats={memberStats}
               dims={dims}
               allAgents={agents}
+              thresholds={vt}
               onEdit={updateTeam}
               onDelete={handleDelete}
               canEdit={isAdmin}
@@ -857,7 +849,7 @@ export default function TeamsPage() {
         </div>
       )}
     </div>
-    {detailStat && <TeamDetailPanel stat={detailStat} onClose={closeDetail} onViewScore={setModalScore} />}
+    {detailStat && <TeamDetailPanel stat={detailStat} thresholds={vt} onClose={closeDetail} onViewScore={setModalScore} />}
     {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )

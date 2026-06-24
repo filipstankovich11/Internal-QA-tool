@@ -23,52 +23,82 @@ function timeSince(ts) {
   return `${Math.max(1, Math.floor(ms / 60000))}m`
 }
 
+// Shared column template so the header and every row line up
+const QUEUE_COLS = '88px minmax(0,1fr) 120px 88px 64px 44px 152px'
+const colLabel   = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c8c8c8' }
+
+function QueueHeader() {
+  return (
+    <div className="grid items-center gap-3 px-3 mb-1.5" style={{ gridTemplateColumns: QUEUE_COLS }}>
+      <span style={colLabel} title="Gorgias ticket ID">Ticket</span>
+      <span style={colLabel} title="Ticket subject">Subject</span>
+      <span style={colLabel} title="Agents on the ticket">Agents</span>
+      <span style={colLabel} title="Verdict — fail / review / disputed">Status</span>
+      <span style={colLabel} className="text-right" title="Weighted QA score (0–100)">Grade</span>
+      <span style={colLabel} className="text-right" title="Time since the ticket was scored">Age</span>
+      <span style={colLabel} className="text-right">Actions</span>
+    </div>
+  )
+}
+
 function QueueRow({ s, onOpen, onRelease, onComplete, agentNames, muted }) {
   const st = statusOf(s)
   const claimAge = Date.now() - (s.claimedAt || Date.now())
   const expiresIn = Math.max(0, Math.ceil((CLAIM_TTL_MS - claimAge) / 86400000))
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
-      style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)', opacity: muted ? 0.6 : 1 }}
+    <div className="grid items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
+      style={{ gridTemplateColumns: QUEUE_COLS, background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)', opacity: muted ? 0.6 : 1 }}
       onMouseEnter={e => e.currentTarget.style.background = '#161616'}
       onMouseLeave={e => e.currentTarget.style.background = '#1e1e20'}>
+      {/* Ticket */}
       <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
-        className="text-xs font-mono shrink-0 transition-colors" style={{ color: '#FF9780' }}
+        className="text-xs font-mono truncate transition-colors" style={{ color: '#FF9780' }}
         onMouseEnter={e => e.target.style.textDecoration = 'underline'}
         onMouseLeave={e => e.target.style.textDecoration = 'none'}>
         #{s.ticketId}
       </a>
-      <button onClick={() => onOpen(s)} className="flex-1 text-left truncate text-sm transition-colors min-w-0"
+      {/* Subject */}
+      <button onClick={() => onOpen(s)} className="text-left truncate text-sm transition-colors min-w-0"
         style={{ color: '#e8e8e8' }}
+        title={s.fullScore?.ticket_subject || undefined}
         onMouseEnter={e => e.currentTarget.style.color = '#fff'}
         onMouseLeave={e => e.currentTarget.style.color = '#e8e8e8'}>
         {s.fullScore?.ticket_subject || '—'}
       </button>
-      {agentNames && <span className="text-xs shrink-0 hidden sm:block truncate max-w-[120px]" style={{ color: '#c8c8c8' }}>{agentNames}</span>}
-      {!muted && (
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0" style={{ color: st.color, background: st.bg }}>{st.label}</span>
-      )}
-      <span className="text-sm tabular-nums shrink-0" style={{ color: '#c8c8c8' }}>{s.effectiveScore?.toFixed(0)}/100</span>
-      <span className="text-xs tabular-nums shrink-0 hidden sm:block" style={{ color: '#888' }}
+      {/* Agents */}
+      <span className="text-xs truncate" style={{ color: agentNames ? '#c8c8c8' : '#666' }} title={agentNames || undefined}>
+        {agentNames || '—'}
+      </span>
+      {/* Status */}
+      {!muted
+        ? <span className="text-xs font-medium px-2 py-0.5 rounded-full justify-self-start" style={{ color: st.color, background: st.bg }}>{st.label}</span>
+        : <span className="text-xs" style={{ color: '#666' }}>—</span>}
+      {/* Grade */}
+      <span className="text-sm tabular-nums text-right" style={{ color: '#c8c8c8' }}>{s.effectiveScore?.toFixed(0)}/100</span>
+      {/* Age */}
+      <span className="text-xs tabular-nums text-right" style={{ color: '#888' }}
         title={muted ? undefined : `Auto-releases in ~${expiresIn} day${expiresIn !== 1 ? 's' : ''} if untouched`}>
         {timeSince(s.scoredAt)}
       </span>
-      {onComplete && (
-        <button onClick={() => onComplete(s.id)}
-          className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.08)' }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.16)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.08)'}
-          title="Mark reviewed — removes it from the queue and releases the claim">
-          ✓ Reviewed
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-2">
+        {onComplete && (
+          <button onClick={() => onComplete(s.id)}
+            className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#10b981', border: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.08)' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.16)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.08)'}
+            title="Mark reviewed — removes it from the queue and releases the claim">
+            ✓ Reviewed
+          </button>
+        )}
+        <button onClick={() => onRelease(s.id)}
+          className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+          title="Release this claim back to the Review Queue">
+          Release
         </button>
-      )}
-      <button onClick={() => onRelease(s.id)}
-        className="text-xs px-2 py-1 rounded-lg shrink-0 transition-colors" style={{ color: '#888', border: '1px solid rgba(255,255,255,0.07)' }}
-        onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
-        onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
-        title="Release this claim back to the Review Queue">
-        Release
-      </button>
+      </div>
     </div>
   )
 }
@@ -137,6 +167,7 @@ export default function MyQueuePage() {
               <p className="text-sm py-4 text-center" style={{ color: '#888' }}>All caught up — nothing left to review in your claims.</p>
             ) : (
               <div className="flex flex-col gap-2">
+                <QueueHeader />
                 {open.map(s => (
                   <QueueRow key={s.id} s={s} onOpen={openScore} onRelease={release} onComplete={complete} agentNames={agentNamesFor(s)} />
                 ))}
@@ -151,6 +182,7 @@ export default function MyQueuePage() {
                 Resolved <span style={{ color: '#666' }}>· release to clear from your queue</span>
               </p>
               <div className="flex flex-col gap-2">
+                <QueueHeader />
                 {done.map(s => (
                   <QueueRow key={s.id} s={s} onOpen={openScore} onRelease={release} agentNames={agentNamesFor(s)} muted />
                 ))}

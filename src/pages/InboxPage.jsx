@@ -5,9 +5,10 @@ import { useToast } from '../components/Toast'
 import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL } from '../lib/verdict'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
 
-const scoreColor     = v => v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
+const CheckIcon = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+const FlagIcon  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
 
 // ── Dimension mini-bars ───────────────────────────────────────────────────────
 function DimMini({ scores }) {
@@ -65,7 +66,7 @@ function DisputeModal({ s, onDispute, onClose }) {
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="w-full max-w-lg rounded-2xl overflow-hidden"
-        style={{ background: '#1e1e20', border: '1px solid rgba(239,68,68,0.2)', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+        style={{ background: '#1e1e20', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
 
         {/* Header */}
         <div className="px-6 py-5 flex items-start justify-between"
@@ -90,7 +91,7 @@ function DisputeModal({ s, onDispute, onClose }) {
             style={{ color: vc, background: vb, borderColor: vborder }}>
             {VERDICT_LABEL[s.effectiveVerdict]}
           </span>
-          <span className="text-xl font-bold tabular-nums shrink-0" style={{ color: scoreColor(s.effectiveScore) }}>
+          <span className="text-xl font-bold tabular-nums shrink-0" style={{ color: gradeColor(s.effectiveScore) }}>
             {s.effectiveScore?.toFixed(0)}<span className="text-xs font-normal" style={{ color: '#555' }}>/100</span>
           </span>
         </div>
@@ -103,11 +104,11 @@ function DisputeModal({ s, onDispute, onClose }) {
             <div className="flex flex-wrap gap-2">
               {DISPUTE_CATEGORIES.map(c => (
                 <button key={c} onClick={() => setCategory(c)}
-                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
                   style={{
-                    background: category === c ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.07)',
-                    color:      category === c ? '#ef4444' : '#666',
-                    border:     category === c ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.10)',
+                    background: category === c ? 'rgba(255,151,128,0.12)' : 'transparent',
+                    color:      category === c ? '#FF9780' : '#888',
+                    border:     category === c ? '1px solid rgba(255,151,128,0.3)' : '1px solid rgba(255,255,255,0.10)',
                   }}>
                   {c}
                 </button>
@@ -124,8 +125,10 @@ function DisputeModal({ s, onDispute, onClose }) {
               onChange={e => setNote(e.target.value)}
               placeholder="Explain what you believe is incorrect and what the correct assessment should be…"
               rows={5}
-              className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none leading-relaxed"
-              style={{ background: '#161616', border: '1px solid rgba(239,68,68,0.25)', color: '#ccc' }}
+              className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none leading-relaxed transition-colors"
+              style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.10)', color: '#ccc' }}
+              onFocus={e => e.target.style.borderColor = 'rgba(255,151,128,0.4)'}
+              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.10)'}
               onKeyDown={e => { if (e.key === 'Escape') onClose() }}
             />
             <p className="text-xs" style={{ color: '#555' }}>
@@ -145,11 +148,9 @@ function DisputeModal({ s, onDispute, onClose }) {
           <button
             onClick={handleSubmit}
             disabled={!note.trim() || saving}
-            className="text-sm px-5 py-2 rounded-xl font-medium transition-all"
-            style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', opacity: !note.trim() || saving ? 0.5 : 1 }}
-            onMouseEnter={e => { if (note.trim() && !saving) e.currentTarget.style.background = 'rgba(239,68,68,0.2)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)' }}>
-            {saving ? 'Submitting…' : '⚑ Submit dispute'}
+            className="g-btn-primary inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium"
+            style={{ opacity: !note.trim() || saving ? 0.5 : 1 }}>
+            <FlagIcon /> {saving ? 'Submitting…' : 'Submit dispute'}
           </button>
         </div>
       </div>
@@ -173,16 +174,15 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
   return (
     <>
-    <div className="rounded-2xl overflow-hidden transition-all"
+    <div className="rounded-2xl overflow-hidden transition-colors"
       style={{
-        background: isNew ? 'rgba(255,151,128,0.03)' : '#171719',
-        border: isNew ? '1px solid rgba(255,151,128,0.15)' : '1px solid rgba(255,255,255,0.10)',
-        boxShadow: `inset 3px 0 0 ${vc}`,
+        background: '#1a1a1c',
+        border: `1px solid ${isNew ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)'}`,
       }}>
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: `1px solid ${isNew ? 'rgba(255,151,128,0.1)' : 'rgba(255,255,255,0.08)'}` }}>
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex items-center gap-3">
           {isNew && <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#FF9780' }} />}
           <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
@@ -218,7 +218,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
             {VERDICT_LABEL[s.effectiveVerdict]}
           </span>
           <ScoreBreakdownHover scores={s.fullScore?.scores} align="left">
-            <span className="text-2xl font-bold tabular-nums cursor-default" style={{ color: scoreColor(s.effectiveScore) }}>
+            <span className="text-2xl font-bold tabular-nums cursor-default" style={{ color: gradeColor(s.effectiveScore) }}>
               {s.effectiveScore?.toFixed(0)}
               <span className="text-sm font-normal ml-0.5" style={{ color: '#666' }}>/100</span>
             </span>
@@ -237,33 +237,33 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
       {/* Actions */}
       <div className="px-5 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {isNew ? (
             <button onClick={handleAck} disabled={acking}
-              className="text-sm px-4 py-1.5 rounded-xl font-medium transition-all"
-              style={{ background: 'rgba(255,151,128,0.1)', color: '#FF9780', border: '1px solid rgba(255,151,128,0.2)', opacity: acking ? 0.5 : 1 }}
+              className="inline-flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg font-medium transition-colors"
+              style={{ background: 'rgba(255,151,128,0.10)', color: '#FF9780', border: '1px solid rgba(255,151,128,0.22)', opacity: acking ? 0.5 : 1 }}
               onMouseEnter={e => { if (!acking) e.currentTarget.style.background = 'rgba(255,151,128,0.18)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,151,128,0.1)' }}>
-              {acking ? 'Saving…' : '✓ Mark as seen'}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,151,128,0.10)' }}>
+              <CheckIcon /> {acking ? 'Saving…' : 'Mark as seen'}
             </button>
           ) : (
-            <span className="text-xs" style={{ color: '#555' }}>
-              ✓ Seen {s.acknowledgedAt ? new Date(s.acknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+            <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: '#666' }}>
+              <CheckIcon /> Seen {s.acknowledgedAt ? new Date(s.acknowledgedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
             </span>
           )}
           {s.disputed ? (
-            <span className="text-xs px-3 py-1.5 rounded-xl font-medium"
-              style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
-              ⚑ Disputed
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium"
+              style={{ color: '#f59e0b', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.22)' }}>
+              <FlagIcon /> Disputed
             </span>
           ) : (
             <button
               onClick={() => setDisputeOpen(true)}
-              className="text-sm px-4 py-1.5 rounded-xl font-medium transition-all"
-              style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.14)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}>
-              ⚑ Dispute
+              className="inline-flex items-center gap-1.5 text-sm px-3.5 py-1.5 rounded-lg font-medium transition-colors"
+              style={{ color: '#888', border: '1px solid rgba(255,255,255,0.10)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}>
+              <FlagIcon /> Dispute
             </button>
           )}
         </div>
