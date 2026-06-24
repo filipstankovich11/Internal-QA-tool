@@ -242,6 +242,24 @@ export default function ReviewQueuePage() {
     clearSelect()
   }
 
+  // Export the selected rows as CSV
+  const bulkExport = () => {
+    const rows = sorted.filter(s => selected.has(s.id))
+    if (!rows.length) return
+    const header = ['Ticket', 'Subject', 'Verdict', 'Score', 'Waiting (days)']
+    const body = rows.map(s => [
+      s.ticketId,
+      `"${(s.fullScore?.ticket_subject || '').replace(/"/g, '""')}"`,
+      s.effectiveVerdict,
+      s.effectiveScore?.toFixed(0) ?? '',
+      Math.floor((Date.now() - s.scoredAt) / 86400000),
+    ].join(','))
+    const blob = new Blob([[header.join(','), ...body].join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `review-queue-${rows.length}.csv`; a.click(); URL.revokeObjectURL(url)
+    toast.success(`Exported ${rows.length} ticket${rows.length > 1 ? 's' : ''}`)
+  }
+
   // Claim / unclaim (persisted via AppContext)
   const claimTicket   = async (id) => {
     const err = await claimScore(id)
@@ -369,6 +387,14 @@ export default function ReviewQueuePage() {
                       className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
                       style={{ background: '#E7F3EC', color: '#2F8F5B', border: '1px solid #CDE6D8', opacity: bulkWorking ? 0.6 : 1 }}>
                       {bulkWorking ? 'Working…' : '✓ Acknowledge all'}
+                    </button>
+                    <button onClick={bulkExport}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5"
+                      style={{ background: '#FFFFFF', color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#1A1E23'; e.currentTarget.style.borderColor = '#E1DCD7' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Export
                     </button>
                     <button onClick={clearSelect}
                       className="text-xs transition-colors" style={{ color: 'rgba(26,30,35,.5)' }}

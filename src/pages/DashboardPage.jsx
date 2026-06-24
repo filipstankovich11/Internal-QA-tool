@@ -44,7 +44,7 @@ const STAT_ICONS = {
   review: svg(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>),
 }
 
-function StatCard({ label, value, format, sub, color, icon, onClick }) {
+function StatCard({ label, value, format, sub, color, icon, onClick, spark }) {
   const animated = useCountUp(typeof value === 'number' ? value : 0)
   const display  = value == null ? '—' : format ? format(animated) : Math.round(animated)
   const [hovered, setHovered] = useState(false)
@@ -82,6 +82,12 @@ function StatCard({ label, value, format, sub, color, icon, onClick }) {
         <p className="text-xs mt-1" style={{ color: clickable && hovered ? '#B84A2E' : 'rgba(26,30,35,.5)', transition: 'color 150ms' }}>
           {sub}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
         </p>
+      )}
+      {spark && spark.length > 1 && (
+        <svg width="100%" height="20" viewBox="0 0 100 20" preserveAspectRatio="none" className="block mt-2">
+          <polyline fill="none" stroke={accent} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"
+            points={spark.map((v, i) => `${(i / (spark.length - 1)) * 100},${19 - (Math.max(0, Math.min(100, v)) / 100) * 18}`).join(' ')} />
+        </svg>
       )}
     </div>
   )
@@ -200,6 +206,55 @@ const selectStyle = {
   outline: 'none',
 }
 
+// Full-width average-score area chart with a pass-threshold reference line
+function AvgTrendChart({ scores, passLine = 80 }) {
+  const pts = useMemo(() => buildTrendData(scores, 30), [scores])
+  const W = 900, H = 170, padX = 14, padTop = 16, padBot = 26
+  const card = { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }
+
+  if (pts.length < 2) return (
+    <div className="p-5 mb-6" style={card}>
+      <p className="g-label" style={{ margin: 0 }}>Average score — last 30 days</p>
+      <p className="text-xs text-center py-10" style={{ color: 'rgba(26,30,35,.45)' }}>Not enough data yet — need scores across 2+ days.</p>
+    </div>
+  )
+
+  const maxDay = Math.max(...pts.map(p => p.day), 29) || 1
+  const x = (d) => padX + (d / maxDay) * (W - padX * 2)
+  const y = (v) => padTop + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - padTop - padBot)
+  const coords = pts.map(p => ({ x: x(p.day), y: y(p.avg) }))
+  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+  const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${H - padBot} L${coords[0].x.toFixed(1)},${H - padBot} Z`
+  const yPass = y(passLine)
+
+  return (
+    <div className="p-5 mb-6" style={card}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="g-label" style={{ margin: 0 }}>Average score — last 30 days</p>
+        <span className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+          <span style={{ width: 14, borderTop: '1px dashed #2F8F5B' }} /> Pass threshold {passLine}
+        </span>
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="avgtrend-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FF9780" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#FF9780" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1={padX} y1={yPass} x2={W - padX} y2={yPass} stroke="#2F8F5B" strokeWidth="1" strokeDasharray="5 5" opacity="0.55" />
+        <path d={area} fill="url(#avgtrend-fill)" />
+        <path d={line} fill="none" stroke="#FF9780" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {coords.map((c, i) => <circle key={i} cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r="2.5" fill="#FF9780" />)}
+      </svg>
+      <div className="flex justify-between mt-1">
+        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>30 days ago</span>
+        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>Today</span>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const { scoreHistory, agents, teams, rubric } = useApp()
   const { role, profile } = useAuth()
@@ -287,6 +342,8 @@ export default function DashboardPage() {
   const passRate = total ? Math.round((pass / total) * 100) : null
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0)
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
+  const vt = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
+  const avgSpark = useMemo(() => buildTrendData(filteredScores, 14).map(p => p.avg), [filteredScores])
 
   return (
     <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
@@ -309,7 +366,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Total Scored',  value: total,                      format: n => Math.round(n),        sub: `${thisWeek} this week`, color: '#1A1E23', icon: STAT_ICONS.total, onClick: showAllTickets },
-          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#C8841E', icon: STAT_ICONS.avg },
+          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#C8841E', icon: STAT_ICONS.avg, spark: avgSpark },
           { label: 'Pass Rate',     value: passRate,                   format: n => `${Math.round(n)}%`,  sub: `${pass} tickets`, color: '#3B7DD8', icon: STAT_ICONS.pass },
           { label: 'Need Review',   value: review + fail,              format: n => Math.round(n),        sub: `${review} review · ${fail} fail`, color: review + fail > 0 ? '#C8841E' : 'rgba(26,30,35,.45)', icon: STAT_ICONS.review },
         ].map((p, i) => (
@@ -391,6 +448,9 @@ export default function DashboardPage() {
         </div>
         <ScoreTrend scores={filteredScores} onDayClick={handleDayClick} selectedDay={selectedDay} />
       </div>
+
+      {/* Full-width average-score trend */}
+      <AvgTrendChart scores={filteredScores} passLine={vt.pass} />
 
       {/* ── Ticket table with filters ── */}
       <div ref={tableRef}>

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import NavigationContext from './context/NavigationContext'
 import Sidebar           from './components/Sidebar'
+import CommandPalette    from './components/CommandPalette'
 import LoginPage         from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 
@@ -30,6 +31,7 @@ class ErrorBoundary extends Component {
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'))
 const ScorePage        = lazy(() => import('./pages/ScorePage'))
+const ScoreFormPage    = lazy(() => import('./pages/ScoreFormPage'))
 const AgentsPage       = lazy(() => import('./pages/AgentsPage'))
 const AgentProfilePage = lazy(() => import('./pages/AgentProfilePage'))
 const InboxPage        = lazy(() => import('./pages/InboxPage'))
@@ -52,6 +54,7 @@ const Spinner = () => (
 function Router({ page, role }) {
   switch (page) {
     case 'dashboard': return <DashboardPage />
+    case 'grade':     return <ScoreFormPage />
     case 'review':    return <ReviewQueuePage />
     case 'myqueue':   return <MyQueuePage />
     case 'agents':    return role === 'agent' ? <AgentProfilePage /> : <AgentsPage />
@@ -78,7 +81,7 @@ function AppShell() {
     // pre-profile state (or a token refresh) would bounce a permitted user off their page.
     if (loading || !role) return
     const blocked =
-      (['score', 'review', 'teams', 'calibration'].includes(page) && !canScore) ||
+      (['score', 'grade', 'review', 'teams', 'calibration'].includes(page) && !canScore) ||
       (['myqueue', 'rubric'].includes(page) && !isAdmin) ||
       (['inbox', 'coaching'].includes(page) && !isAgent)
     if (blocked) setPage('dashboard')
@@ -93,6 +96,7 @@ function AppShell() {
     <AppProvider>
       <ToastProvider>
         <div className="flex min-h-screen">
+          <CommandPalette />
           <Sidebar page={page} setPage={setPage} />
           <div className="flex-1 min-w-0">
             <ErrorBoundary>

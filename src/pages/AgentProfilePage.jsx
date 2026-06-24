@@ -6,61 +6,8 @@ import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, gradeColor } from '../lib/verdict'
+import { TrendChart } from '../components/TrendChart'
 const dimColor    = v => v >= 4  ? '#2F8F5B' : v >= 3  ? '#C8841E' : '#D14B3D'
-
-// ── trend chart ───────────────────────────────────────────────────────────────
-function buildTrendData(scores, days = 30) {
-  const cutoff = Date.now() - days * 86400000
-  const recent = scores.filter(s => s.scoredAt >= cutoff)
-  if (!recent.length) return []
-  const buckets = {}
-  recent.forEach(s => {
-    const idx = Math.floor((s.scoredAt - cutoff) / 86400000)
-    if (!buckets[idx]) buckets[idx] = []
-    buckets[idx].push(s.effectiveScore)
-  })
-  return Object.entries(buckets)
-    .map(([day, vals]) => ({ day: parseInt(day), avg: vals.reduce((a, b) => a + b, 0) / vals.length }))
-    .sort((a, b) => a.day - b.day)
-}
-
-function TrendChart({ scores }) {
-  const pts = buildTrendData(scores, 30)
-  if (pts.length < 2) return (
-    <p className="text-xs text-center py-6" style={{ color: 'rgba(26,30,35,.45)' }}>
-      Not enough data yet — need scores across 2+ days
-    </p>
-  )
-
-  const W = 400, H = 80, padX = 8, padY = 6
-  const vals = pts.map(p => p.avg)
-  const minV = Math.max(0,   Math.min(...vals) - 5)
-  const maxV = Math.min(100, Math.max(...vals) + 5)
-  const range = maxV - minV || 10
-  const x = day => padX + (day / 29) * (W - padX * 2)
-  const y = v   => H - padY - ((v - minV) / range) * (H - padY * 2)
-
-  const first = pts[0], last = pts[pts.length - 1]
-  const line  = pts.map(({ day, avg }, i) => `${i === 0 ? 'M' : 'L'}${x(day).toFixed(1)},${y(avg).toFixed(1)}`).join(' ')
-  const area  = `${line} L${x(last.day).toFixed(1)},${H} L${x(first.day).toFixed(1)},${H} Z`
-  const color = last.avg > first.avg + 3 ? '#2F8F5B' : last.avg < first.avg - 3 ? '#D14B3D' : 'rgba(26,30,35,.5)'
-
-  return (
-    <div className="w-full">
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 200 }}>
-        <path d={area} fill={color} opacity="0.04" />
-        <path d={line}  fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-        {pts.map(({ day, avg }) => (
-          <circle key={day} cx={x(day).toFixed(1)} cy={y(avg).toFixed(1)} r="2.5" fill={color} opacity="0.9" />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-1">
-        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>30 days ago</span>
-        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>Today</span>
-      </div>
-    </div>
-  )
-}
 
 // ── dimension bar ─────────────────────────────────────────────────────────────
 function DimBar({ label, weight, avg }) {

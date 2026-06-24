@@ -367,6 +367,30 @@ function DivergenceSummary({ aiScore, entries }) {
           </span>
         )}
       </div>
+
+      {/* Per-reviewer agreement matrix + takeaway */}
+      <div className="mt-3 pt-3" style={{ borderTop: '1px solid #F0ECE9' }}>
+        <div className="flex flex-col gap-1.5">
+          {scored.map(e => {
+            const dev = Math.abs(Number(e.weighted_score) - avg)
+            const tag = dev <= 5 ? { l: 'Aligned', c: '#2F8F5B' } : dev <= 12 ? { l: 'Close', c: '#C8841E' } : { l: 'Diverges', c: '#D14B3D' }
+            return (
+              <div key={e.id} className="flex items-center justify-between text-xs">
+                <span style={{ color: 'rgba(26,30,35,.72)' }}>{e.reviewer_name}</span>
+                <span className="flex items-center gap-2">
+                  <span className="tabular-nums font-semibold" style={{ color: gradeColor(Number(e.weighted_score)) }}>{Math.round(Number(e.weighted_score))}</span>
+                  <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: tag.c, background: `${tag.c}1a` }}>{tag.l}</span>
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs mt-2.5" style={{ color: 'rgba(26,30,35,.6)' }}>
+          {spread <= 8 ? '✓ Reviewers are well aligned on this ticket.'
+            : spread <= 20 ? 'Some divergence — worth a quick discussion to align.'
+            : 'High divergence — calibrate on this ticket before trusting these scores.'}
+        </p>
+      </div>
     </div>
   )
 }
