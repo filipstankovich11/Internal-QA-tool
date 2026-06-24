@@ -146,49 +146,43 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
         )}
       </div>
 
-      <div className="flex items-end gap-2 h-20 overflow-visible">
+      <div className="flex gap-3 overflow-visible">
         {days.map((d, i) => {
           const isSelected = selectedDay === d.dateStr
           const isHovered  = hoveredBar === i && d.count > 0
           const isDimmed   = hasSelection && !isSelected
-          const barColor   = d.count === 0   ? '#F0ECE9'
-                           : isSelected      ? '#B84A2E'
-                           : isHovered       ? '#ffb39a'
-                           : '#FF9780'
-          // Solid coral fill, with a soft glow on hover/select
-          const barBg     = d.count === 0 ? '#F0ECE9' : barColor
-          const barGlow   = isSelected ? '0 0 12px rgba(184,74,46,0.20)' : isHovered ? '0 0 10px rgba(255,151,128,0.40)' : null
-          const barShadow = d.count > 0 && barGlow ? barGlow : 'none'
+          // Shorter bars get a lighter coral; the busiest day is full-strength coral
+          const intensity  = 0.5 + 0.5 * (d.count / maxCount)
+          const barBg      = d.count === 0 ? '#F0ECE9'
+                           : isSelected     ? '#B84A2E'
+                           : isHovered       ? '#FF9780'
+                           : `rgba(255,151,128,${intensity.toFixed(2)})`
+          const barH       = d.count === 0 ? 6 : Math.max((d.count / maxCount) * 120, 46)
           return (
             <div key={i}
-              className="flex-1 flex flex-col items-center gap-1"
-              style={{ cursor: d.count > 0 ? 'pointer' : 'default', opacity: isDimmed ? 0.35 : 1, transition: 'opacity 200ms' }}
+              className="flex-1 flex flex-col items-center gap-2"
+              style={{ cursor: d.count > 0 ? 'pointer' : 'default', opacity: isDimmed ? 0.4 : 1, transition: 'opacity 200ms' }}
               onClick={() => d.count > 0 && onDayClick(d.dateStr)}
               onMouseEnter={() => setHoveredBar(i)}
               onMouseLeave={() => setHoveredBar(null)}
               title={d.count > 0 ? `${d.count} ticket${d.count !== 1 ? 's' : ''} on ${d.label}` : undefined}>
-              <div className="relative w-full">
-                {/* Hover background glow behind the bar — soft gradient that fades upward */}
-                {isHovered && !isSelected && (
-                  <div className="absolute bottom-0 pointer-events-none"
-                    style={{
-                      left: '-20%', right: '-20%', height: '92px',
-                      background: 'radial-gradient(ellipse 70% 100% at 50% 100%, rgba(255,151,128,0.22) 0%, rgba(255,151,128,0.10) 35%, rgba(255,151,128,0) 75%)',
-                      filter: 'blur(6px)',
-                      transition: 'opacity 150ms',
-                    }} />
-                )}
-                <div className="relative w-full rounded-t-md"
-                  style={{ height: `${Math.max((d.count / maxCount) * 64, d.count > 0 ? 24 : 0)}px`, background: barBg, transition: 'background 150ms, height 200ms, box-shadow 150ms', boxShadow: barShadow }}>
+              {/* Fixed-height track so every bar shares one baseline */}
+              <div className="relative w-full flex items-end justify-center" style={{ height: 130 }}>
+                <div className="relative w-full" style={{
+                  height: barH, background: barBg,
+                  borderTopLeftRadius: 10, borderTopRightRadius: 10,
+                  borderBottomLeftRadius: d.count === 0 ? 10 : 0, borderBottomRightRadius: d.count === 0 ? 10 : 0,
+                  transition: 'background 150ms, height 200ms',
+                }}>
                   {d.count > 0 && (
-                    <span className="absolute -top-5 left-0 right-0 text-center text-xs font-semibold tabular-nums"
-                      style={{ color: '#1A1E23' }}>
+                    <span className="absolute left-0 right-0 text-center tabular-nums"
+                      style={{ top: 8, color: isSelected ? '#FFFFFF' : '#1A1E23', fontWeight: 700, fontSize: 13 }}>
                       {d.count}
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-xs" style={{ color: isSelected ? '#1A1E23' : isHovered ? '#1A1E23' : 'rgba(26,30,35,.5)', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
+              <span className="text-sm" style={{ color: isSelected ? '#1A1E23' : 'rgba(26,30,35,.55)', fontWeight: isSelected ? 600 : 400, transition: 'color 150ms' }}>{d.label}</span>
             </div>
           )
         })}
@@ -294,11 +288,11 @@ export default function DashboardPage() {
 
   return (
     <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
-    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
+    <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl" style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
+        <h1 style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>{role === 'agent' ? 'My Performance' : 'Dashboard'}</h1>
         <p className="text-sm mt-0.5" style={{ color: 'rgba(26,30,35,.6)' }}>
           {hasFilters
             ? <><span style={{ color: '#B84A2E' }}>{total}</span> ticket{total !== 1 ? 's' : ''} match your filters</>
@@ -331,58 +325,60 @@ export default function DashboardPage() {
             <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
           </div>
           {total === 0 ? <p className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>No tickets scored yet</p> : (() => {
+            const DIST = { PASS: '#3B7DD8', NEEDS_REVIEW: '#C8841E', FAIL: '#D14B3D' }
+            const NAME = { PASS: 'Pass', NEEDS_REVIEW: 'Review', FAIL: 'Fail' }
             const vt = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
             const range = { PASS: `≥${vt.pass}`, NEEDS_REVIEW: `${vt.needs_review}–${vt.pass - 1}`, FAIL: `<${vt.needs_review}` }
             const rows = [['PASS', pass], ['NEEDS_REVIEW', review], ['FAIL', fail]]
             const C = 2 * Math.PI * 42
             const passRate = Math.round((pass / total) * 100)
-            const segCount = rows.filter(([, n]) => n > 0).length
-            const GAP = segCount > 1 ? 12 : 0  // crisp separation between arcs (none if a single verdict)
-            const labelStyle = { fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' }
+            const labelStyle = { fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.45)' }
             let acc = 0
+            // Continuous ring — segments meet flush (no gaps)
             const segs = rows.filter(([, n]) => n > 0).map(([v, n]) => {
               const frac = n / total
-              const len = Math.max(1, frac * C - GAP)
               const seg = (
-                <circle key={v} cx="50" cy="50" r="42" fill="none" stroke={VERDICT_COLOR[v]} strokeWidth="11" strokeLinecap="round"
-                  strokeDasharray={`${len.toFixed(2)} ${(C - len).toFixed(2)}`}
-                  strokeDashoffset={(-(acc * C) - GAP / 2).toFixed(2)} />
+                <circle key={v} cx="50" cy="50" r="42" fill="none" stroke={DIST[v]} strokeWidth="12"
+                  strokeDasharray={`${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`}
+                  strokeDashoffset={(-(acc * C)).toFixed(2)} />
               )
               acc += frac
               return seg
             })
             return (
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-6">
                 {/* Donut — pass rate in the center */}
-                <div className="relative shrink-0" style={{ width: 116, height: 116 }}>
-                  <svg width="116" height="116" viewBox="0 0 100 100">
+                <div className="relative shrink-0" style={{ width: 150, height: 150 }}>
+                  <svg width="150" height="150" viewBox="0 0 100 100">
                     <g transform="rotate(-90 50 50)">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="#F0ECE9" strokeWidth="11" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="#F0ECE9" strokeWidth="12" />
                       {segs}
                     </g>
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl tabular-nums" style={{ color: VERDICT_COLOR.PASS, lineHeight: 1, fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{passRate}%</span>
-                    <span className="text-xs mt-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>pass rate</span>
+                    <span className="tabular-nums" style={{ fontSize: 30, color: '#1A1E23', lineHeight: 1, fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{passRate}%</span>
+                    <span className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>pass rate</span>
                   </div>
                 </div>
-                {/* Legend — labelled columns so each number is clear */}
-                <div className="flex-1 min-w-0 flex flex-col gap-2.5">
-                  <div className="flex items-center gap-4">
+                {/* Legend — labelled columns with hairline dividers */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-4 pb-2" style={{ borderBottom: '1px solid #F0ECE9' }}>
                     <span className="flex-1" />
-                    <span className="w-12 text-right" style={labelStyle}>Tickets</span>
+                    <span className="w-14 text-right" style={labelStyle}>Tickets</span>
                     <span className="w-12 text-right" style={labelStyle}>Share</span>
                   </div>
-                  {rows.map(([v, n]) => {
+                  {rows.map(([v, n], idx) => {
                     const pct = total > 0 ? Math.round((n / total) * 100) : 0
                     return (
-                      <div key={v} className="flex items-center gap-4" title={`${VERDICT_DESC[v]} · score ${range[v]}`}>
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: VERDICT_COLOR[v], flexShrink: 0 }} />
-                          <span className="text-xs font-medium" style={{ color: VERDICT_COLOR[v] }}>{VERDICT_LABEL[v]}</span>
+                      <div key={v} className="flex items-center gap-4 py-2.5"
+                        style={{ borderBottom: idx < rows.length - 1 ? '1px solid #F0ECE9' : 'none' }}
+                        title={`${VERDICT_DESC[v]} · score ${range[v]}`}>
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          <span style={{ width: 9, height: 9, borderRadius: '50%', background: DIST[v], flexShrink: 0 }} />
+                          <span className="font-semibold" style={{ fontSize: 15, color: DIST[v] }}>{NAME[v]}</span>
                         </div>
-                        <span className="w-12 text-right text-xs tabular-nums" style={{ color: '#1A1E23' }}>{n}</span>
-                        <span className="w-12 text-right text-xs tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{pct}%</span>
+                        <span className="w-14 text-right tabular-nums font-bold" style={{ fontSize: 15, color: '#1A1E23' }}>{n}</span>
+                        <span className="w-12 text-right tabular-nums" style={{ fontSize: 14, color: 'rgba(26,30,35,.55)' }}>{pct}%</span>
                       </div>
                     )
                   })}
@@ -397,7 +393,7 @@ export default function DashboardPage() {
       {/* ── Ticket table with filters ── */}
       <div ref={tableRef}>
         <div className="flex items-center justify-between mb-4">
-          <h2 style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{role === 'agent' ? 'My Tickets' : 'All Tickets'}</h2>
+          <h2 style={{ fontSize: 20, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{role === 'agent' ? 'My Tickets' : 'All tickets'}</h2>
           <div className="flex items-center gap-3">
             <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
               Showing {Math.min(visibleCount, filteredScores.length)} of {filteredScores.length}

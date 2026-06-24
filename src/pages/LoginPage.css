@@ -315,11 +315,14 @@
 .page-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
 .page-wordmark { display: flex; align-items: center; gap: 8px; }
 .page-wordmark__name {
+  font-family: var(--font-display, 'Inter Tight'), system-ui, sans-serif;
   color: var(--ink);
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 .page-wordmark__badge {
   background: var(--coral);
