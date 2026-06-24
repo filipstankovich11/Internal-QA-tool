@@ -143,3 +143,28 @@
   transition: color 0.15s;
 }
 .g-btn-ghost:hover { color: #fff; }
+
+/* ── Accessibility ──────────────────────────────────────────────────────────── */
+/* Visible keyboard-focus ring — shows only for keyboard nav (:focus-visible),
+   never on mouse clicks. Buttons/links/nav items had no focus indicator before. */
+:focus-visible {
+  outline: 2px solid var(--g-coral);
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+/* Form controls often set inline `outline: none`, which beats the rule above —
+   give them a box-shadow ring instead (the .g-input :focus ring still wins for inputs). */
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 151, 128, 0.30);
+}
+
+/* Respect users who prefer reduced motion — neutralize transitions and the
+   page/modal/stagger/shimmer/skeleton animations rather than flashing them. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
