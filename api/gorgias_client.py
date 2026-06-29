@@ -1,9 +1,12 @@
+import random
 import time
 import requests
 from typing import Optional
 
 
 class GorgiasClient:
+    MAX_BACKOFF = 30  # cap any single wait, seconds
+
     def __init__(self, domain: str, auth_header: str):
         self.base_url = f"https://{domain}/api"
         self.headers = {
@@ -11,18 +14,46 @@ class GorgiasClient:
             "Content-Type": "application/json",
         }
 
-    def _get(self, path: str, params: dict = None, retries: int = 4) -> dict:
+    def _get(self, path: str, params: dict = None, retries: int = 6) -> dict:
         url = f"{self.base_url}{path}"
+        last_exc = None
         for attempt in range(retries):
-            response = requests.get(url, headers=self.headers, params=params, timeout=30)
-            if response.status_code == 429:
-                wait = int(response.headers.get("Retry-After", 10)) + 2
-                print(f"  Rate limited — waiting {wait}s before retry...")
+            try:
+                response = requests.get(url, headers=self.headers, params=params, timeout=30)
+            except requests.RequestException as e:
+                last_exc = e
+                if attempt == retries - 1:
+                    raise
+                time.sleep(min(2 ** attempt + random.random(), self.MAX_BACKOFF))
+                continue
+
+            # Gorgias throttles aggressively (429), and 5xx are usually transient — back off and retry both.
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt == retries - 1:
+                    break
+                retry_after = response.headers.get("Retry-After")
+                if retry_after is not None:
+                    try:
+                        wait = float(retry_after) + 1
+                    except ValueError:
+                        wait = 2 ** attempt
+                else:
+                    wait = 2 ** attempt  # exponential fallback: 1, 2, 4, 8, 16…
+                wait = min(wait + random.random(), self.MAX_BACKOFF)  # jitter + cap
+                print(f"  Gorgias {response.status_code} on {path} — waiting {wait:.1f}s (attempt {attempt + 1}/{retries})")
                 time.sleep(wait)
                 continue
+
             response.raise_for_status()
             return response.json()
-        response.raise_for_status()
+
+        # Exhausted retries — surface a clear, actionable error
+        if last_exc is not None:
+            raise last_exc
+        raise requests.HTTPError(
+            f"Gorgias rate limit / server error persisted after {retries} retries for {path}. "
+            "Please wait a moment and try again."
+        )
 
     def list_tickets(self, limit: int = 10, cursor: Optional[str] = None) -> dict:
         params = {"limit": limit, "order_by": "created_datetime:desc"}
