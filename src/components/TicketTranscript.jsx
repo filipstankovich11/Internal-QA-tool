@@ -86,7 +86,7 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
                 </div>
                 <div className="text-sm leading-relaxed px-3.5 py-2.5 whitespace-pre-wrap" style={{
                   background: agent ? '#FFF4F1' : '#F6F4F2', color: '#1A1E23',
-                  border: `1px solid ${lit ? '#FF9780' : (agent ? '#FBD9CE' : '#E5DFD9')}`,
+                  border: `1px solid ${lit ? '#FF9780' : (agent ? '#FFB39A' : '#D6CEC5')}`,
                   borderRadius: 16, borderTopRightRadius: agent ? 4 : 16, borderTopLeftRadius: agent ? 16 : 4,
                   boxShadow: lit ? '0 0 0 2px rgba(255,151,128,.35), 0 1px 6px rgba(255,151,128,.25)' : 'none',
                   transition: 'box-shadow .2s ease, border-color .2s ease',
