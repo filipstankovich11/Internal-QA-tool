@@ -132,7 +132,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
       scoresObj[d.id] = dim
     })
     const agent = agents.find(a => a.id === agentId)
-    await addScore({
+    const saved = await addScore({
       ticket_id:      ticketId || `manual-${Date.now()}`,
       ticket_subject: '',
       verdict,
@@ -144,6 +144,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
       auto_fail:      { triggered: autoFails.length > 0, conditions: autoFails.map(id => autoFailConds.find(c => c.id === id)?.name).filter(Boolean) },
       manual:         true,
     })
+    if (saved?.error) { toast.error(`Couldn't save the score: ${saved.error.message || 'database error'}`); return }
     setSubmitted(true)
     toast.success('Score submitted')
   }

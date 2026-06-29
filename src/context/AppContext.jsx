@@ -225,14 +225,18 @@ export function AppProvider({ children }) {
       })
       .select().single()
 
-    if (!error) {
-      const entry = dbToScore(data)
-      setScoreHistory(prev => {
-        const filtered = prev.filter(s => s.ticketId !== scoreResult.ticket_id)
-        return [entry, ...filtered].slice(0, 500)
-      })
-      return entry
+    if (error) {
+      // Surface the failure — a swallowed insert error means a ticket looks
+      // "scored" in the UI but never reaches the DB or the review queue.
+      console.error('addScore: failed to persist score', error)
+      return { error }
     }
+    const entry = dbToScore(data)
+    setScoreHistory(prev => {
+      const filtered = prev.filter(s => s.ticketId !== scoreResult.ticket_id)
+      return [entry, ...filtered].slice(0, 500)
+    })
+    return entry
   }
 
   const deleteScore = async (id) => {

@@ -425,7 +425,8 @@ export default function ScorePage() {
     try {
       const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
       if (!ok) { setError(data.error || 'Something went wrong.'); return }
-      addScore(data)
+      const saved = await addScore(data)
+      if (saved?.error) { setError(`Scored ${data.verdict}, but it couldn't be saved to the queue: ${saved.error.message || 'database error'}. Please retry.`); return }
       openPanel(data)
       setTicketUrl('')
     } catch (e) { setError(e.message) }
@@ -441,7 +442,8 @@ export default function ScorePage() {
       try {
         const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
         if (!ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
-        addScore(data)
+        const saved = await addScore(data)
+        if (saved?.error) { setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
         setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
       } catch (e) { setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
