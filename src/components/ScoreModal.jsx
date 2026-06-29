@@ -563,6 +563,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   const [editingScore,   setEditingScore]   = useState(false)
   const [notifyOnReview, setNotifyOnReview] = useState(true)
   const [activeEvidence, setActiveEvidence] = useState([])  // criterion's cited message ids → transcript highlight
+  const [menuOpen,       setMenuOpen]       = useState(false) // header "⋯" overflow menu
 
   const displayVerdict  = s.overrideVerdict || s.verdict
   const displayScore    = s.overrideScore   ?? s.weighted_score
@@ -662,6 +663,14 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [onClose, panel, variant])
 
+  // Close the "⋯" menu on any outside click (deferred so the opening click doesn't close it)
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = () => setMenuOpen(false)
+    const t = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(t); document.removeEventListener('click', close) }
+  }, [menuOpen])
+
   const inner = (
     <>
     {/* Edit score — opens the grading form pre-filled with this score */}
@@ -716,6 +725,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
             <div className="flex items-center gap-1.5 flex-wrap justify-end">
               {/* Work actions — only on My Queue; elsewhere the modal is view-only */}
               {actions && (<>
+              {/* Primary: mark reviewed / reviewed status */}
               {isAdmin && s.scoreId && !confirmDelete && !reviewed && (
                 <button onClick={openReviewConfirm} disabled={reviewing}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
@@ -739,20 +749,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                     title="Re-open — puts it back in the queue">Re-open</button>
                 </span>
               )}
-              {isAdmin && s.scoreId && !confirmDelete && (
-                <button onClick={openNotifyPreview} disabled={notifying}
-                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: notifying ? 'rgba(26,30,35,.45)' : 'rgba(26,30,35,.72)', cursor: notifying ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!notifying) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.borderColor='#E1DCD7' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.borderColor='#E7E3DF' }}
-                  title="Send score summary to agent via Slack DM">
-                  {notifying
-                    ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <svg width="11" height="11" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
-                  }
-                  {notifying ? 'Sending…' : 'Notify'}
-                </button>
-              )}
+              {/* Primary: edit score */}
               {isAdmin && s.scoreId && !confirmDelete && (
                 <button onClick={() => setEditingScore(true)}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
@@ -764,26 +761,48 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                   Edit score
                 </button>
               )}
+              {/* Secondary actions — collapsed into a "⋯" menu */}
               {s.scoreId && !confirmDelete && (
-                <button onClick={rescore} disabled={rescoring}
-                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: rescoring ? 'rgba(26,30,35,.45)' : 'rgba(26,30,35,.72)', cursor: rescoring ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!rescoring) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#FF9780'; e.currentTarget.style.borderColor='#FFEAE6' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color=rescoring?'rgba(26,30,35,.45)':'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor='#E7E3DF' }}
-                  title="Re-run AI scoring on this ticket">
-                  {rescoring ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> : <RefreshIcon />}
-                  {rescoring ? 'Rescoring…' : 'Re-score'}
-                </button>
+                <div className="relative">
+                  <button onClick={() => setMenuOpen(o => !o)} disabled={rescoring || notifying}
+                    className="flex items-center justify-center rounded-lg transition-all"
+                    style={{ background: menuOpen ? '#F6F2EF' : '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.6)', width: 30, height: 30 }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF' }}
+                    onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background='#FFFFFF' }}
+                    title="More actions">
+                    {(rescoring || notifying)
+                      ? <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>}
+                  </button>
+                  {menuOpen && (
+                    <div className="absolute right-0 py-1 rounded-xl overflow-hidden"
+                      style={{ top: 'calc(100% + 6px)', minWidth: 184, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 12px 32px rgba(0,0,0,.16)', zIndex: 30 }}>
+                      {isAdmin && (
+                        <button onClick={() => { setMenuOpen(false); openNotifyPreview() }}
+                          className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
+                          onMouseEnter={e => e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                          <svg width="13" height="13" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                          Notify on Slack
+                        </button>
+                      )}
+                      <button onClick={() => { setMenuOpen(false); rescore() }}
+                        className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
+                        onMouseEnter={e => e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <RefreshIcon /> Re-score with AI
+                      </button>
+                      {isAdmin && (
+                        <button onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
+                          className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: '#D14B3D' }}
+                          onMouseEnter={e => e.currentTarget.style.background='#FDEEEA'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          Delete score
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
-              {isAdmin && s.scoreId && !confirmDelete && (
-                <button onClick={() => setConfirmDelete(true)}
-                  className="text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: '#FEF6F4', border: '1px solid #F4DDD7', color: '#D14B3D' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='#FDEEEA'; e.currentTarget.style.borderColor='#EFC9C1' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FEF6F4'; e.currentTarget.style.borderColor='#F4DDD7' }}>
-                  Delete
-                </button>
-              )}
+              {/* Delete confirmation — replaces the toolbar while active */}
               {confirmDelete && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs" style={{ color: '#D14B3D' }}>Delete?</span>
