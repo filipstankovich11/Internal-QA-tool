@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { authFetchJson } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 
@@ -50,6 +50,16 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
 
   const ev = evidenceIds.map(String)
 
+  // Scroll the first cited message into view when the highlight changes
+  const rowRefs = useRef({})
+  const evKey = ev.join(',')
+  useEffect(() => {
+    if (!ev.length) return
+    const first = (messages || []).find(m => ev.includes(String(m.id)))
+    const el = first && rowRefs.current[String(first.id)]
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [evKey, messages]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-2">
@@ -69,7 +79,7 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
             const lit = ev.includes(String(m.id))
             const agent = m.from_agent
             return (
-              <div key={m.id} style={{ alignSelf: agent ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
+              <div key={m.id} ref={el => { rowRefs.current[String(m.id)] = el }} style={{ alignSelf: agent ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
                 <div className="flex items-center gap-1.5 mb-0.5 text-xs" style={{ color: 'rgba(26,30,35,.45)', justifyContent: agent ? 'flex-end' : 'flex-start' }}>
                   <span className="font-medium" style={{ color: 'rgba(26,30,35,.6)' }}>{m.author || (agent ? 'Agent' : 'Customer')}</span>
                   {!m.public && <span className="px-1 rounded" style={{ background: '#F1ECE8' }}>internal</span>}

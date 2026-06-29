@@ -42,6 +42,11 @@ const VERDICT = {
 }
 
 const scoreColor = n => n >= 4 ? '#2F8F5B' : n >= 3 ? '#C8841E' : '#D14B3D'
+const CONF = {
+  high:   { label: 'High',   color: '#2F8F5B', bg: '#E6F4EC' },
+  medium: { label: 'Medium', color: '#C8841E', bg: '#FBEBD3' },
+  low:    { label: 'Low',    color: '#B84A2E', bg: '#FFEAE6' },
+}
 
 // ── 5-dot score indicator ─────────────────────────────────────────────────────
 function ScoreDots({ score }) {
@@ -116,25 +121,51 @@ function DimensionStrip({ dimensions }) {
 }
 
 // ── Criteria row with dots ────────────────────────────────────────────────────
-function SubScoreRow({ label, data }) {
+function SubScoreRow({ label, data, onActivate }) {
   const [open, setOpen] = useState(false)
-  const { score, notes } = data
+  const { score, notes, confidence, evidence } = data
   const color = scoreColor(score)
+  const conf = CONF[confidence]
+  const ev = (evidence || []).map(String)
+  // Expanding a criterion highlights its cited messages in the transcript
+  const toggle = () => setOpen(v => { const nv = !v; if (nv && ev.length) onActivate?.(ev); return nv })
 
   return (
     <div className="py-2.5" style={{ borderBottom: '1px solid #F0ECE9' }}>
-      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
+      <button onClick={toggle} className="w-full flex items-center gap-3 text-left">
         <span className="shrink-0 transition-transform" style={{ color: 'rgba(26,30,35,.45)', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
         <span className="text-sm flex-1" style={{ color: 'rgba(26,30,35,.72)' }}>{label}</span>
+        {ev.length > 0 && <span title={`${ev.length} cited message${ev.length>1?'s':''}`} style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780', flexShrink: 0 }} />}
         <ScoreDots score={score} />
         <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
       </button>
-      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>}
+      {open && (
+        <div className="mt-2 ml-6">
+          <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>
+          {(conf || ev.length > 0) && (
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {conf && (
+                <span className="text-[11px] inline-flex items-center gap-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+                  AI confidence <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
+                </span>
+              )}
+              {ev.length > 0 && (
+                <button onClick={() => onActivate?.(ev)}
+                  className="text-[11px] inline-flex items-center gap-1 transition-colors" style={{ color: '#B84A2E' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#FF9780'} onMouseLeave={e => e.currentTarget.style.color = '#B84A2E'}>
+                  <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
+                  Show {ev.length} cited message{ev.length > 1 ? 's' : ''} in transcript
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
+function DimensionCard({ name, weight, average, rows, isOpen, onToggle, onActivate }) {
   const avg = typeof average === 'number' ? average : Number(average) || 0
   const color = scoreColor(avg)
 
@@ -169,7 +200,7 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
       }}>
         <div style={{ padding: '0 16px 16px', borderTop: '1px solid #F0ECE9' }}>
           <div style={{ paddingTop: 4 }}>
-            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}
+            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} onActivate={onActivate} />)}
           </div>
         </div>
       </div>
@@ -177,23 +208,23 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
   )
 }
 
-function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception }) {
+function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception, onActivate }) {
   const [openDim, setOpenDim] = useState(-1) // start collapsed — no dimension auto-opens
   const toggle = i => setOpenDim(prev => prev === i ? -1 : i)
   return (
     <div>
       <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
-        isOpen={openDim === 0} onToggle={() => toggle(0)}
+        isOpen={openDim === 0} onToggle={() => toggle(0)} onActivate={onActivate}
         rows={[
           { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
           { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
           { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
         ]} />
       <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
-        isOpen={openDim === 1} onToggle={() => toggle(1)}
+        isOpen={openDim === 1} onToggle={() => toggle(1)} onActivate={onActivate}
         rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
       <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
-        isOpen={openDim === 2} onToggle={() => toggle(2)}
+        isOpen={openDim === 2} onToggle={() => toggle(2)} onActivate={onActivate}
         rows={[
           { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
           { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
@@ -531,6 +562,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   const [confirmReview,  setConfirmReview]  = useState(false)
   const [editingScore,   setEditingScore]   = useState(false)
   const [notifyOnReview, setNotifyOnReview] = useState(true)
+  const [activeEvidence, setActiveEvidence] = useState([])  // criterion's cited message ids → transcript highlight
 
   const displayVerdict  = s.overrideVerdict || s.verdict
   const displayScore    = s.overrideScore   ?? s.weighted_score
@@ -844,6 +876,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                 inquiry_resolution={inquiry_resolution}
                 internal_processes={internal_processes}
                 customer_perception={customer_perception}
+                onActivate={setActiveEvidence}
               />
             </>
           ) : (
@@ -1084,7 +1117,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
           Back
         </button>
       )}
-      <TicketTranscript ticketId={s.ticket_id} />
+      <TicketTranscript ticketId={s.ticket_id} evidenceIds={activeEvidence} />
     </div>
   )
 
