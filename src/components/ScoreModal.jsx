@@ -702,7 +702,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     )}
     {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
-          style={{ background: '#FFFFFF', borderBottom: `1px solid ${vc.border}`, boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          style={{ background: '#FFFFFF', borderBottom: `1px solid ${vc.border}`, boxShadow: '0 6px 16px -12px rgba(0,0,0,.22)' }}>
 
           {/* Row 1: Ticket ID (left) + Actions (right) — actions wrap on narrow panes */}
           <div className="flex items-start justify-between gap-2 mb-4 flex-wrap">
