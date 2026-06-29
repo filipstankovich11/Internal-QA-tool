@@ -262,9 +262,22 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
     for dim in dims:
         dim_obj = {"weight": dim["weight"] / 100}
         for crit in dim.get("criteria", []):
-            dim_obj[crit["id"]] = {"score": "<1-5>", "notes": "<specific observation>"}
+            dim_obj[crit["id"]] = {
+                "score": "<1-5>",
+                "notes": "<specific observation>",
+                "confidence": "<high|medium|low — your certainty in this score>",
+                "evidence": ["<MSG ids from the thread that justify this score, e.g. 12345>"],
+            }
         dim_obj["dimension_average"] = "<float, 1 decimal>"
         scores_spec[dim["id"]] = dim_obj
+
+    lines += [
+        "For every criterion also return `confidence` (high/medium/low — how certain you are) "
+        "and `evidence` (a list of the MSG ids from the thread, shown as `[MSG <id> · …]`, that "
+        "most directly justify the score). Cite 1–3 message ids; use an empty list only if no "
+        "single message is decisive.",
+        "",
+    ]
 
     output_template = {
         "ticket_id": "<integer>",

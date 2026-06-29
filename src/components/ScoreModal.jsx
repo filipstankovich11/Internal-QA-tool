@@ -6,6 +6,7 @@ import { useToast } from './Toast'
 import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
+import ScoreFormPage from '../pages/ScoreFormPage'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -527,6 +528,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   const reviewed  = !!record?.reviewedAt
   const [reviewing,      setReviewing]      = useState(false)
   const [confirmReview,  setConfirmReview]  = useState(false)
+  const [editingScore,   setEditingScore]   = useState(false)
   const [notifyOnReview, setNotifyOnReview] = useState(true)
 
   const displayVerdict  = s.overrideVerdict || s.verdict
@@ -629,6 +631,12 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
 
   const inner = (
     <>
+    {/* Edit score — opens the grading form pre-filled with this score */}
+    {editingScore && (
+      <ScoreFormPage initialScore={s} asModal
+        onClose={() => setEditingScore(false)}
+        onSaved={() => { setEditingScore(false); onClose() }} />
+    )}
     {/* Mark-reviewed confirmation */}
     {confirmReview && (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)' }}
@@ -710,6 +718,17 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                     : <svg width="11" height="11" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
                   }
                   {notifying ? 'Sending…' : 'Notify'}
+                </button>
+              )}
+              {isAdmin && s.scoreId && !confirmDelete && (
+                <button onClick={() => setEditingScore(true)}
+                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
+                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.72)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#B84A2E'; e.currentTarget.style.borderColor='#FFD2C9' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color='rgba(26,30,35,.72)'; e.currentTarget.style.borderColor='#E7E3DF' }}
+                  title="Re-grade this ticket against the rubric (overrides the score)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  Edit score
                 </button>
               )}
               {s.scoreId && !confirmDelete && (

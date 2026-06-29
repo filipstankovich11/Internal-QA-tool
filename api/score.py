@@ -414,6 +414,42 @@ def sample_tickets():
         return jsonify({'error': str(e)}), 502
 
 
+# ─── Ticket conversation (for the score form transcript) ──────────────────────
+
+@app.route('/api/ticket-messages', methods=['GET'])
+@require_auth
+def ticket_messages():
+    ticket_id = request.args.get('ticket_id', type=int)
+    if not ticket_id:
+        return jsonify({'error': 'ticket_id is required'}), 400
+
+    gorgias_auth, gorgias_domain, _ = get_env()
+    if not gorgias_auth:
+        return jsonify({'error': 'GORGIAS_AUTH not configured'}), 500
+
+    gorgias = GorgiasClient(domain=gorgias_domain, auth_header=gorgias_auth)
+    try:
+        msgs = gorgias.get_ticket_messages(ticket_id)
+        out = []
+        for m in msgs:
+            body = m.get('body_text') or ''
+            if not body and m.get('body_html'):
+                body = re.sub(r'<[^>]+>', ' ', m.get('body_html', ''))
+                body = re.sub(r'\s+', ' ', body).strip()
+            sender = m.get('sender') or {}
+            out.append({
+                'id':         m.get('id'),
+                'from_agent': bool(m.get('from_agent')),
+                'public':     bool(m.get('public', True)),
+                'author':     sender.get('name') or sender.get('email') or ('Agent' if m.get('from_agent') else 'Customer'),
+                'created_at': m.get('created_datetime', ''),
+                'body':       body or '(no text content)',
+            })
+        return jsonify({'messages': out})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 502
+
+
 # ─── Vercel handler ───────────────────────────────────────────────────────────
 
 handler = app

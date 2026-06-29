@@ -26,8 +26,10 @@ def _format_thread(ticket: dict, messages: list[dict]) -> str:
         channel = msg.get("channel", "")
         is_public = msg.get("public", True)
         note = " [INTERNAL NOTE]" if not is_public else ""
+        msg_id = msg.get("id")
 
-        lines.append(f"[{sender}]{note} — {timestamp} ({channel})")
+        # MSG <id> lets the model cite exact messages in each criterion's `evidence`
+        lines.append(f"[MSG {msg_id} · {sender}]{note} — {timestamp} ({channel})")
 
         body = msg.get("body_text") or ""
         if not body and msg.get("body_html"):

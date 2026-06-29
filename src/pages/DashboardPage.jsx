@@ -50,6 +50,9 @@ function StatCard({ label, value, format, sub, color, icon, onClick, spark }) {
   const [hovered, setHovered] = useState(false)
   const accent = color || '#1A1E23'
   const clickable = !!onClick
+  const trend = spark && spark.length > 1
+    ? (spark[spark.length - 1] > spark[0] + 1 ? ' · trending up' : spark[spark.length - 1] < spark[0] - 1 ? ' · trending down' : ' · steady')
+    : ''
   return (
     <div className="p-5"
       onMouseEnter={() => setHovered(true)}
@@ -77,17 +80,27 @@ function StatCard({ label, value, format, sub, color, icon, onClick, spark }) {
           </span>
         )}
       </div>
-      <p className="text-3xl" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{display}</p>
+      <div className="flex items-end justify-between gap-3">
+        <p className="text-3xl shrink-0" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, lineHeight: 1 }}>{display}</p>
+        {spark && spark.length > 1 && (() => {
+          const n = spark.length
+          const lo = Math.min(...spark), hi = Math.max(...spark), range = (hi - lo) || 1
+          const x = (i) => 3 + (i / (n - 1)) * 90
+          const y = (v) => 31 - ((v - lo) / range) * 28
+          const last = spark[n - 1]
+          return (
+            <svg width="96" height="34" viewBox="0 0 96 34" className="shrink-0 mb-0.5" style={{ overflow: 'visible' }}>
+              <polyline fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                points={spark.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} />
+              <circle cx={x(n - 1).toFixed(1)} cy={y(last).toFixed(1)} r="3" fill={accent} />
+            </svg>
+          )
+        })()}
+      </div>
       {sub && (
         <p className="text-xs mt-1" style={{ color: clickable && hovered ? '#B84A2E' : 'rgba(26,30,35,.5)', transition: 'color 150ms' }}>
-          {sub}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
+          {sub}{trend}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
         </p>
-      )}
-      {spark && spark.length > 1 && (
-        <svg width="100%" height="20" viewBox="0 0 100 20" preserveAspectRatio="none" className="block mt-2">
-          <polyline fill="none" stroke={accent} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round"
-            points={spark.map((v, i) => `${(i / (spark.length - 1)) * 100},${19 - (Math.max(0, Math.min(100, v)) / 100) * 18}`).join(' ')} />
-        </svg>
       )}
     </div>
   )
