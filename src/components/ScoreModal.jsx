@@ -658,7 +658,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    if (!panel && variant !== 'page') document.body.style.overflow = 'hidden'
+    if (!panel) document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [onClose, panel, variant])
 
@@ -702,18 +702,18 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     )}
     {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
-          style={{ background: `rgba(255,255,255,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          style={{ background: '#FFFFFF', borderBottom: `1px solid ${vc.border}`, boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
 
-          {/* Row 1: Ticket ID (left) + Actions (right) */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Row 1: Ticket ID (left) + Actions (right) — actions wrap on narrow panes */}
+          <div className="flex items-start justify-between gap-2 mb-4 flex-wrap">
             <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
-              className="text-xs transition-colors"
+              className="text-xs transition-colors shrink-0 mt-1.5"
               style={{ color: '#B84A2E' }}
               onMouseEnter={e => e.currentTarget.style.color='#FF9780'}
               onMouseLeave={e => e.currentTarget.style.color='#B84A2E'}>
               Ticket #{s.ticket_id}
             </a>
-            <div className="flex items-center gap-2 shrink-0 pl-6">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
               {/* Work actions — only on My Queue; elsewhere the modal is view-only */}
               {actions && (<>
               {isAdmin && s.scoreId && !confirmDelete && !reviewed && (
