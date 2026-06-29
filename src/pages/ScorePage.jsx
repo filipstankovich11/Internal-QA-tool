@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import ScoreModal from '../components/ScoreModal'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -357,18 +356,13 @@ function ResultRow({ result, onView }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ScorePage() {
-  const { scoreHistory, addScore, agents, rubric, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, addScore, agents, rubric, openScore } = useApp()
   const { canScore } = useAuth()
 
   const [mode,        setMode]        = useState('single')
-  const [panelScore,  setPanelScore]  = useState(null) // concise side panel
-  const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
 
-  // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
-  // other overlays (notifications/settings), expandable to the full modal.
-  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
+  // Open a scored ticket in the full-page two-pane detail (same surface everywhere).
+  const openPanel = openScore
 
   // Single mode state
   const [ticketUrl, setTicketUrl] = useState('')
@@ -460,7 +454,7 @@ export default function ScorePage() {
     : null
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
       <div className="mb-8">
@@ -765,15 +759,6 @@ export default function ScorePage() {
       )}
 
       </div>
-      {panelScore && (
-        <ScoreModal
-          score={panelScore}
-          onClose={closePanel}
-          onExpand={() => { setModalScore(panelScore); closePanel() }}
-          panel
-        />
-      )}
-      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -119,11 +118,9 @@ function ScoreRow({ s, onView, onAcknowledge }) {
 
 // ── main page ─────────────────────────────────────────────────────────────────
 export default function AgentProfilePage() {
-  const { agents, teams, scoreHistory, acknowledgeScore } = useApp()
+  const { agents, teams, scoreHistory, acknowledgeScore, openScore: showScore } = useApp()
   const { profile, user } = useAuth()
   const toast = useToast()
-
-  const [activeScore, setActiveScore] = useState(null)
 
   const agent  = agents.find(a => a.user_id === user?.id) ?? null
   const team   = teams.find(t => t.id === agent?.team_id)
@@ -166,7 +163,7 @@ export default function AgentProfilePage() {
     else    toast.error('Failed to acknowledge')
   }
 
-  const openScore = (s) => setActiveScore({
+  const openScore = (s) => showScore({
     ...s.fullScore,
     scoreId:        s.id,
     reviewerNote:   s.notes,
@@ -346,8 +343,6 @@ export default function AgentProfilePage() {
           </div>
         )}
       </div>
-
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
     </div>
   )
 }

@@ -180,12 +180,11 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ReviewQueuePage() {
-  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore } = useApp()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
 
-  const [panelScore,  setPanelScore]  = useState(null) // concise side panel
-  const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
+  const [modalScore,  setModalScore]  = useState(null) // two-pane review modal (transcript + grading)
   const [disputeScore, setDisputeScore] = useState(null) // dispute resolution modal
   const [sortOrder,    setSortOrder]    = useState('priority')
   const [agentFilter,  setAgentFilter]  = useState('')
@@ -282,13 +281,9 @@ export default function ReviewQueuePage() {
   const unclaimTicket = (id) => unclaimScore(id)
 
 
-  // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
-  // other overlays (notifications/settings), expandable to the full modal.
-  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
-
-  const open = (item) => openPanel({
+  // Reviewers triage in a large two-pane modal (transcript + grading) so they
+  // stay in the queue — the rest of the app opens the same view full-page.
+  const open = (item) => setModalScore({
     ...item.fullScore,
     scoreId:         item.id,
     reviewerNote:    item.notes,
@@ -302,7 +297,7 @@ export default function ReviewQueuePage() {
   })
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-6xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -468,15 +463,7 @@ export default function ReviewQueuePage() {
       )}
 
       </div>
-      {panelScore && (
-        <ScoreModal
-          score={panelScore}
-          onClose={closePanel}
-          onExpand={() => { setModalScore(panelScore); closePanel() }}
-          panel
-        />
-      )}
-      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
+      {modalScore && <ScoreModal score={modalScore} variant="modal" actions onClose={() => setModalScore(null)} />}
       {disputeScore && <DisputeResolution score={disputeScore} onClose={() => setDisputeScore(null)} onResolved={() => setDisputeScore(null)} />}
     </div>
   )

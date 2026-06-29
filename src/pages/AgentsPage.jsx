@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import ScoreModal from '../components/ScoreModal'
 import { useToast } from '../components/Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { supabase } from '../lib/supabase'
@@ -267,7 +266,7 @@ const AgentRow = memo(function AgentRow({ stat, thresholds, onOpen, onEditAgent,
 })
 
 export default function AgentsPage() {
-  const { agents, teams, scoreHistory, rubric, dataLoading, addAgent, updateAgent, deleteAgent, activeOverlay, setActiveOverlay } = useApp()
+  const { agents, teams, scoreHistory, rubric, dataLoading, addAgent, updateAgent, deleteAgent, openScore } = useApp()
   const { canEdit } = useAuth()
   const toast = useToast()
   const [teamFilter,        setTeamFilter]        = useState('all')
@@ -283,18 +282,11 @@ export default function AgentsPage() {
   const [layoutOverride,    setLayoutOverride]    = useState(null) // null = auto by roster size
   const [visibleCount,      setVisibleCount]      = useState(AGENT_PAGE_SIZE)
 
-  // Side-panel score detail — mirrors Dashboard/Score/Review Queue
-  const [panelScore, setPanelScore] = useState(null)
-  const [modalScore, setModalScore] = useState(null)
-  // Stable callbacks — keep AgentCard/AgentRow (both memo'd) from re-rendering on
-  // every keystroke in the search box.
-  const openPanel  = useCallback((score) => { setPanelScore(score); setActiveOverlay('score') }, [setActiveOverlay])
-  const closePanel = useCallback(() => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }, [setActiveOverlay])
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
-
-  // View a single score from the per-agent drill-down: close the modal first so
-  // the slide-in panel (z-40) isn't hidden behind it (z-50).
-  const viewScoreFromHistory = useCallback((score) => { setHistoryAgent(null); openPanel(score) }, [openPanel])
+  // Opening a score detail (full-page) — stable callbacks keep AgentCard/AgentRow
+  // (both memo'd) from re-rendering on every keystroke in the search box.
+  const openPanel = openScore
+  // View a single score from the per-agent drill-down: close the drill-down first.
+  const viewScoreFromHistory = useCallback((score) => { setHistoryAgent(null); openScore(score) }, [openScore])
   const openHistory = useCallback((agent) => setHistoryAgent(agent), [])
 
   useEffect(() => {
@@ -383,7 +375,7 @@ export default function AgentsPage() {
   const selectStyle = { background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23', outline: 'none' }
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-5xl mx-auto px-4 pt-10 pb-16">
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
@@ -570,15 +562,6 @@ export default function AgentsPage() {
         )
       })()}
     </div>
-    {panelScore && (
-      <ScoreModal
-        score={panelScore}
-        onClose={closePanel}
-        onExpand={() => { setModalScore(panelScore); closePanel() }}
-        panel
-      />
-    )}
-    {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }

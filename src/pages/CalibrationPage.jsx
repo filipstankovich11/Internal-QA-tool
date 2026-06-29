@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
-import ScoreModal from '../components/ScoreModal'
 import ScoringProgress from '../components/ScoringProgress'
 import Segmented from '../components/Segmented'
 
@@ -478,18 +477,11 @@ function RevealedView({ session, entries }) {
 // ── Session detail panel ──────────────────────────────────────────────────────
 function SessionDetail({ session: initialSession, onBack }) {
   const { user, isAdmin } = useAuth()
-  const { activeOverlay, setActiveOverlay } = useApp()
+  const { openScore: openPanel } = useApp()
   const [session,  setSession]  = useState(initialSession)
   const [entries,  setEntries]  = useState([])
   const [loading,  setLoading]  = useState(true)
   const [editing,  setEditing]  = useState(false)   // revising my own score before reveal
-
-  // Score detail — slide-in panel + expand-to-full modal, same as the other pages
-  const [panelScore, setPanelScore] = useState(null)
-  const [modalScore, setModalScore] = useState(null)
-  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
 
   const myEntry = entries.find(e => e.reviewer_id === user?.id)
 
@@ -509,7 +501,7 @@ function SessionDetail({ session: initialSession, onBack }) {
     : { label: 'Open', color: '#C8841E', bg: '#FBEBD3' }
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
       {/* Back + header */}
       <div className="flex items-start gap-4 mb-6">
@@ -544,15 +536,6 @@ function SessionDetail({ session: initialSession, onBack }) {
         <SubmitForm session={session} onSubmitted={load} onViewDetail={openPanel} />
       )}
     </div>
-    {panelScore && (
-      <ScoreModal
-        score={panelScore}
-        onClose={closePanel}
-        onExpand={() => { setModalScore(panelScore); closePanel() }}
-        panel
-      />
-    )}
-    {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }

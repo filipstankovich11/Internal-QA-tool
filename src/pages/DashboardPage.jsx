@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import ScoreModal from '../components/ScoreModal'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import DatePicker from '../components/DatePicker'
 import Dropdown from '../components/Dropdown'
@@ -273,23 +272,13 @@ export default function DashboardPage() {
   const { role, profile } = useAuth()
 
   // myAgentId from context — used only for display; scoreHistory is already scoped
-  const { myAgentId, activeOverlay, setActiveOverlay, dataLoading } = useApp()
-  const [panelScore, setPanelScore] = useState(null)
-  const [modalScore, setModalScore] = useState(null)
+  const { myAgentId, dataLoading, openScore } = useApp()
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
   const [selectedDay,  setSelectedDay]  = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE) // progressive "Show more" reveal
   const tableRef = useRef(null)
-
-  // Close the score panel when another overlay (notifications / settings) opens
-  useEffect(() => {
-    if (activeOverlay !== 'score') setPanelScore(null)
-  }, [activeOverlay])
-
-  const openPanel = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
 
   const handleDayClick = (dateStr) => {
     if (!dateStr || selectedDay === dateStr) {
@@ -359,7 +348,7 @@ export default function DashboardPage() {
   const avgSpark = useMemo(() => buildTrendData(filteredScores, 14).map(p => p.avg), [filteredScores])
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
 
       {/* Header */}
@@ -685,7 +674,7 @@ export default function DashboardPage() {
                   #{s.ticketId}
                 </a>
 
-                <button onClick={() => openPanel({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
+                <button onClick={() => openScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
                   className="text-sm text-left truncate pr-3 transition-colors"
                   style={{ color: '#1A1E23' }}
                   onMouseEnter={e => e.target.style.color='#B84A2E'}
@@ -737,16 +726,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {panelScore && (
-        <ScoreModal
-          score={panelScore}
-          onClose={closePanel}
-          onExpand={() => { setModalScore(panelScore); closePanel() }}
-          panel
-        />
-      )}
-      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
     </div>
   )

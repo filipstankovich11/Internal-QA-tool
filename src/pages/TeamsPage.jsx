@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import { TrendChart } from '../components/TrendChart'
-import ScoreModal from '../components/ScoreModal'
 import Segmented from '../components/Segmented'
 import { VERDICT_COLOR, gradeColor } from '../lib/verdict'
 
@@ -645,7 +644,7 @@ function exportCSV(rows, period) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function TeamsPage() {
-  const { teams, agents, scoreHistory, rubric, addTeam, updateTeam, deleteTeam, updateAgent, activeOverlay, setActiveOverlay } = useApp()
+  const { teams, agents, scoreHistory, rubric, addTeam, updateTeam, deleteTeam, updateAgent, activeOverlay, setActiveOverlay, openScore } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
 
@@ -655,7 +654,6 @@ export default function TeamsPage() {
   const [period,  setPeriod]  = useState('all')
   const [view,    setView]    = useState('cards')
   const [detailTeamId, setDetailTeamId] = useState(null)
-  const [modalScore,   setModalScore]   = useState(null)
 
   // Team detail panel — coordinated with the global overlay (notifications/settings)
   const openDetail  = (id) => { setDetailTeamId(id); setActiveOverlay('team') }
@@ -882,8 +880,7 @@ export default function TeamsPage() {
         </div>
       )}
     </div>
-    {detailStat && <TeamDetailPanel stat={detailStat} thresholds={vt} onClose={closeDetail} onViewScore={setModalScore} />}
-    {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
+    {detailStat && <TeamDetailPanel stat={detailStat} thresholds={vt} onClose={closeDetail} onViewScore={openScore} />}
     </div>
   )
 }

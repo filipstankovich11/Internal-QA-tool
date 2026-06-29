@@ -7,6 +7,7 @@ import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
 import ScoreFormPage from '../pages/ScoreFormPage'
+import TicketTranscript from './TicketTranscript'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -507,7 +508,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false }) {
+export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false, variant = null }) {
   const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory } = useApp()
   const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
@@ -625,9 +626,9 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    if (!panel) document.body.style.overflow = 'hidden'
+    if (!panel && variant !== 'page') document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
-  }, [onClose, panel])
+  }, [onClose, panel, variant])
 
   const inner = (
     <>
@@ -1071,6 +1072,52 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
         </div>
       </div>
   ) : null
+
+  // Conversation transcript (left) — shared by the page + modal two-pane layouts
+  const transcriptPane = (
+    <div className="flex-1 min-w-0 h-full overflow-y-auto px-6 py-6" style={{ background: '#FFF9F4' }}>
+      {variant === 'page' && (
+        <button onClick={onClose}
+          className="inline-flex items-center gap-1.5 text-sm mb-4 transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Back
+        </button>
+      )}
+      <TicketTranscript ticketId={s.ticket_id} />
+    </div>
+  )
+
+  // Full-page two-pane — fills the content area (sidebar stays visible)
+  if (variant === 'page') return (
+    <>
+    <div className="flex h-screen overflow-hidden">
+      {transcriptPane}
+      <div className="h-full overflow-y-auto shrink-0" style={{ width: 620, background: '#FFFFFF', borderLeft: '1px solid #EEEEEE' }}>
+        {inner}
+      </div>
+    </div>
+    {notifyEl}
+    </>
+  )
+
+  // Large centered two-pane modal — used in the review queue
+  if (variant === 'modal') return (
+    <>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
+      <div className="rounded-2xl w-full overflow-hidden modal-enter flex"
+        style={{ maxWidth: 1120, height: '88vh', background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
+        onClick={e => e.stopPropagation()}>
+        {transcriptPane}
+        <div className="h-full overflow-y-auto shrink-0" style={{ width: 560, borderLeft: '1px solid #EEEEEE' }}>
+          {inner}
+        </div>
+      </div>
+    </div>
+    {notifyEl}
+    </>
+  )
 
   if (panel) return (
     <>

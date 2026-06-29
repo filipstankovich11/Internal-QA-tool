@@ -3,8 +3,8 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import Dropdown from '../components/Dropdown'
+import TicketTranscript from '../components/TicketTranscript'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { authFetchJson } from '../lib/api'
 import { gradeColor } from '../lib/verdict'
 
 const CONF = {
@@ -99,8 +99,6 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
   const [submitted, setSubmitted] = useState(false)
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
   const [focusIdx, setFocusIdx] = useState(0)
-  const [transcript, setTranscript] = useState(null)   // null = not loaded; [] = none
-  const [loadingMsgs, setLoadingMsgs] = useState(false)
   const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted
   const evidenceIds = activeCrit ? (aiMeta[activeCrit]?.evidence || []) : []
 
@@ -163,18 +161,6 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     return () => window.removeEventListener('keydown', onKey)
   }, [focusIdx, allCrit, canScore, submitted, scores, autoFails, note, agentId, ticketUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load the ticket conversation for the transcript (edit mode only)
-  useEffect(() => {
-    if (!editing || !ticketId) return
-    let cancelled = false
-    setLoadingMsgs(true)
-    authFetchJson(`/api/ticket-messages?ticket_id=${ticketId}`)
-      .then(({ data }) => { if (!cancelled) setTranscript(data?.messages || []) })
-      .catch(() => { if (!cancelled) setTranscript([]) })
-      .finally(() => { if (!cancelled) setLoadingMsgs(false) })
-    return () => { cancelled = true }
-  }, [editing, ticketId])
-
   // Evidence highlight follows the focused criterion (keyboard or click)
   useEffect(() => { if (editing) setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, editing, allCrit])
 
@@ -212,45 +198,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                 </div>
               )}
               {/* Conversation transcript — clicking a criterion rings its evidence */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.45)' }}>Conversation</p>
-                  {evidenceIds.length > 0 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
-                      <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
-                      {evidenceIds.length} cited
-                    </span>
-                  )}
-                </div>
-                {loadingMsgs ? (
-                  <p className="text-xs py-6 text-center" style={{ color: 'rgba(26,30,35,.45)' }}>Loading conversation…</p>
-                ) : (transcript && transcript.length) ? (
-                  <div className="flex flex-col gap-2.5 overflow-y-auto pr-1" style={{ maxHeight: 440 }}>
-                    {transcript.map(m => {
-                      const lit = evidenceIds.includes(String(m.id))
-                      const agent = m.from_agent
-                      return (
-                        <div key={m.id} style={{ alignSelf: agent ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
-                          <div className="flex items-center gap-1.5 mb-0.5 text-xs" style={{ color: 'rgba(26,30,35,.45)', justifyContent: agent ? 'flex-end' : 'flex-start' }}>
-                            <span className="font-medium" style={{ color: 'rgba(26,30,35,.6)' }}>{m.author || (agent ? 'Agent' : 'Customer')}</span>
-                            {!m.public && <span className="px-1 rounded" style={{ background: '#F1ECE8' }}>internal</span>}
-                          </div>
-                          <div className="text-sm leading-relaxed px-3.5 py-2.5 whitespace-pre-wrap" style={{
-                            background: agent ? '#FFF4F1' : '#F6F4F2', color: '#1A1E23',
-                            borderRadius: 16, borderTopRightRadius: agent ? 4 : 16, borderTopLeftRadius: agent ? 16 : 4,
-                            boxShadow: lit ? '0 0 0 2px #FF9780, 0 1px 6px rgba(255,151,128,.3)' : 'none',
-                            transition: 'box-shadow .2s ease',
-                          }}>{(m.body || '').trim() || '(no text)'}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs py-3 leading-relaxed" style={{ color: 'rgba(26,30,35,.45)' }}>
-                    Couldn’t load the conversation here. <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" style={{ color: '#B84A2E' }}>Open #{ticketId} in Gorgias →</a>
-                  </p>
-                )}
-              </div>
+              <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} maxHeight={440} />
             </>
           ) : (
             <>

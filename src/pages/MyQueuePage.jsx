@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import ScoreModal from '../components/ScoreModal'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { useToast } from '../components/Toast'
 import { isClaimActive } from '../lib/claims'
@@ -83,15 +82,9 @@ function ClaimCard({ s, agentNames, onScore, onRelease, muted }) {
 }
 
 export default function MyQueuePage() {
-  const { scoreHistory, agents, unclaimScore, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, agents, unclaimScore, openScore: showScore } = useApp()
   const { user } = useAuth()
   const toast = useToast()
-
-  const [panelScore, setPanelScore] = useState(null)
-  const [modalScore, setModalScore] = useState(null)
-  const openPanel  = (s) => { setPanelScore(s); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
 
   const agentNamesFor = (s) => (s.agentIds || []).map(id => agents.find(a => a.id === id)?.name).filter(Boolean).join(' · ')
 
@@ -113,13 +106,13 @@ export default function MyQueuePage() {
 
   const release = async (id) => { const ok = await unclaimScore(id); if (ok) toast.info('Ticket released') }
 
-  const openScore = (s) => openPanel({
+  const openScore = (s) => showScore({
     ...s.fullScore, scoreId: s.id, reviewerNote: s.notes,
     overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt,
-  })
+  }, { actions: true })
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
@@ -169,16 +162,6 @@ export default function MyQueuePage() {
         </div>
       )}
     </div>
-    {panelScore && (
-      <ScoreModal
-        score={panelScore}
-        onClose={closePanel}
-        onExpand={() => { setModalScore(panelScore); closePanel() }}
-        panel
-        actions
-      />
-    )}
-    {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} actions />}
     </div>
   )
 }
