@@ -23,7 +23,6 @@ const MENU_TABS = [
   { id: 'rubric',      label: 'QA Guidance',  adminOnly: true, icon: ic(<><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></>) },
 ]
 
-const ROLE_TEXT = 'rgba(26,30,35,.55)'
 
 const BellIcon    = () => ic(<><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></>)
 const GearIcon    = () => ic(<><path d="M11 10.27 7 3.34"/><path d="m11 13.73-4 6.93"/><path d="M12 22v-2"/><path d="M12 2v2"/><path d="M14 12h8"/><path d="m17 20.66-1-1.73"/><path d="m17 3.34-1 1.73"/><path d="M2 12h2"/><path d="m20.66 17-1.73-1"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m3.34 7 1.73 1"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="8"/></>)
@@ -262,7 +261,7 @@ export default function Sidebar({ page, setPage }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, fontWeight: 700, flexShrink: 0,
             }}
-              title={collapsed ? `${profile.name} · ${role}` : undefined}
+              title={collapsed ? profile.name : undefined}
             >
               {(profile.name || '?')[0].toUpperCase()}
             </div>
@@ -270,9 +269,6 @@ export default function Sidebar({ page, setPage }) {
               <div style={{ minWidth: 0 }}>
                 <div style={{ color: '#1A1E23', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.name}
-                </div>
-                <div style={{ color: ROLE_TEXT, fontSize: 12, textTransform: 'capitalize', marginTop: 1 }}>
-                  {role}
                 </div>
               </div>
             )}
