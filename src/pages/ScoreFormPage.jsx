@@ -208,8 +208,11 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                 placeholder="https://yourcompany.gorgias.com/app/ticket/…"
                 className="g-input rounded-lg px-3 py-2.5 text-sm" />
               {ticketId && (
-                <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer"
-                  className="text-sm font-medium" style={{ color: '#B84A2E' }}>→ Open ticket #{ticketId} in Gorgias</a>
+                <>
+                  <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer"
+                    className="text-sm font-medium" style={{ color: '#B84A2E' }}>→ Open ticket #{ticketId} in Gorgias</a>
+                  <TicketTranscript ticketId={ticketId} maxHeight={440} />
+                </>
               )}
             </>
           )}
@@ -218,11 +221,13 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
             <Dropdown value={agentId} onChange={setAgentId} width="100%" avatars
               options={[{ value: '', label: 'No agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
           </div>
-          <div className="rounded-xl p-4 text-xs leading-relaxed" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9', color: 'rgba(26,30,35,.6)' }}>
-            {editing
-              ? 'Pre-filled with the AI’s scores. Adjust any criterion — “Overrode” shows where you differ from the AI. Saving overrides the committed score.'
-              : 'Open the full conversation in Gorgias for context, then grade each criterion on the right. The conversation isn’t stored in the QA app.'}
-          </div>
+          {(editing || !ticketId) && (
+            <div className="rounded-xl p-4 text-xs leading-relaxed" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9', color: 'rgba(26,30,35,.6)' }}>
+              {editing
+                ? 'Pre-filled with the AI’s scores. Adjust any criterion — “Overrode” shows where you differ from the AI. Saving overrides the committed score.'
+                : 'Paste a ticket link above to load its conversation here, then grade each criterion on the right.'}
+            </div>
+          )}
         </div>
 
         {/* Right — live grading */}
