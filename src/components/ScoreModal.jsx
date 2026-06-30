@@ -7,6 +7,7 @@ import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
 import TicketTranscript from './TicketTranscript'
+import Linkify from './Linkify'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -106,7 +107,7 @@ function SubScoreRow({ label, data, onActivate }) {
       </button>
       {open && (
         <div className="mt-2 ml-6">
-          <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>
+          <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}><Linkify text={notes} /></p>
           {(conf || ev.length > 0) && (
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               {conf && (
@@ -410,7 +411,7 @@ function WhatWentWell({ scores }) {
         {top.map((c, i) => (
           <div key={i} className="flex items-start gap-2.5">
             <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color: '#2F8F5B' }}>✓</span>
-            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{c.notes}</p>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={c.notes} /></p>
           </div>
         ))}
       </div>
@@ -834,7 +835,7 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
           {/* Summary */}
           <div className="rounded-xl p-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Summary</p>
-            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{s.summary}</p>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={s.summary} /></p>
           </div>
 
           {/* What went well */}
@@ -852,7 +853,7 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
                       style={{ background: '#FFEAE6', color: '#B84A2E' }}>
                       {i + 1}
                     </div>
-                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{imp}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={imp} /></p>
                   </div>
                 ))}
               </div>

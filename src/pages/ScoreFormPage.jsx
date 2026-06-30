@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import TicketTranscript from '../components/TicketTranscript'
+import Linkify from '../components/Linkify'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { gradeColor } from '../lib/verdict'
 
@@ -186,7 +187,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                     What went well
                   </p>
                   <ul className="flex flex-col gap-1">
-                    {wentWell.map((t, i) => <li key={i} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {t}</li>)}
+                    {wentWell.map((t, i) => <li key={i} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· <Linkify text={t} /></li>)}
                   </ul>
                 </div>
               )}
@@ -197,7 +198,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                     What to fix
                   </p>
                   <ul className="flex flex-col gap-1">
-                    {toFix.map((t, i) => <li key={i} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {t}</li>)}
+                    {toFix.map((t, i) => <li key={i} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· <Linkify text={t} /></li>)}
                   </ul>
                 </div>
               )}
@@ -270,7 +271,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                         </div>
                         {focused && aiNotes[c.id] && (
                           <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
-                            <span className="font-semibold" style={{ color: '#B84A2E' }}>AI rationale · </span>{aiNotes[c.id]}
+                            <span className="font-semibold" style={{ color: '#B84A2E' }}>AI rationale · </span><Linkify text={aiNotes[c.id]} />
                           </p>
                         )}
                         {ev.length > 0 && (

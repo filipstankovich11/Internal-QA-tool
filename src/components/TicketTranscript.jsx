@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { authFetchJson } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import Linkify from './Linkify'
 
 // Session cache so reopening a ticket is instant and doesn't re-spend the
 // Gorgias rate budget. Keyed by ticket id; also dedupes concurrent fetches.
@@ -105,7 +106,7 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
                 }}
                   onMouseEnter={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255,151,128,.25)' }) : undefined}
                   onMouseLeave={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = 'none' }) : undefined}>
-                  {(m.body || '').trim() || '(no text)'}</div>
+                  <Linkify text={(m.body || '').trim() || '(no text)'} /></div>
                 {(annotations[String(m.id)] || []).map((a, i) => {
                   const good = a.type === 'good'
                   return (

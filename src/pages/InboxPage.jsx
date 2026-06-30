@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
+import Linkify from '../components/Linkify'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
 
@@ -230,7 +231,7 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
       {s.notes && (
         <div className="px-5 py-3" style={{ borderBottom: '1px solid #F0ECE9', background: '#FBF7F3' }}>
           <p className="text-xs mb-1" style={{ color: 'rgba(26,30,35,.6)' }}>Reviewer note</p>
-          <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{s.notes}</p>
+          <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={s.notes} /></p>
         </div>
       )}
 
