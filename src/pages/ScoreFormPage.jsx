@@ -311,7 +311,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
         {/* Right — scoring (flat: dividers + boxed auto-fail/coaching) */}
         <div className="p-6 flex flex-col gap-5 overflow-y-auto">
           {/* Live score */}
-          <div>
+          <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
             <div className="flex items-start justify-between mb-2.5 gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.45)' }}>Live score</p>
