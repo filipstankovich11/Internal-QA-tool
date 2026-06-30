@@ -14,11 +14,11 @@ class ErrorBoundary extends Component {
   render() {
     if (!this.state.error) return this.props.children
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#161616' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF9F4' }}>
         <div className="text-center px-6 max-w-md">
           <p className="text-4xl mb-4">⚠️</p>
-          <p className="text-white font-semibold mb-2">Something went wrong</p>
-          <p className="text-sm mb-6" style={{ color: '#777' }}>{this.state.error.message}</p>
+          <p className="font-semibold mb-2" style={{ color: '#1A1E23' }}>Something went wrong</p>
+          <p className="text-sm mb-6" style={{ color: 'rgba(26,30,35,.6)' }}>{this.state.error.message}</p>
           <button onClick={() => this.setState({ error: null })}
             className="g-btn-primary text-sm px-5 py-2 rounded-xl">
             Try again
@@ -43,7 +43,7 @@ const ScoreFormPage    = lazy(() => import('./pages/ScoreFormPage'))
 const ScoreModal       = lazy(() => import('./components/ScoreModal'))
 
 const Spinner = () => (
-  <div className="min-h-screen flex items-center justify-center" style={{ background: '#161616' }}>
+  <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF9F4' }}>
     <svg className="animate-spin h-6 w-6" style={{ color: '#FF9780' }} viewBox="0 0 24 24" fill="none">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
