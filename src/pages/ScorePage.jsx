@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import ScoreModal from '../components/ScoreModal'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -7,6 +6,10 @@ import { authFetchJson, buildFewShotExamples } from '../lib/api'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, gradeColor } from '../lib/verdict'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import ScoringProgress from '../components/ScoringProgress'
+import ScoreFormPage from './ScoreFormPage'
+import DatePicker from '../components/DatePicker'
+import Segmented from '../components/Segmented'
+import Dropdown from '../components/Dropdown'
 
 const HISTORY_PAGE_SIZE = 10 // history rows shown before "Show more"
 
@@ -40,19 +43,7 @@ function ModeToggle({ mode, setMode }) {
     { id: 'csv',    label: 'CSV Upload'    },
     { id: 'view',   label: 'Gorgias View'  },
   ]
-  return (
-    <div className="flex items-center gap-1 p-1 rounded-xl w-fit" style={{ background: '#F1ECE8' }}>
-      {modes.map(({ id, label }) => (
-        <button key={id} onClick={() => setMode(id)}
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-          style={mode === id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 2px rgba(0,0,0,.06)' } : { color: 'rgba(26,30,35,.6)' }}
-          onMouseEnter={e => { if (mode !== id) e.currentTarget.style.color = '#1A1E23' }}
-          onMouseLeave={e => { if (mode !== id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-          {label}
-        </button>
-      ))}
-    </div>
-  )
+  return <Segmented options={modes} value={mode} onChange={setMode} segWidth={116} fontPx={14} padY={8} />
 }
 
 // ── Batch — CSV upload zone ───────────────────────────────────────────────────
@@ -366,18 +357,14 @@ function ResultRow({ result, onView }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ScorePage() {
-  const { scoreHistory, addScore, agents, rubric, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, addScore, agents, rubric, openScore } = useApp()
   const { canScore } = useAuth()
 
   const [mode,        setMode]        = useState('single')
-  const [panelScore,  setPanelScore]  = useState(null) // concise side panel
-  const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
+  const [method,      setMethod]      = useState('ai')  // 'ai' = AI scoring · 'manual' = grade by hand
 
-  // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
-  // other overlays (notifications/settings), expandable to the full modal.
-  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
+  // Open a scored ticket in the full-page two-pane detail (same surface everywhere).
+  const openPanel = openScore
 
   // Single mode state
   const [ticketUrl, setTicketUrl] = useState('')
@@ -434,7 +421,8 @@ export default function ScorePage() {
     try {
       const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url, rubric, few_shot_examples: fewShotExamples }) })
       if (!ok) { setError(data.error || 'Something went wrong.'); return }
-      addScore(data)
+      const saved = await addScore(data)
+      if (saved?.error) { setError(`Scored ${data.verdict}, but it couldn't be saved to the queue: ${saved.error.message || 'database error'}. Please retry.`); return }
       openPanel(data)
       setTicketUrl('')
     } catch (e) { setError(e.message) }
@@ -450,7 +438,8 @@ export default function ScorePage() {
       try {
         const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
         if (!ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
-        addScore(data)
+        const saved = await addScore(data)
+        if (saved?.error) { setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
         setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
       } catch (e) { setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
@@ -467,14 +456,21 @@ export default function ScorePage() {
     : null
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
-    <div className="max-w-2xl mx-auto px-4 pt-10 pb-16">
+    <div className="panel-push">
+    <div className="max-w-6xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: '#1A1E23' }}>Score</h1>
-        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
+      <div className="mb-6">
+        <h1 className="mb-1" style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>Score</h1>
+        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>{method === 'ai' ? 'Score a single ticket, upload a CSV, or pull from a Gorgias view' : 'Grade a ticket by hand against the rubric — no AI involved.'}</p>
       </div>
 
+      {/* Method: AI scoring vs manual grade */}
+      <div className="mb-7">
+        <Segmented options={[{ id: 'ai', label: 'Score with AI' }, { id: 'manual', label: 'Grade manually' }]}
+          value={method} onChange={setMethod} segWidth={142} fontPx={14} padY={9} />
+      </div>
+
+      {method === 'ai' && (<>
       {/* Mode toggle */}
       <div className="mb-6">
         <ModeToggle mode={mode} setMode={switchMode} />
@@ -490,7 +486,7 @@ export default function ScorePage() {
             </div>
           )}
 
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-2 mb-3 max-w-2xl">
             <input
               type="text" value={ticketUrl}
               onChange={e => setTicketUrl(e.target.value)}
@@ -578,21 +574,16 @@ export default function ScorePage() {
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Agent</label>
-                  <select value={filters.agent} onChange={e => setF('agent', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={inputStyle} onFocus={onFocus} onBlur={onBlur}>
-                    <option value="">All agents</option>
-                    {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
+                  <Dropdown value={filters.agent} onChange={v => setF('agent', v)} width={180} avatars
+                    options={[{ value: '', label: 'All agents' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>From</label>
-                  <input type="date" value={filters.dateFrom} onChange={e => setF('dateFrom', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'light' }} onFocus={onFocus} onBlur={onBlur} />
+                  <DatePicker value={filters.dateFrom} onChange={v => setF('dateFrom', v)} width={150} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>To</label>
-                  <input type="date" value={filters.dateTo} onChange={e => setF('dateTo', e.target.value)}
-                    className="rounded-xl px-3 py-2 text-sm" style={{ ...inputStyle, colorScheme: 'light' }} onFocus={onFocus} onBlur={onBlur} />
+                  <DatePicker value={filters.dateTo} onChange={v => setF('dateTo', v)} width={150} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Status</label>
@@ -775,17 +766,11 @@ export default function ScorePage() {
           )}
         </>
       )}
+      </>)}
+
+      {method === 'manual' && <ScoreFormPage embedded />}
 
       </div>
-      {panelScore && (
-        <ScoreModal
-          score={panelScore}
-          onClose={closePanel}
-          onExpand={() => { setModalScore(panelScore); closePanel() }}
-          panel
-        />
-      )}
-      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
   )
 }

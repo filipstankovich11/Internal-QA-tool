@@ -73,6 +73,33 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
   }
 
   const unreadCount = notifications.filter(n => !n.read).length
+  const newOnes = notifications.filter(n => !n.read)
+  const earlier = notifications.filter(n => n.read)
+
+  const GroupLabel = ({ children }) => (
+    <p style={{ padding: '12px 16px 4px', fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.4)' }}>{children}</p>
+  )
+
+  const renderRow = (n) => {
+    const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
+    return (
+      <button key={n.id} onClick={() => markRead(n.id)}
+        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: 'default' }}
+        onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
+        onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'}>
+        <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 1 }}>{meta.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ color: n.read ? 'rgba(26,30,35,.6)' : '#1A1E23', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>{n.message}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: meta.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{meta.label}</span>
+            <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
+            <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>{timeAgo(n.created_at)}</span>
+          </div>
+        </div>
+        {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9780', flexShrink: 0, marginTop: 5 }} />}
+      </button>
+    )
+  }
 
   return (
     <>
@@ -156,57 +183,12 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
               <p style={{ color: 'rgba(26,30,35,.5)', fontSize: 12 }}>You'll see disputes, overrides, and notes here</p>
             </div>
           ) : (
-            notifications.map(n => {
-              const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
-              return (
-                <button
-                  key={n.id}
-                  onClick={() => markRead(n.id)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    padding: '14px 16px',
-                    borderBottom: '1px solid #F0ECE9',
-                    background: n.read ? 'transparent' : '#FFEAE6',
-                    textAlign: 'left',
-                    transition: 'background 150ms',
-                    cursor: 'default',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
-                  onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'}
-                >
-                  {/* Type icon */}
-                  <span style={{
-                    width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                    background: `${meta.color}22`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, marginTop: 1,
-                  }}>
-                    {meta.icon}
-                  </span>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ color: n.read ? 'rgba(26,30,35,.6)' : '#1A1E23', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>
-                      {n.message}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 10, color: meta.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {meta.label}
-                      </span>
-                      <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
-                      <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>{timeAgo(n.created_at)}</span>
-                    </div>
-                  </div>
-
-                  {/* Unread dot */}
-                  {!n.read && (
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9780', flexShrink: 0, marginTop: 5 }} />
-                  )}
-                </button>
-              )
-            })
+            <>
+              {newOnes.length > 0 && <GroupLabel>New — {newOnes.length}</GroupLabel>}
+              {newOnes.map(renderRow)}
+              {earlier.length > 0 && <GroupLabel>Earlier</GroupLabel>}
+              {earlier.map(renderRow)}
+            </>
           )}
         </div>
       </div>

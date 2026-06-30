@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
-import ScoreModal from '../components/ScoreModal'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS } from '../lib/verdict'
 
@@ -104,8 +103,7 @@ function FilterBar({ agents, teams, filters, setFilters, total, filtered }) {
 }
 
 export default function TicketsPage() {
-  const { scoreHistory, agents, teams, getAgentScores } = useApp()
-  const [activeScore, setActiveScore] = useState(null)
+  const { scoreHistory, agents, teams, getAgentScores, openScore: showScore } = useApp()
   const [filters, setFilters] = useState({
     agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '',
   })
@@ -193,7 +191,7 @@ export default function TicketsPage() {
               </a>
 
               {/* Subject — clickable to open score modal */}
-              <button onClick={() => setActiveScore(s.fullScore)}
+              <button onClick={() => showScore(s.fullScore)}
                 className="text-sm text-left truncate pr-3 transition-colors"
                 style={{ color: '#ccc' }}
                 onMouseEnter={e => e.target.style.color = '#fff'}
@@ -234,8 +232,6 @@ export default function TicketsPage() {
           ))}
         </div>
       )}
-
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
     </div>
   )
 }

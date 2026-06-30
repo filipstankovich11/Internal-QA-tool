@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 import { startPrefetch } from '../lib/prefetch'
@@ -91,6 +91,27 @@ export function AppProvider({ children }) {
   // this when it opens; the others watch it and close themselves.
   // Values: 'notifications' | 'settings' | 'score' | null
   const [activeOverlay, setActiveOverlay] = useState(null)
+
+  // ── Score detail surface ─────────────────────────────────────────────────────
+  // The single way to open a graded ticket. Everywhere except the review queue
+  // renders this full-page (App swaps the routed content); the review queue uses
+  // its own modal so reviewers stay in the queue. `opts.actions` enables the
+  // work actions (mark reviewed / notify / re-score…) that My Queue needs.
+  const [viewingScore, setViewingScore] = useState(null)   // { score, actions }
+  const openScore  = useCallback((score, opts = {}) => {
+    setViewingScore({ score, actions: !!opts.actions })
+    setActiveOverlay('score')
+  }, [])
+  const closeScore = useCallback(() => {
+    setViewingScore(null)
+    setActiveOverlay(o => o === 'score' ? null : o)
+  }, [])
+
+  // Editing a committed score opens the grading form full-page (App swaps the
+  // routed content), rather than a modal stacked on the detail.
+  const [scoreToEdit, setScoreToEdit] = useState(null)
+  const openScoreEditor  = useCallback((score) => { setScoreToEdit(score); setActiveOverlay('score') }, [])
+  const closeScoreEditor = useCallback(() => { setScoreToEdit(null) }, [])
 
   // ── Resolve the current user's agent record (agents only) ───────────────────
   const myAgentId = useMemo(
@@ -225,14 +246,18 @@ export function AppProvider({ children }) {
       })
       .select().single()
 
-    if (!error) {
-      const entry = dbToScore(data)
-      setScoreHistory(prev => {
-        const filtered = prev.filter(s => s.ticketId !== scoreResult.ticket_id)
-        return [entry, ...filtered].slice(0, 500)
-      })
-      return entry
+    if (error) {
+      // Surface the failure — a swallowed insert error means a ticket looks
+      // "scored" in the UI but never reaches the DB or the review queue.
+      console.error('addScore: failed to persist score', error)
+      return { error }
     }
+    const entry = dbToScore(data)
+    setScoreHistory(prev => {
+      const filtered = prev.filter(s => s.ticketId !== scoreResult.ticket_id)
+      return [entry, ...filtered].slice(0, 500)
+    })
+    return entry
   }
 
   const deleteScore = async (id) => {
@@ -394,6 +419,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       teams, agents, scoreHistory: visibleScoreHistory, rubric, dataLoading, myAgentId,
       activeOverlay, setActiveOverlay,
+      viewingScore, openScore, closeScore,
+      scoreToEdit, openScoreEditor, closeScoreEditor,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,

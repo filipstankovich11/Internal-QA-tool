@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
-import ScoreModal from '../components/ScoreModal'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
+import DatePicker from '../components/DatePicker'
+import Dropdown from '../components/Dropdown'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, VERDICT_DESC } from '../lib/verdict'
 
@@ -42,12 +43,15 @@ const STAT_ICONS = {
   review: svg(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>),
 }
 
-function StatCard({ label, value, format, sub, color, icon, onClick }) {
+function StatCard({ label, value, format, sub, color, icon, onClick, spark }) {
   const animated = useCountUp(typeof value === 'number' ? value : 0)
   const display  = value == null ? '—' : format ? format(animated) : Math.round(animated)
   const [hovered, setHovered] = useState(false)
   const accent = color || '#1A1E23'
   const clickable = !!onClick
+  const trend = spark && spark.length > 1
+    ? (spark[spark.length - 1] > spark[0] + 1 ? ' · trending up' : spark[spark.length - 1] < spark[0] - 1 ? ' · trending down' : ' · steady')
+    : ''
   return (
     <div className="p-5"
       onMouseEnter={() => setHovered(true)}
@@ -75,10 +79,26 @@ function StatCard({ label, value, format, sub, color, icon, onClick }) {
           </span>
         )}
       </div>
-      <p className="text-3xl" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600 }}>{display}</p>
+      <div className="flex items-end justify-between gap-3">
+        <p className="text-3xl shrink-0" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, lineHeight: 1 }}>{display}</p>
+        {spark && spark.length > 1 && (() => {
+          const n = spark.length
+          const lo = Math.min(...spark), hi = Math.max(...spark), range = (hi - lo) || 1
+          const x = (i) => 3 + (i / (n - 1)) * 90
+          const y = (v) => 31 - ((v - lo) / range) * 28
+          const last = spark[n - 1]
+          return (
+            <svg width="96" height="34" viewBox="0 0 96 34" className="shrink-0 mb-0.5" style={{ overflow: 'visible' }}>
+              <polyline fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                points={spark.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')} />
+              <circle cx={x(n - 1).toFixed(1)} cy={y(last).toFixed(1)} r="3" fill={accent} />
+            </svg>
+          )
+        })()}
+      </div>
       {sub && (
         <p className="text-xs mt-1" style={{ color: clickable && hovered ? '#B84A2E' : 'rgba(26,30,35,.5)', transition: 'color 150ms' }}>
-          {sub}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
+          {sub}{trend}{clickable && <span style={{ marginLeft: 4, opacity: hovered ? 1 : 0, transition: 'opacity 150ms' }}>→</span>}
         </p>
       )}
     </div>
@@ -198,28 +218,67 @@ const selectStyle = {
   outline: 'none',
 }
 
+// Full-width average-score area chart with a pass-threshold reference line
+function AvgTrendChart({ scores, passLine = 80 }) {
+  const pts = useMemo(() => buildTrendData(scores, 30), [scores])
+  const W = 900, H = 170, padX = 14, padTop = 16, padBot = 26
+  const card = { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }
+
+  if (pts.length < 2) return (
+    <div className="p-5 mb-6" style={card}>
+      <p className="g-label" style={{ margin: 0 }}>Average score — last 30 days</p>
+      <p className="text-xs text-center py-10" style={{ color: 'rgba(26,30,35,.45)' }}>Not enough data yet — need scores across 2+ days.</p>
+    </div>
+  )
+
+  const maxDay = Math.max(...pts.map(p => p.day), 29) || 1
+  const x = (d) => padX + (d / maxDay) * (W - padX * 2)
+  const y = (v) => padTop + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - padTop - padBot)
+  const coords = pts.map(p => ({ x: x(p.day), y: y(p.avg) }))
+  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
+  const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${H - padBot} L${coords[0].x.toFixed(1)},${H - padBot} Z`
+  const yPass = y(passLine)
+
+  return (
+    <div className="p-5 mb-6" style={card}>
+      <div className="flex items-center justify-between mb-3">
+        <p className="g-label" style={{ margin: 0 }}>Average score — last 30 days</p>
+        <span className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+          <span style={{ width: 14, borderTop: '1px dashed #2F8F5B' }} /> Pass threshold {passLine}
+        </span>
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="avgtrend-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FF9780" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#FF9780" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1={padX} y1={yPass} x2={W - padX} y2={yPass} stroke="#2F8F5B" strokeWidth="1" strokeDasharray="5 5" opacity="0.55" />
+        <path d={area} fill="url(#avgtrend-fill)" />
+        <path d={line} fill="none" stroke="#FF9780" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {coords.map((c, i) => <circle key={i} cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r="2.5" fill="#FF9780" />)}
+      </svg>
+      <div className="flex justify-between mt-1">
+        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>30 days ago</span>
+        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>Today</span>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const { scoreHistory, agents, teams, rubric } = useApp()
   const { role, profile } = useAuth()
 
   // myAgentId from context — used only for display; scoreHistory is already scoped
-  const { myAgentId, activeOverlay, setActiveOverlay, dataLoading } = useApp()
-  const [panelScore, setPanelScore] = useState(null)
-  const [modalScore, setModalScore] = useState(null)
+  const { myAgentId, dataLoading, openScore } = useApp()
   const [filters,      setFilters]      = useState({ agent: '', team: '', verdicts: [], dateFrom: '', dateTo: '' })
   const [activeRange,  setActiveRange]  = useState(null) // '7d' | '30d' | '90d'
   const [ticketSearch, setTicketSearch] = useState('')
   const [selectedDay,  setSelectedDay]  = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE) // progressive "Show more" reveal
   const tableRef = useRef(null)
-
-  // Close the score panel when another overlay (notifications / settings) opens
-  useEffect(() => {
-    if (activeOverlay !== 'score') setPanelScore(null)
-  }, [activeOverlay])
-
-  const openPanel = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
 
   const handleDayClick = (dateStr) => {
     if (!dateStr || selectedDay === dateStr) {
@@ -285,9 +344,11 @@ export default function DashboardPage() {
   const passRate = total ? Math.round((pass / total) * 100) : null
   const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 7); weekStart.setHours(0,0,0,0)
   const thisWeek  = filteredScores.filter(s => s.scoredAt >= weekStart.getTime()).length
+  const vt = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
+  const avgSpark = useMemo(() => buildTrendData(filteredScores, 14).map(p => p.avg), [filteredScores])
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
 
       {/* Header */}
@@ -307,7 +368,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Total Scored',  value: total,                      format: n => Math.round(n),        sub: `${thisWeek} this week`, color: '#1A1E23', icon: STAT_ICONS.total, onClick: showAllTickets },
-          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#C8841E', icon: STAT_ICONS.avg },
+          { label: 'Average Score', value: avg != null ? parseFloat(avg) : null, format: n => n.toFixed(1), sub: 'out of 100', color: '#C8841E', icon: STAT_ICONS.avg, spark: avgSpark },
           { label: 'Pass Rate',     value: passRate,                   format: n => `${Math.round(n)}%`,  sub: `${pass} tickets`, color: '#3B7DD8', icon: STAT_ICONS.pass },
           { label: 'Need Review',   value: review + fail,              format: n => Math.round(n),        sub: `${review} review · ${fail} fail`, color: review + fail > 0 ? '#C8841E' : 'rgba(26,30,35,.45)', icon: STAT_ICONS.review },
         ].map((p, i) => (
@@ -389,6 +450,9 @@ export default function DashboardPage() {
         </div>
         <ScoreTrend scores={filteredScores} onDayClick={handleDayClick} selectedDay={selectedDay} />
       </div>
+
+      {/* Full-width average-score trend */}
+      <AvgTrendChart scores={filteredScores} passLine={vt.pass} />
 
       {/* ── Ticket table with filters ── */}
       <div ref={tableRef}>
@@ -475,35 +539,27 @@ export default function DashboardPage() {
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
                 <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Agent</label>
-                <select value={filters.agent} onChange={e => set('agent', e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
-                  <option value="">All agents</option>
-                  {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                <Dropdown value={filters.agent} onChange={v => set('agent', v)} width={170} avatars
+                  options={[{ value: '', label: 'All agents' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
               </div>
             )}
 
             {role !== 'agent' && (
               <div className="flex flex-col gap-1.5 min-w-[150px]">
                 <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Team</label>
-                <select value={filters.team} onChange={e => set('team', e.target.value)}
-                  className="rounded-xl px-3 py-2 text-sm" style={selectStyle} onFocus={focus} onBlur={blur}>
-                  <option value="">All teams</option>
-                  {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <Dropdown value={filters.team} onChange={v => set('team', v)} width={170}
+                  options={[{ value: '', label: 'All teams' }, ...teams.map(t => ({ value: t.id, label: t.name }))]} />
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>From</label>
-              <input type="date" value={filters.dateFrom} onChange={e => set('dateFrom', e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'light' }} onFocus={focus} onBlur={blur} />
+              <DatePicker value={filters.dateFrom} onChange={v => { set('dateFrom', v); setActiveRange(null) }} width={150} />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>To</label>
-              <input type="date" value={filters.dateTo} onChange={e => set('dateTo', e.target.value)}
-                className="rounded-xl px-3 py-2 text-sm" style={{ ...selectStyle, colorScheme: 'light' }} onFocus={focus} onBlur={blur} />
+              <DatePicker value={filters.dateTo} onChange={v => { set('dateTo', v); setActiveRange(null) }} width={150} />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -618,7 +674,7 @@ export default function DashboardPage() {
                   #{s.ticketId}
                 </a>
 
-                <button onClick={() => openPanel({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
+                <button onClick={() => openScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
                   className="text-sm text-left truncate pr-3 transition-colors"
                   style={{ color: '#1A1E23' }}
                   onMouseEnter={e => e.target.style.color='#B84A2E'}
@@ -670,16 +726,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {panelScore && (
-        <ScoreModal
-          score={panelScore}
-          onClose={closePanel}
-          onExpand={() => { setModalScore(panelScore); closePanel() }}
-          panel
-        />
-      )}
-      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
     </div>
     </div>
   )

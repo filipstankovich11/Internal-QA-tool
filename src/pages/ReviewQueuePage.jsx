@@ -2,7 +2,10 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
+import DisputeResolution from '../components/DisputeResolution'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
+import Segmented from '../components/Segmented'
+import Dropdown from '../components/Dropdown'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
@@ -55,7 +58,7 @@ function badgeFor(item) {
 
 // ── Queue item row ─────────────────────────────────────────────────────────────
 
-function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUnclaim, isAdmin }) {
+function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUnclaim, onResolve, isAdmin }) {
   const { agents } = useApp()
   const agentName  = (id) => agents.find(a => a.id === id)?.name
   const badge      = badgeFor(item)
@@ -152,11 +155,22 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
         <div className="px-4 pb-3.5" style={{ borderTop: '1px solid #F0ECE9' }}>
           <p className="text-xs pt-2.5 mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Agent's dispute reason:</p>
           <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{item.disputeNote}</p>
-          {item.disputeAt && (
-            <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.5)' }}>
-              Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </p>
-          )}
+          <div className="flex items-center justify-between gap-3 mt-1.5">
+            {item.disputeAt ? (
+              <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+                Flagged {new Date(item.disputeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            ) : <span />}
+            {isAdmin && onResolve && (
+              <button onClick={() => onResolve(item)}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shrink-0"
+                style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFE0D6' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#FFEAE6'}
+                onMouseLeave={e => e.currentTarget.style.background = '#FFF4F1'}>
+                Resolve dispute →
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -166,12 +180,12 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ReviewQueuePage() {
-  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore, activeOverlay, setActiveOverlay } = useApp()
+  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore } = useApp()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
 
-  const [panelScore,  setPanelScore]  = useState(null) // concise side panel
-  const [modalScore,  setModalScore]  = useState(null) // full modal (via expand)
+  const [modalScore,  setModalScore]  = useState(null) // two-pane review modal (transcript + grading)
+  const [disputeScore, setDisputeScore] = useState(null) // dispute resolution modal
   const [sortOrder,    setSortOrder]    = useState('priority')
   const [agentFilter,  setAgentFilter]  = useState('')
   const [selected,     setSelected]     = useState(new Set())
@@ -240,6 +254,24 @@ export default function ReviewQueuePage() {
     clearSelect()
   }
 
+  // Export the selected rows as CSV
+  const bulkExport = () => {
+    const rows = sorted.filter(s => selected.has(s.id))
+    if (!rows.length) return
+    const header = ['Ticket', 'Subject', 'Verdict', 'Score', 'Waiting (days)']
+    const body = rows.map(s => [
+      s.ticketId,
+      `"${(s.fullScore?.ticket_subject || '').replace(/"/g, '""')}"`,
+      s.effectiveVerdict,
+      s.effectiveScore?.toFixed(0) ?? '',
+      Math.floor((Date.now() - s.scoredAt) / 86400000),
+    ].join(','))
+    const blob = new Blob([[header.join(','), ...body].join('\n')], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `review-queue-${rows.length}.csv`; a.click(); URL.revokeObjectURL(url)
+    toast.success(`Exported ${rows.length} ticket${rows.length > 1 ? 's' : ''}`)
+  }
+
   // Claim / unclaim (persisted via AppContext)
   const claimTicket   = async (id) => {
     const err = await claimScore(id)
@@ -249,13 +281,9 @@ export default function ReviewQueuePage() {
   const unclaimTicket = (id) => unclaimScore(id)
 
 
-  // Mirror the dashboard: open a ticket in the side panel, mutually exclusive with
-  // other overlays (notifications/settings), expandable to the full modal.
-  const openPanel  = (score) => { setPanelScore(score); setActiveOverlay('score') }
-  const closePanel = () => { setPanelScore(null); setActiveOverlay(o => o === 'score' ? null : o) }
-  useEffect(() => { if (activeOverlay !== 'score') setPanelScore(null) }, [activeOverlay])
-
-  const open = (item) => openPanel({
+  // Reviewers triage in a large two-pane modal (transcript + grading) so they
+  // stay in the queue — the rest of the app opens the same view full-page.
+  const open = (item) => setModalScore({
     ...item.fullScore,
     scoreId:         item.id,
     reviewerNote:    item.notes,
@@ -269,7 +297,7 @@ export default function ReviewQueuePage() {
   })
 
   return (
-    <div className={`panel-push ${panelScore ? 'is-open' : ''}`}>
+    <div className="panel-push">
     <div className="max-w-6xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -331,26 +359,13 @@ export default function ReviewQueuePage() {
           {/* Toolbar */}
           <div className="flex items-center gap-2 flex-wrap mb-4 pb-4" style={{ borderBottom: '1px solid #EEEEEE' }}>
             {/* Sort */}
-            <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: '#F1ECE8', border: '1px solid #EEEEEE' }}>
-              {[{ id: 'priority', label: 'Priority' }, { id: 'oldest', label: 'Oldest' }, { id: 'newest', label: 'Newest' }].map(o => (
-                <button key={o.id} onClick={() => setSortOrder(o.id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                  style={sortOrder === o.id ? { background: '#FFFFFF', color: '#1A1E23', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' } : { color: 'rgba(26,30,35,.6)' }}
-                  onMouseEnter={e => { if (sortOrder !== o.id) e.currentTarget.style.color = '#1A1E23' }}
-                  onMouseLeave={e => { if (sortOrder !== o.id) e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
-                  {o.label}
-                </button>
-              ))}
-            </div>
+            <Segmented options={[{ id: 'priority', label: 'Priority' }, { id: 'oldest', label: 'Oldest' }, { id: 'newest', label: 'Newest' }]}
+              value={sortOrder} onChange={setSortOrder} segWidth={72} fontPx={12} padY={6} />
 
             {/* Agent filter */}
             {queueAgents.length > 0 && (
-              <select value={agentFilter} onChange={e => setAgentFilter(e.target.value)}
-                className="rounded-xl px-3 py-2 text-xs"
-                style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: agentFilter ? '#1A1E23' : 'rgba(26,30,35,.6)', outline: 'none' }}>
-                <option value="">All agents</option>
-                {queueAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              <Dropdown value={agentFilter} onChange={setAgentFilter} width={170} avatars
+                options={[{ value: '', label: 'All agents' }, ...queueAgents.map(a => ({ value: a.id, label: a.name }))]} />
             )}
 
             {/* Bulk select controls */}
@@ -380,6 +395,14 @@ export default function ReviewQueuePage() {
                       className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
                       style={{ background: '#E7F3EC', color: '#2F8F5B', border: '1px solid #CDE6D8', opacity: bulkWorking ? 0.6 : 1 }}>
                       {bulkWorking ? 'Working…' : '✓ Acknowledge all'}
+                    </button>
+                    <button onClick={bulkExport}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5"
+                      style={{ background: '#FFFFFF', color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#1A1E23'; e.currentTarget.style.borderColor = '#E1DCD7' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Export
                     </button>
                     <button onClick={clearSelect}
                       className="text-xs transition-colors" style={{ color: 'rgba(26,30,35,.5)' }}
@@ -419,6 +442,7 @@ export default function ReviewQueuePage() {
                 claimedBy={claimedName(item)}
                 onClaim={claimTicket}
                 onUnclaim={unclaimTicket}
+                onResolve={setDisputeScore}
                 isAdmin={isAdmin}
               />
             ))}
@@ -439,15 +463,8 @@ export default function ReviewQueuePage() {
       )}
 
       </div>
-      {panelScore && (
-        <ScoreModal
-          score={panelScore}
-          onClose={closePanel}
-          onExpand={() => { setModalScore(panelScore); closePanel() }}
-          panel
-        />
-      )}
-      {modalScore && <ScoreModal score={modalScore} onClose={() => setModalScore(null)} />}
+      {modalScore && <ScoreModal score={modalScore} variant="modal" actions onClose={() => setModalScore(null)} />}
+      {disputeScore && <DisputeResolution score={disputeScore} onClose={() => setDisputeScore(null)} onResolved={() => setDisputeScore(null)} />}
     </div>
   )
 }

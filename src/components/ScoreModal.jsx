@@ -6,6 +6,7 @@ import { useToast } from './Toast'
 import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
+import TicketTranscript from './TicketTranscript'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -40,6 +41,11 @@ const VERDICT = {
 }
 
 const scoreColor = n => n >= 4 ? '#2F8F5B' : n >= 3 ? '#C8841E' : '#D14B3D'
+const CONF = {
+  high:   { label: 'High',   color: '#2F8F5B', bg: '#E6F4EC' },
+  medium: { label: 'Medium', color: '#C8841E', bg: '#FBEBD3' },
+  low:    { label: 'Low',    color: '#B84A2E', bg: '#FFEAE6' },
+}
 
 // ── 5-dot score indicator ─────────────────────────────────────────────────────
 function ScoreDots({ score }) {
@@ -114,25 +120,51 @@ function DimensionStrip({ dimensions }) {
 }
 
 // ── Criteria row with dots ────────────────────────────────────────────────────
-function SubScoreRow({ label, data }) {
+function SubScoreRow({ label, data, onActivate }) {
   const [open, setOpen] = useState(false)
-  const { score, notes } = data
+  const { score, notes, confidence, evidence } = data
   const color = scoreColor(score)
+  const conf = CONF[confidence]
+  const ev = (evidence || []).map(String)
+  // Expanding a criterion highlights its cited messages in the transcript
+  const toggle = () => setOpen(v => { const nv = !v; if (nv && ev.length) onActivate?.(ev); return nv })
 
   return (
     <div className="py-2.5" style={{ borderBottom: '1px solid #F0ECE9' }}>
-      <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 text-left">
+      <button onClick={toggle} className="w-full flex items-center gap-3 text-left">
         <span className="shrink-0 transition-transform" style={{ color: 'rgba(26,30,35,.45)', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
         <span className="text-sm flex-1" style={{ color: 'rgba(26,30,35,.72)' }}>{label}</span>
+        {ev.length > 0 && <span title={`${ev.length} cited message${ev.length>1?'s':''}`} style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780', flexShrink: 0 }} />}
         <ScoreDots score={score} />
         <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
       </button>
-      {open && <p className="text-xs mt-2 ml-6 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>}
+      {open && (
+        <div className="mt-2 ml-6">
+          <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>
+          {(conf || ev.length > 0) && (
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {conf && (
+                <span className="text-[11px] inline-flex items-center gap-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+                  AI confidence <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
+                </span>
+              )}
+              {ev.length > 0 && (
+                <button onClick={() => onActivate?.(ev)}
+                  className="text-[11px] inline-flex items-center gap-1 transition-colors" style={{ color: '#B84A2E' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#FF9780'} onMouseLeave={e => e.currentTarget.style.color = '#B84A2E'}>
+                  <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
+                  Show {ev.length} cited message{ev.length > 1 ? 's' : ''} in transcript
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
+function DimensionCard({ name, weight, average, rows, isOpen, onToggle, onActivate }) {
   const avg = typeof average === 'number' ? average : Number(average) || 0
   const color = scoreColor(avg)
 
@@ -167,7 +199,7 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
       }}>
         <div style={{ padding: '0 16px 16px', borderTop: '1px solid #F0ECE9' }}>
           <div style={{ paddingTop: 4 }}>
-            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} />)}
+            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} onActivate={onActivate} />)}
           </div>
         </div>
       </div>
@@ -175,23 +207,23 @@ function DimensionCard({ name, weight, average, rows, isOpen, onToggle }) {
   )
 }
 
-function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception }) {
+function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception, onActivate }) {
   const [openDim, setOpenDim] = useState(-1) // start collapsed — no dimension auto-opens
   const toggle = i => setOpenDim(prev => prev === i ? -1 : i)
   return (
     <div>
       <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
-        isOpen={openDim === 0} onToggle={() => toggle(0)}
+        isOpen={openDim === 0} onToggle={() => toggle(0)} onActivate={onActivate}
         rows={[
           { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
           { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
           { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
         ]} />
       <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
-        isOpen={openDim === 1} onToggle={() => toggle(1)}
+        isOpen={openDim === 1} onToggle={() => toggle(1)} onActivate={onActivate}
         rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
       <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
-        isOpen={openDim === 2} onToggle={() => toggle(2)}
+        isOpen={openDim === 2} onToggle={() => toggle(2)} onActivate={onActivate}
         rows={[
           { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
           { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
@@ -506,8 +538,8 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory } = useApp()
+export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false, variant = null }) {
+  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory, openScoreEditor } = useApp()
   const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
   const toast = useToast()
@@ -528,6 +560,8 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   const [reviewing,      setReviewing]      = useState(false)
   const [confirmReview,  setConfirmReview]  = useState(false)
   const [notifyOnReview, setNotifyOnReview] = useState(true)
+  const [activeEvidence, setActiveEvidence] = useState([])  // criterion's cited message ids → transcript highlight
+  const [menuOpen,       setMenuOpen]       = useState(false) // header "⋯" overflow menu
 
   const displayVerdict  = s.overrideVerdict || s.verdict
   const displayScore    = s.overrideScore   ?? s.weighted_score
@@ -625,7 +659,15 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     document.addEventListener('keydown', onKey)
     if (!panel) document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
-  }, [onClose, panel])
+  }, [onClose, panel, variant])
+
+  // Close the "⋯" menu on any outside click (deferred so the opening click doesn't close it)
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = () => setMenuOpen(false)
+    const t = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(t); document.removeEventListener('click', close) }
+  }, [menuOpen])
 
   const inner = (
     <>
@@ -661,20 +703,21 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     )}
     {/* Sticky header — colour-washed by verdict */}
         <div className="sticky top-0 z-10 px-6 pt-5 pb-5 rounded-t-2xl"
-          style={{ background: `rgba(255,255,255,0.96)`, borderBottom: `1px solid ${vc.border}`, backdropFilter: 'blur(8px)', boxShadow: `inset 0 -1px 0 ${vc.wash}` }}>
+          style={{ background: '#FFFFFF', borderBottom: `1px solid ${vc.border}`, boxShadow: '0 6px 16px -12px rgba(0,0,0,.22)' }}>
 
-          {/* Row 1: Ticket ID (left) + Actions (right) */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Row 1: Ticket ID (left) + Actions (right) — actions wrap on narrow panes */}
+          <div className="flex items-start justify-between gap-2 mb-4 flex-wrap">
             <a href={gorgiasTicketUrl(s.ticket_id)} target="_blank" rel="noreferrer"
-              className="text-xs transition-colors"
+              className="text-xs transition-colors shrink-0 mt-1.5"
               style={{ color: '#B84A2E' }}
               onMouseEnter={e => e.currentTarget.style.color='#FF9780'}
               onMouseLeave={e => e.currentTarget.style.color='#B84A2E'}>
               Ticket #{s.ticket_id}
             </a>
-            <div className="flex items-center gap-2 shrink-0 pl-6">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
               {/* Work actions — only on My Queue; elsewhere the modal is view-only */}
               {actions && (<>
+              {/* Primary: mark reviewed / reviewed status */}
               {isAdmin && s.scoreId && !confirmDelete && !reviewed && (
                 <button onClick={openReviewConfirm} disabled={reviewing}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
@@ -698,40 +741,60 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                     title="Re-open — puts it back in the queue">Re-open</button>
                 </span>
               )}
+              {/* Primary: edit score */}
               {isAdmin && s.scoreId && !confirmDelete && (
-                <button onClick={openNotifyPreview} disabled={notifying}
+                <button onClick={() => openScoreEditor(s)}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: notifying ? 'rgba(26,30,35,.45)' : 'rgba(26,30,35,.72)', cursor: notifying ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!notifying) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.borderColor='#E1DCD7' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.borderColor='#E7E3DF' }}
-                  title="Send score summary to agent via Slack DM">
-                  {notifying
-                    ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                    : <svg width="11" height="11" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
-                  }
-                  {notifying ? 'Sending…' : 'Notify'}
+                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.72)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#B84A2E'; e.currentTarget.style.borderColor='#FFD2C9' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color='rgba(26,30,35,.72)'; e.currentTarget.style.borderColor='#E7E3DF' }}
+                  title="Re-grade this ticket against the rubric (overrides the score)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  Edit score
                 </button>
               )}
+              {/* Secondary actions — collapsed into a "⋯" menu */}
               {s.scoreId && !confirmDelete && (
-                <button onClick={rescore} disabled={rescoring}
-                  className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: rescoring ? 'rgba(26,30,35,.45)' : 'rgba(26,30,35,.72)', cursor: rescoring ? 'not-allowed' : 'pointer' }}
-                  onMouseEnter={e => { if (!rescoring) { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#FF9780'; e.currentTarget.style.borderColor='#FFEAE6' } }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color=rescoring?'rgba(26,30,35,.45)':'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor='#E7E3DF' }}
-                  title="Re-run AI scoring on this ticket">
-                  {rescoring ? <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg> : <RefreshIcon />}
-                  {rescoring ? 'Rescoring…' : 'Re-score'}
-                </button>
+                <div className="relative">
+                  <button onClick={() => setMenuOpen(o => !o)} disabled={rescoring || notifying}
+                    className="flex items-center justify-center rounded-lg transition-all"
+                    style={{ background: menuOpen ? '#F6F2EF' : '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.6)', width: 30, height: 30 }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF' }}
+                    onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background='#FFFFFF' }}
+                    title="More actions">
+                    {(rescoring || notifying)
+                      ? <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>}
+                  </button>
+                  {menuOpen && (
+                    <div className="absolute right-0 py-1 rounded-xl overflow-hidden"
+                      style={{ top: 'calc(100% + 6px)', minWidth: 184, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 12px 32px rgba(0,0,0,.16)', zIndex: 30 }}>
+                      {isAdmin && (
+                        <button onClick={() => { setMenuOpen(false); openNotifyPreview() }}
+                          className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
+                          onMouseEnter={e => e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                          <svg width="13" height="13" viewBox="0 0 24 24"><path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/><path fill="#2EB67D" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/><path fill="#ECB22E" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/><path fill="#36C5F0" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>
+                          Notify on Slack
+                        </button>
+                      )}
+                      <button onClick={() => { setMenuOpen(false); rescore() }}
+                        className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
+                        onMouseEnter={e => e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <RefreshIcon /> Re-score with AI
+                      </button>
+                      {isAdmin && (
+                        <button onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
+                          className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: '#D14B3D' }}
+                          onMouseEnter={e => e.currentTarget.style.background='#FDEEEA'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          Delete score
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
-              {isAdmin && s.scoreId && !confirmDelete && (
-                <button onClick={() => setConfirmDelete(true)}
-                  className="text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
-                  style={{ background: '#FEF6F4', border: '1px solid #F4DDD7', color: '#D14B3D' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='#FDEEEA'; e.currentTarget.style.borderColor='#EFC9C1' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FEF6F4'; e.currentTarget.style.borderColor='#F4DDD7' }}>
-                  Delete
-                </button>
-              )}
+              {/* Delete confirmation — replaces the toolbar while active */}
               {confirmDelete && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs" style={{ color: '#D14B3D' }}>Delete?</span>
@@ -824,6 +887,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                 inquiry_resolution={inquiry_resolution}
                 internal_processes={internal_processes}
                 customer_perception={customer_perception}
+                onActivate={setActiveEvidence}
               />
             </>
           ) : (
@@ -1052,6 +1116,60 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
         </div>
       </div>
   ) : null
+
+  // Per-message AI annotations: { msgId: [{ type, note }] }
+  const annMap = {}
+  ;(s.annotations || []).forEach(a => {
+    if (a?.message_id == null) return
+    const id = String(a.message_id)
+    ;(annMap[id] = annMap[id] || []).push({ type: a.type === 'good' ? 'good' : 'bad', note: a.note || '' })
+  })
+
+  // Conversation transcript (left) — shared by the page + modal two-pane layouts
+  const transcriptPane = (
+    <div className="flex-1 min-w-0 h-full overflow-y-auto px-6 py-6" style={{ background: '#FFF9F4' }}>
+      {variant === 'page' && (
+        <button onClick={onClose}
+          className="inline-flex items-center gap-1.5 text-sm mb-4 transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Back
+        </button>
+      )}
+      <TicketTranscript ticketId={s.ticket_id} evidenceIds={activeEvidence} annotations={annMap} />
+    </div>
+  )
+
+  // Full-page two-pane — fills the content area (sidebar stays visible)
+  if (variant === 'page') return (
+    <>
+    <div className="flex h-screen overflow-hidden">
+      {transcriptPane}
+      <div className="h-full overflow-y-auto shrink-0" style={{ width: 620, background: '#FFFFFF', borderLeft: '1px solid #EEEEEE' }}>
+        {inner}
+      </div>
+    </div>
+    {notifyEl}
+    </>
+  )
+
+  // Large centered two-pane modal — used in the review queue
+  if (variant === 'modal') return (
+    <>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
+      <div className="rounded-2xl w-full overflow-hidden modal-enter flex"
+        style={{ maxWidth: 1240, height: '90vh', background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
+        onClick={e => e.stopPropagation()}>
+        {transcriptPane}
+        <div className="h-full overflow-y-auto shrink-0" style={{ width: 560, borderLeft: '1px solid #EEEEEE' }}>
+          {inner}
+        </div>
+      </div>
+    </div>
+    {notifyEl}
+    </>
+  )
 
   if (panel) return (
     <>

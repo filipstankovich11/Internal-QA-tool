@@ -1,9 +1,10 @@
 import { useState, useEffect, lazy, Suspense, Component } from 'react'
-import { AppProvider }    from './context/AppContext'
+import { AppProvider, useApp } from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import NavigationContext from './context/NavigationContext'
 import Sidebar           from './components/Sidebar'
+import CommandPalette    from './components/CommandPalette'
 import LoginPage         from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 
@@ -38,7 +39,8 @@ const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
 const MyQueuePage      = lazy(() => import('./pages/MyQueuePage'))
-const CalibrationPage  = lazy(() => import('./pages/CalibrationPage'))
+const ScoreFormPage    = lazy(() => import('./pages/ScoreFormPage'))
+const ScoreModal       = lazy(() => import('./components/ScoreModal'))
 
 const Spinner = () => (
   <div className="min-h-screen flex items-center justify-center" style={{ background: '#161616' }}>
@@ -59,9 +61,33 @@ function Router({ page, role }) {
     case 'coaching':  return <CoachingPage />
     case 'teams':     return <TeamsPage />
     case 'rubric':       return <RubricPage />
-    case 'calibration': return <CalibrationPage />
     default:             return <ScorePage />
   }
+}
+
+// Main content area — swaps the routed page for the full-page score detail when
+// a score is open (the review queue opens its own modal instead). Navigating
+// to another page closes the detail.
+function MainContent({ page, role }) {
+  const { viewingScore, closeScore, scoreToEdit, closeScoreEditor } = useApp()
+  useEffect(() => { closeScore(); closeScoreEditor() }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<Spinner />}>
+        {scoreToEdit ? (
+          <ScoreFormPage initialScore={scoreToEdit}
+            onClose={closeScoreEditor}
+            onSaved={() => { closeScoreEditor(); closeScore() }} />
+        ) : viewingScore ? (
+          <ScoreModal score={viewingScore.score} actions={viewingScore.actions} variant="page" onClose={closeScore} />
+        ) : (
+          <div key={page} className="page-enter">
+            <Router page={page} role={role} />
+          </div>
+        )}
+      </Suspense>
+    </ErrorBoundary>
+  )
 }
 
 function AppShell() {
@@ -78,7 +104,7 @@ function AppShell() {
     // pre-profile state (or a token refresh) would bounce a permitted user off their page.
     if (loading || !role) return
     const blocked =
-      (['score', 'review', 'teams', 'calibration'].includes(page) && !canScore) ||
+      (['score', 'review', 'teams'].includes(page) && !canScore) ||
       (['myqueue', 'rubric'].includes(page) && !isAdmin) ||
       (['inbox', 'coaching'].includes(page) && !isAgent)
     if (blocked) setPage('dashboard')
@@ -93,15 +119,10 @@ function AppShell() {
     <AppProvider>
       <ToastProvider>
         <div className="flex min-h-screen">
+          <CommandPalette />
           <Sidebar page={page} setPage={setPage} />
           <div className="flex-1 min-w-0">
-            <ErrorBoundary>
-              <Suspense fallback={<Spinner />}>
-                <div key={page} className="page-enter">
-                  <Router page={page} role={role} />
-                </div>
-              </Suspense>
-            </ErrorBoundary>
+            <MainContent page={page} role={role} />
           </div>
         </div>
       </ToastProvider>

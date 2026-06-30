@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
-import ScoreModal from '../components/ScoreModal'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
@@ -285,10 +284,9 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function InboxPage() {
-  const { scoreHistory, acknowledgeScore, flagScore } = useApp()
+  const { scoreHistory, acknowledgeScore, flagScore, openScore: showScore } = useApp()
   const { role } = useAuth()
   const toast  = useToast()
-  const [activeScore, setActiveScore] = useState(null)
 
   // scoreHistory is already scoped to the agent's own scores via AppContext
   const visibleScores = scoreHistory
@@ -309,7 +307,7 @@ export default function InboxPage() {
     else    toast.error('Failed to submit dispute')
   }
 
-  const openScore = (s) => setActiveScore({
+  const openScore = (s) => showScore({
     ...s.fullScore,
     scoreId:         s.id,
     reviewerNote:    s.notes,
@@ -395,8 +393,6 @@ export default function InboxPage() {
           <p className="text-sm">No scores yet — check back after your tickets are reviewed.</p>
         </div>
       )}
-
-      {activeScore && <ScoreModal score={activeScore} onClose={() => setActiveScore(null)} />}
     </div>
   )
 }
