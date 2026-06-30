@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
@@ -14,7 +14,6 @@ const CONF = {
 }
 
 const CARD = { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }
-const DIM_PALETTE = ['#FF9780', '#F2AE6D', '#FFB39A', '#E08F3C', '#FFC2A8'] // contribution-bar segments
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'NEEDS REVIEW', FAIL: 'FAIL' }
 
 // 1–5 pill selector
@@ -161,6 +160,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
       manual:         true,
     })
     if (saved?.error) { toast.error(`Couldn't save the score: ${saved.error.message || 'database error'}`); return }
+    if (ticketId) { try { localStorage.removeItem(`qa-draft-${ticketId}`) } catch { /* ignore */ } }
     setSubmitted(true)
     toast.success('Score submitted')
   }
@@ -182,169 +182,213 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
   // Evidence highlight / tagging target follows the focused criterion (keyboard or click)
   useEffect(() => { setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, allCrit])
 
+  // ── Derived for the layout ───────────────────────────────────────────────────
+  const agentChips = editing ? (initialScore.agent_senders || []).map(a => a.name).filter(Boolean) : []
+  const wentWell = editing
+    ? dims.flatMap(d => d.criteria).filter(c => (aiScores[c.id] || 0) >= 4 && aiNotes[c.id]).map(c => aiNotes[c.id]).slice(0, 3)
+    : []
+  const toFix = editing ? improvements : []
+
+  // Save / restore a manual draft in localStorage, keyed by ticket
+  const draftKey = (!editing && ticketId) ? `qa-draft-${ticketId}` : null
+  const saveDraft = () => {
+    if (!draftKey) { toast.info('Paste a ticket link first'); return }
+    try { localStorage.setItem(draftKey, JSON.stringify({ scores, autoFails, note, agentId, manualEvidence })) } catch { /* ignore */ }
+    toast.success('Draft saved')
+  }
+  const restoredKey = useRef(null)
+  useEffect(() => {
+    if (!draftKey || restoredKey.current === draftKey) return
+    restoredKey.current = draftKey
+    try {
+      const d = JSON.parse(localStorage.getItem(draftKey) || 'null')
+      if (!d) return
+      if (d.scores) setScores(s => ({ ...s, ...d.scores }))
+      if (d.autoFails) setAutoFails(d.autoFails)
+      if (typeof d.note === 'string') setNote(d.note)
+      if (d.agentId) setAgentId(d.agentId)
+      if (d.manualEvidence) setManualEvidence(d.manualEvidence)
+      toast.info('Draft restored')
+    } catch { /* ignore */ }
+  }, [draftKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const content = (
     <div className={embedded ? '' : 'max-w-6xl mx-auto px-8 pt-8 pb-14'}>
-      {!embedded && (
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div>
-          <h1 style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>{editing ? 'Score ticket' : 'Grade a ticket'}</h1>
-          <p className="text-sm mt-1" style={{ color: 'rgba(26,30,35,.6)' }}>
-            {editing ? `Pre-filled with the AI's grades for #${ticketId}. Adjust any criterion — press 1–5 to score. Saving overrides the committed score.` : 'Score a ticket against the rubric — the total and verdict update as you go.'}
-          </p>
-        </div>
-        {editing && (
-          <span className="text-xs font-medium px-3 py-1.5 rounded-full shrink-0 inline-flex items-center gap-1.5" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a3 3 0 0 0-3 3v.5a3 3 0 0 0-2 5.3V13a3 3 0 0 0 5 2.2 3 3 0 0 0 5-2.2v-1.2a3 3 0 0 0-2-5.3V6a3 3 0 0 0-3-3Z"/></svg>
-            AI-assisted scoring
-          </span>
-        )}
-      </div>
-      )}
-
-      <div className="grid lg:grid-cols-2 gap-5 items-start">
-        {/* Left — ticket context (pinned so the conversation stays in view while grading) */}
-        <div className="p-5 flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start" style={CARD}>
-          <p className="g-label" style={{ margin: 0 }}>Ticket</p>
-          {editing ? (
-            <>
-              <div className="flex items-center gap-2 flex-wrap">
-                <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" className="font-mono text-sm font-medium" style={{ color: '#B84A2E' }}>#{ticketId}</a>
-                <span className="text-sm" style={{ color: 'rgba(26,30,35,.72)' }}>{initialScore.ticket_subject || ''}</span>
-              </div>
-              {initialScore.summary && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.45)' }}>AI summary</p>
-                  <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{initialScore.summary}</p>
-                </div>
-              )}
-              {/* Conversation transcript — clicking a criterion rings its evidence */}
-              <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} maxHeight={440} />
-            </>
-          ) : (
-            <>
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        {/* Left — ticket + conversation (pinned so it stays in view while grading) */}
+        <div className="p-6 flex flex-col gap-5 lg:sticky lg:top-4 lg:self-start" style={CARD}>
+          {/* Manual: ticket link */}
+          {!editing && (
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'rgba(26,30,35,.45)' }}>Ticket</label>
               <input value={ticketUrl} onChange={e => setTicketUrl(e.target.value)}
                 placeholder="https://yourcompany.gorgias.com/app/ticket/…"
-                className="g-input rounded-lg px-3 py-2.5 text-sm" />
-              {ticketId && (
-                <>
-                  <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer"
-                    className="text-sm font-medium" style={{ color: '#B84A2E' }}>→ Open ticket #{ticketId} in Gorgias</a>
-                  <TicketTranscript ticketId={ticketId} maxHeight={440}
-                    evidenceIds={evidenceIds} taggedIds={allTagged}
-                    onToggleMessage={activeCrit ? (id) => toggleEvidence(activeCrit, id) : undefined}
-                    taggingLabel={activeCrit ? critName(activeCrit) : null} />
-                </>
-              )}
-            </>
-          )}
-          <div>
-            <label className="text-xs block mb-1.5" style={{ color: 'rgba(26,30,35,.6)' }}>Agent graded</label>
-            <Dropdown value={agentId} onChange={setAgentId} width="100%" avatars
-              options={[{ value: '', label: 'No agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
-          </div>
-          {(editing || !ticketId) && (
-            <div className="rounded-xl p-4 text-xs leading-relaxed" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9', color: 'rgba(26,30,35,.6)' }}>
-              {editing
-                ? 'Pre-filled with the AI’s scores. Adjust any criterion — “Overrode” shows where you differ from the AI. Saving overrides the committed score.'
-                : 'Paste a ticket link above to load its conversation here, then grade each criterion on the right.'}
+                className="g-input rounded-lg px-3 py-2.5 text-sm w-full" />
             </div>
           )}
+
+          {/* Ticket meta + title */}
+          {ticketId && (
+            <div>
+              <div className="flex items-center gap-2 text-xs mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+                <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" className="font-medium" style={{ color: '#B84A2E' }}>#{ticketId}</a>
+                <span>·</span><span>Gorgias</span>
+              </div>
+              {editing && initialScore.ticket_subject && (
+                <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", lineHeight: 1.3 }}>{initialScore.ticket_subject}</h2>
+              )}
+            </div>
+          )}
+
+          {/* Agent — chips (editing) or picker (manual) */}
+          {editing ? (
+            agentChips.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {agentChips.map((n, i) => (
+                  <span key={i} className="text-xs px-2.5 py-1 rounded-lg font-medium" style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFE0D6' }}>{n}</span>
+                ))}
+              </div>
+            )
+          ) : (
+            <div>
+              <label className="text-xs block mb-1.5" style={{ color: 'rgba(26,30,35,.6)' }}>Agent graded</label>
+              <Dropdown value={agentId} onChange={setAgentId} width="100%" avatars
+                options={[{ value: '', label: 'No agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
+            </div>
+          )}
+
+          {/* Conversation highlights (AI) */}
+          {editing && (wentWell.length > 0 || toFix.length > 0) && (
+            <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.45)' }}>Conversation highlights</p>
+              {wentWell.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: '#2F8F5B' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    What went well
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {wentWell.map((t, i) => <li key={i} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {t}</li>)}
+                  </ul>
+                </div>
+              )}
+              {toFix.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: '#D14B3D' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    What to fix
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {toFix.map((t, i) => <li key={i} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {t}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Conversation transcript */}
+          {ticketId ? (
+            <TicketTranscript ticketId={ticketId} maxHeight={editing ? 520 : 440}
+              evidenceIds={evidenceIds} taggedIds={editing ? [] : allTagged}
+              onToggleMessage={!editing && activeCrit ? (id) => toggleEvidence(activeCrit, id) : undefined}
+              taggingLabel={!editing && activeCrit ? critName(activeCrit) : null} />
+          ) : !editing ? (
+            <p className="text-xs py-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.5)' }}>Paste a ticket link above to load its conversation here, then grade each criterion on the right.</p>
+          ) : null}
         </div>
 
-        {/* Right — live grading */}
-        <div className="flex flex-col gap-4">
-          {/* Score card */}
-          <div className="p-5" style={CARD}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-baseline gap-2">
-                <span className="tabular-nums" style={{ fontSize: 34, fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, color: gradeColor(total, thresholds) }}>{total}</span>
-                <span className="text-sm" style={{ color: 'rgba(26,30,35,.45)' }}>/100</span>
+        {/* Right — scoring */}
+        <div className="p-6 flex flex-col gap-5" style={CARD}>
+          {/* Live score */}
+          <div>
+            <div className="flex items-start justify-between mb-2.5 gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.45)' }}>Live score</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="tabular-nums" style={{ fontSize: 40, fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, color: gradeColor(total, thresholds), lineHeight: 1 }}>{total}</span>
+                  <span className="text-sm" style={{ color: 'rgba(26,30,35,.45)' }}>/100</span>
+                </div>
               </div>
-              <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ color: vColor, background: vBg }}>{VERDICT_LABEL[verdict]}</span>
+              <div style={{ textAlign: 'right' }}>
+                <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ color: vColor, background: vBg }}>{VERDICT_LABEL[verdict]}</span>
+                <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.4)' }}>Pass ≥ {thresholds.pass} · Review ≥ {thresholds.needs_review}</p>
+              </div>
             </div>
-            {/* Contribution bar — total split by each dimension's weighted points */}
-            <div className="w-full rounded-full overflow-hidden flex" style={{ height: 8, background: '#F0ECE9' }}>
-              {dims.map((d, i) => {
-                const contrib = (dimAvg(d) / 5) * (d.weight || 0)
-                return <div key={d.id} title={`${d.name}: ${contrib.toFixed(1)} pts`}
-                  style={{ width: `${contrib}%`, background: DIM_PALETTE[i % DIM_PALETTE.length], transition: 'width .35s cubic-bezier(.16,1,.3,1)' }} />
-              })}
-            </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-              {dims.map((d, i) => (
-                <span key={d.id} className="flex items-center gap-1 text-xs" style={{ color: 'rgba(26,30,35,.55)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: DIM_PALETTE[i % DIM_PALETTE.length] }} />
-                  {d.name} <span className="tabular-nums font-medium" style={{ color: 'rgba(26,30,35,.72)' }}>{((dimAvg(d) / 5) * (d.weight || 0)).toFixed(1)}</span>
-                </span>
-              ))}
+            <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: '#F0ECE9' }}>
+              <div style={{ width: `${total}%`, height: '100%', background: gradeColor(total, thresholds), transition: 'width .35s cubic-bezier(.16,1,.3,1)' }} />
             </div>
             {autoFails.length > 0 && <p className="text-xs mt-2" style={{ color: '#D14B3D' }}>Auto-fail triggered — verdict forced to FAIL.</p>}
-            <p className="text-xs mt-2" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'rgba(26,30,35,.6)' }}>1–5</b> to score · <b style={{ color: 'rgba(26,30,35,.6)' }}>↑↓</b> to move · <b style={{ color: 'rgba(26,30,35,.6)' }}>⌘↵</b> to submit</p>
           </div>
 
-          {/* Dimension cards */}
-          {dims.map(d => (
-            <div key={d.id} className="p-5" style={CARD}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="font-semibold" style={{ fontSize: 15, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>{d.name}
-                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>{d.weight}%</span>
-                </p>
-                <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor((dimAvg(d) / 5) * 100, thresholds) }}>{dimAvg(d).toFixed(1)}<span className="text-xs font-normal" style={{ color: 'rgba(26,30,35,.45)' }}>/5</span></span>
-              </div>
-              <div className="flex flex-col gap-1">
-                {d.criteria.map(c => {
-                  const idx = allCrit.indexOf(c.id)
-                  const focused = idx === focusIdx
-                  const ai = aiScores[c.id]
-                  const diff = editing && ai != null && scores[c.id] !== ai
-                  const conf = editing ? CONF[aiMeta[c.id]?.confidence] : null
-                  const ev = editing ? (aiMeta[c.id]?.evidence || []) : (manualEvidence[c.id] || [])
-                  return (
-                    <div key={c.id} onClick={() => setFocusIdx(idx)}
-                      className="rounded-lg px-2 py-2 -mx-2 transition-colors cursor-pointer"
-                      style={{ background: focused ? '#FFF4F1' : 'transparent', boxShadow: focused ? 'inset 0 0 0 1px #FFD2C9' : 'none' }}>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: 'rgba(26,30,35,.72)' }}>
-                          {c.name}
-                          {conf && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
-                          )}
-                          {editing && ai != null && (
-                            <span className="text-xs font-medium" style={{ color: diff ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
-                              {diff ? `overrode ${ai}→${scores[c.id]}` : `matches AI (${ai})`}
-                            </span>
-                          )}
-                        </span>
-                        <Pills value={scores[c.id]} onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
+          {/* Dimensions — flat sections */}
+          <div className="flex flex-col">
+            {dims.map((d, di) => (
+              <div key={d.id} className="py-4" style={{ borderTop: di > 0 ? '1px solid #F0ECE9' : 'none' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold flex items-center gap-2" style={{ fontSize: 15, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
+                    {d.name}
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>{d.weight}%</span>
+                  </p>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor((dimAvg(d) / 5) * 100, thresholds) }}>{dimAvg(d).toFixed(1)}<span className="text-xs font-normal" style={{ color: 'rgba(26,30,35,.45)' }}>/5</span></span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {d.criteria.map(c => {
+                    const idx = allCrit.indexOf(c.id)
+                    const focused = idx === focusIdx
+                    const ai = aiScores[c.id]
+                    const diff = editing && ai != null && scores[c.id] !== ai
+                    const conf = editing ? CONF[aiMeta[c.id]?.confidence] : null
+                    const ev = editing ? (aiMeta[c.id]?.evidence || []) : (manualEvidence[c.id] || [])
+                    return (
+                      <div key={c.id} onClick={() => setFocusIdx(idx)}
+                        className="rounded-lg px-2 py-2 -mx-2 transition-colors cursor-pointer"
+                        style={{ background: focused ? '#FFF4F1' : 'transparent', boxShadow: focused ? 'inset 0 0 0 1px #FFD2C9' : 'none' }}>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: 'rgba(26,30,35,.72)' }}>
+                            {c.name}
+                            {conf && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
+                            )}
+                            {editing && ai != null && (
+                              <span className="text-xs font-medium" style={{ color: diff ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
+                                {diff ? `overrode ${ai}→${scores[c.id]}` : `matches AI (${ai})`}
+                              </span>
+                            )}
+                          </span>
+                          <Pills value={scores[c.id]} onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
+                        </div>
+                        {editing && aiNotes[c.id] && (
+                          <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'rgba(26,30,35,.55)' }}>
+                            <span className="font-medium" style={{ color: 'rgba(26,30,35,.45)' }}>AI: </span>{aiNotes[c.id]}
+                          </p>
+                        )}
+                        {editing && ev.length > 0 && (
+                          <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
+                            {focused ? `↖ Highlighted ${ev.length} cited message${ev.length > 1 ? 's' : ''} in the transcript` : `${ev.length} cited message${ev.length > 1 ? 's' : ''} — click to highlight`}
+                          </p>
+                        )}
+                        {!editing && ticketId && (focused || ev.length > 0) && (
+                          <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
+                            {focused
+                              ? (ev.length ? `${ev.length} message${ev.length > 1 ? 's' : ''} tagged · click messages to toggle` : 'Click messages in the conversation to tag evidence')
+                              : `${ev.length} tagged`}
+                          </p>
+                        )}
                       </div>
-                      {editing && aiNotes[c.id] && (
-                        <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'rgba(26,30,35,.55)' }}>
-                          <span className="font-medium" style={{ color: 'rgba(26,30,35,.45)' }}>AI: </span>{aiNotes[c.id]}
-                        </p>
-                      )}
-                      {editing && ev.length > 0 && (
-                        <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
-                          {focused ? `↖ Highlighted ${ev.length} cited message${ev.length > 1 ? 's' : ''} in the transcript` : `${ev.length} cited message${ev.length > 1 ? 's' : ''} — click to highlight`}
-                        </p>
-                      )}
-                      {!editing && ticketId && (focused || ev.length > 0) && (
-                        <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
-                          {focused
-                            ? (ev.length ? `${ev.length} message${ev.length > 1 ? 's' : ''} tagged · click messages to toggle` : 'Click messages in the conversation to tag evidence')
-                            : `${ev.length} tagged`}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
-          {/* Auto-fail */}
+          {/* Auto-fail conditions */}
           {autoFailConds.length > 0 && (
-            <div className="p-5" style={{ ...CARD, border: '1px solid #F4DDD7' }}>
-              <p className="g-label mb-3" style={{ margin: 0, color: '#D14B3D' }}>Auto-fail conditions</p>
+            <div className="rounded-xl p-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: '#D14B3D' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Auto-fail conditions
+              </p>
               <div className="flex flex-col gap-2.5">
                 {autoFailConds.map(c => {
                   const on = autoFails.includes(c.id)
@@ -364,39 +408,36 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
             </div>
           )}
 
-          {/* Coaching note + submit */}
-          <div className="p-5" style={CARD}>
-            <label className="g-label block mb-2" style={{ margin: 0 }}>Coaching note</label>
-            {improvements.length > 0 && (
-              <div className="mb-2">
-                <p className="text-xs mb-1.5" style={{ color: 'rgba(26,30,35,.45)' }}>AI suggestions — tap to add</p>
-                <div className="flex flex-col gap-1.5">
-                  {improvements.map((imp, i) => (
-                    <button key={i} type="button" onClick={() => setNote(n => n.trim() ? `${n.trim()}\n• ${imp}` : `• ${imp}`)}
-                      className="text-xs text-left rounded-lg px-3 py-2 transition-colors" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#FFEAE6'} onMouseLeave={e => e.currentTarget.style.background = '#FFF4F1'}>
-                      + {imp}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Coaching note */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider block mb-2" style={{ color: 'rgba(26,30,35,.45)' }}>Coaching note</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
-              placeholder="What went well, what to improve…"
+              placeholder="What should this agent do differently next time?"
               className="g-input w-full rounded-xl px-3 py-2.5 text-sm resize-none" style={{ color: '#1A1E23' }} />
-            {submitted ? (
-              <div className="mt-3 flex items-center gap-2 text-sm rounded-xl px-3 py-2.5" style={{ background: '#E6F4EC', border: '1px solid #BFE3CD', color: '#2F8F5B' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                Score submitted — {total}/100 · {VERDICT_LABEL[verdict]}
-              </div>
-            ) : (
-              <button onClick={submit} disabled={!canScore}
-                className="g-btn-primary w-full mt-3 text-sm py-2.5 rounded-xl font-medium"
-                style={{ opacity: canScore ? 1 : 0.5 }}>
-                {editing ? 'Save revision' : 'Submit score'}
-              </button>
-            )}
           </div>
+
+          {/* Actions */}
+          {submitted ? (
+            <div className="flex items-center gap-2 text-sm rounded-xl px-3 py-2.5" style={{ background: '#E6F4EC', border: '1px solid #BFE3CD', color: '#2F8F5B' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Score submitted — {total}/100 · {VERDICT_LABEL[verdict]}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'rgba(26,30,35,.6)' }}>1–5</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>↑↓</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>⌘↵</b></p>
+              <div className="flex items-center gap-2 ml-auto">
+                {!editing && (
+                  <button onClick={saveDraft} className="g-btn-ghost text-sm px-4 py-2.5 rounded-xl">Save draft</button>
+                )}
+                <button onClick={submit} disabled={!canScore}
+                  className="g-btn-primary text-sm px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2"
+                  style={{ opacity: canScore ? 1 : 0.5 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {editing ? 'Save revision' : 'Submit score'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
