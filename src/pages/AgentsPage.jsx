@@ -49,17 +49,18 @@ function ScoreRing({ value, color, size = 48 }) {
   )
 }
 
-// One dimension bar — label · progress · value (1–5), coloured by grade
+// One dimension bar — label · progress · value (1–5), coloured by grade.
+// Always renders (shows "—" when there's no data) so cards keep a uniform height.
 function DimBar({ label, value, thresholds }) {
-  if (value == null) return null
-  const color = gradeColor((value / 5) * 100, thresholds)
+  const has = value != null
+  const color = has ? gradeColor((value / 5) * 100, thresholds) : 'rgba(26,30,35,.35)'
   return (
     <div className="flex items-center gap-2.5">
       <span className="text-xs shrink-0" style={{ color: 'rgba(26,30,35,.6)', width: 74 }}>{label}</span>
       <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, background: '#F1ECE8' }}>
-        <div style={{ width: `${Math.max(4, Math.min(100, (value / 5) * 100))}%`, height: '100%', background: color, borderRadius: 99, transition: 'width .5s cubic-bezier(.16,1,.3,1)' }} />
+        {has && <div style={{ width: `${Math.max(4, Math.min(100, (value / 5) * 100))}%`, height: '100%', background: color, borderRadius: 99, transition: 'width .5s cubic-bezier(.16,1,.3,1)' }} />}
       </div>
-      <span className="text-xs font-semibold tabular-nums text-right shrink-0" style={{ color, width: 26 }}>{value.toFixed(1)}</span>
+      <span className="text-xs font-semibold tabular-nums text-right shrink-0" style={{ color, width: 26 }}>{has ? value.toFixed(1) : '—'}</span>
     </div>
   )
 }
@@ -101,14 +102,14 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
 
   if (editing) {
     return (
-      <div className="rounded-2xl p-5" style={CARD_STYLE}>
+      <div className="rounded-2xl p-5 h-full" style={CARD_STYLE}>
         <AgentEditForm agent={agent} profiles={profiles} onSave={onEdit} onCancel={() => setEditing(false)} />
       </div>
     )
   }
 
   return (
-    <div className="rounded-2xl p-5" style={CARD_STYLE}
+    <div className="rounded-2xl p-5 h-full flex flex-col" style={CARD_STYLE}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       {/* Header: score ring · name/badge/subtitle · trend */}
       <div className="flex items-start gap-3">
@@ -141,17 +142,15 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
         )}
       </div>
 
-      {/* Dimension bars */}
-      {dimAvgs.some(x => x.avg != null) && (
-        <div className="mt-4 flex flex-col gap-2.5">
-          {dimAvgs.map(({ d, avg: dv }) => (
-            <DimBar key={d.id} label={DIM_SHORT[d.id] || d.name} value={dv} thresholds={thresholds} />
-          ))}
-        </div>
-      )}
+      {/* Dimension bars — always three rows so cards stay a uniform height */}
+      <div className="mt-4 flex flex-col gap-2.5">
+        {dimAvgs.map(({ d, avg: dv }) => (
+          <DimBar key={d.id} label={DIM_SHORT[d.id] || d.name} value={dv} thresholds={thresholds} />
+        ))}
+      </div>
 
-      {/* Focus + Coach (admin edit/delete reveal on hover) */}
-      <div className="mt-4 pt-3 flex items-center justify-between gap-2" style={{ borderTop: '1px solid #F0ECE9' }}>
+      {/* Focus + Coach (admin edit/delete reveal on hover) — pinned to the bottom */}
+      <div className="mt-auto pt-4 flex items-center justify-between gap-2" style={{ borderTop: '1px solid #F0ECE9' }}>
         <span className="text-xs truncate" style={{ color: 'rgba(26,30,35,.55)' }}>
           {focus ? <>Focus: <span style={{ color: focus === 'on track' ? '#2F8F5B' : 'rgba(26,30,35,.72)' }}>{focus}</span></> : '—'}
         </span>
@@ -503,7 +502,7 @@ export default function AgentsPage() {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {paged.map((stat, i) => (
-                <div key={stat.agent.id} className="stagger-item" style={{ '--i': i }}>
+                <div key={stat.agent.id} className="stagger-item h-full" style={{ '--i': i }}>
                 <AgentCard stat={stat}
                   team={stat.team}
                   profiles={profiles}
