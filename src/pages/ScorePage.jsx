@@ -6,6 +6,7 @@ import { authFetchJson, buildFewShotExamples } from '../lib/api'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, gradeColor } from '../lib/verdict'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import ScoringProgress from '../components/ScoringProgress'
+import ScoreFormPage from './ScoreFormPage'
 import DatePicker from '../components/DatePicker'
 import Segmented from '../components/Segmented'
 import Dropdown from '../components/Dropdown'
@@ -360,6 +361,7 @@ export default function ScorePage() {
   const { canScore } = useAuth()
 
   const [mode,        setMode]        = useState('single')
+  const [manualOpen,  setManualOpen]  = useState(false) // manual (no-AI) grading form
 
   // Open a scored ticket in the full-page two-pane detail (same surface everywhere).
   const openPanel = openScore
@@ -507,6 +509,13 @@ export default function ScorePage() {
           </div>
 
           {urlError && <p className="text-xs mt-2 ml-1" style={{ color: '#C8841E' }}>⚠ {urlError}</p>}
+          {canScore && (
+            <button onClick={() => setManualOpen(true)}
+              className="text-xs mt-2 ml-1 transition-colors" style={{ color: 'rgba(26,30,35,.55)' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.55)'}>
+              or grade manually without AI →
+            </button>
+          )}
           <ScoringProgress loading={loading} />
           {error && <p className="text-xs text-center mt-2" style={{ color: '#D14B3D' }}>{error}</p>}
 
@@ -759,6 +768,10 @@ export default function ScorePage() {
       )}
 
       </div>
+      {manualOpen && (
+        <ScoreFormPage asModal initialTicketUrl={ticketUrl}
+          onClose={() => setManualOpen(false)} onSaved={() => setManualOpen(false)} />
+      )}
     </div>
   )
 }

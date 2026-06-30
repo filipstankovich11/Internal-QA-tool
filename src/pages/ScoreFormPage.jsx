@@ -37,7 +37,7 @@ function Pills({ value, onChange }) {
   )
 }
 
-export default function ScoreFormPage({ initialScore = null, asModal = false, onClose, onSaved }) {
+export default function ScoreFormPage({ initialScore = null, asModal = false, onClose, onSaved, initialTicketUrl = '' }) {
   const { rubric, agents, addScore, overrideScore } = useApp()
   const { canScore } = useAuth()
   const toast = useToast()
@@ -89,7 +89,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     return autoFailConds.filter(c => names.includes(c.name)).map(c => c.id)
   })
   const [note, setNote]   = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
-  const [ticketUrl, setTicketUrl] = useState('')
+  const [ticketUrl, setTicketUrl] = useState(initialTicketUrl)
   const [agentId, setAgentId] = useState(() => {
     const senders = initialScore?.agent_senders || []
     return agents.find(a => senders.some(s =>

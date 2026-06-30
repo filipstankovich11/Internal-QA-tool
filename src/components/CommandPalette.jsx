@@ -7,13 +7,11 @@ import { useApp } from '../context/AppContext'
 const PAGES = [
   { id: 'dashboard',   label: 'Dashboard' },
   { id: 'score',       label: 'Score',        scorer: true },
-  { id: 'grade',       label: 'Grade a ticket', scorer: true },
   { id: 'review',      label: 'Review Queue', scorer: true },
   { id: 'myqueue',     label: 'My Queue',     admin: true },
   { id: 'agents',      label: 'Agents' },
   { id: 'teams',       label: 'Teams',        scorer: true },
   { id: 'rubric',      label: 'QA Guidance',  admin: true },
-  { id: 'calibration', label: 'Calibration',  scorer: true },
   { id: 'inbox',       label: 'Inbox',        agent: true },
   { id: 'coaching',    label: 'Coaching',     agent: true },
 ]
@@ -48,7 +46,6 @@ export default function CommandPalette() {
     const actions = [
       canScore && { id: 'a-score', label: 'Score a ticket', go: 'score' },
       canScore && { id: 'a-review', label: 'Open the review queue', go: 'review' },
-      isAdmin && { id: 'a-cal', label: 'New calibration session', go: 'calibration' },
       isAdmin && { id: 'a-rubric', label: 'Edit QA guidance', go: 'rubric' },
     ].filter(Boolean)
     const recent = [...scoreHistory].sort((a, b) => b.scoredAt - a.scoredAt).slice(0, 4)

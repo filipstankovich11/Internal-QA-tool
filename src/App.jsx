@@ -31,7 +31,6 @@ class ErrorBoundary extends Component {
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'))
 const ScorePage        = lazy(() => import('./pages/ScorePage'))
-const ScoreFormPage    = lazy(() => import('./pages/ScoreFormPage'))
 const AgentsPage       = lazy(() => import('./pages/AgentsPage'))
 const AgentProfilePage = lazy(() => import('./pages/AgentProfilePage'))
 const InboxPage        = lazy(() => import('./pages/InboxPage'))
@@ -40,7 +39,6 @@ const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
 const MyQueuePage      = lazy(() => import('./pages/MyQueuePage'))
-const CalibrationPage  = lazy(() => import('./pages/CalibrationPage'))
 const ScoreModal       = lazy(() => import('./components/ScoreModal'))
 
 const Spinner = () => (
@@ -55,7 +53,6 @@ const Spinner = () => (
 function Router({ page, role }) {
   switch (page) {
     case 'dashboard': return <DashboardPage />
-    case 'grade':     return <ScoreFormPage />
     case 'review':    return <ReviewQueuePage />
     case 'myqueue':   return <MyQueuePage />
     case 'agents':    return role === 'agent' ? <AgentProfilePage /> : <AgentsPage />
@@ -63,7 +60,6 @@ function Router({ page, role }) {
     case 'coaching':  return <CoachingPage />
     case 'teams':     return <TeamsPage />
     case 'rubric':       return <RubricPage />
-    case 'calibration': return <CalibrationPage />
     default:             return <ScorePage />
   }
 }
@@ -103,7 +99,7 @@ function AppShell() {
     // pre-profile state (or a token refresh) would bounce a permitted user off their page.
     if (loading || !role) return
     const blocked =
-      (['score', 'grade', 'review', 'teams', 'calibration'].includes(page) && !canScore) ||
+      (['score', 'review', 'teams'].includes(page) && !canScore) ||
       (['myqueue', 'rubric'].includes(page) && !isAdmin) ||
       (['inbox', 'coaching'].includes(page) && !isAgent)
     if (blocked) setPage('dashboard')
