@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 import Dropdown from '../components/Dropdown'
 import TicketTranscript from '../components/TicketTranscript'
-import { gorgiasTicketUrl } from '../lib/gorgias'
+import { gorgiasTicketUrl, parseTicketId } from '../lib/gorgias'
 import { gradeColor } from '../lib/verdict'
 
 const CONF = {
@@ -127,7 +127,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
 
   const toggleAutoFail = (id) => setAutoFails(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
-  const ticketId = editing ? initialScore.ticket_id : (ticketUrl.match(/(\d{4,})/) || [])[1] || ''
+  const ticketId = editing ? initialScore.ticket_id : parseTicketId(ticketUrl)
 
   const submit = async () => {
     // Editing a committed score → record the human revision as an override
