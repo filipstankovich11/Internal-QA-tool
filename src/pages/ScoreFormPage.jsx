@@ -307,8 +307,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           ) : null}
         </div>
 
-        {/* Right — scoring */}
-        <div className="p-6 flex flex-col gap-5" style={CARD}>
+        {/* Right — scoring (flat: dividers + boxed auto-fail/coaching, no outer card) */}
+        <div className="flex flex-col gap-5">
           {/* Live score */}
           <div>
             <div className="flex items-start justify-between mb-2.5 gap-3">
@@ -332,8 +332,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
 
           {/* Dimensions — flat sections */}
           <div className="flex flex-col">
-            {dims.map((d, di) => (
-              <div key={d.id} className="py-4" style={{ borderTop: di > 0 ? '1px solid #F0ECE9' : 'none' }}>
+            {dims.map((d) => (
+              <div key={d.id} className="py-4" style={{ borderTop: '1px solid #EEEEEE' }}>
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-semibold flex items-center gap-2" style={{ fontSize: 15, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
                     {d.name}
@@ -394,7 +394,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
 
           {/* Auto-fail conditions */}
           {autoFailConds.length > 0 && (
-            <div className="rounded-xl p-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+            <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
               <p className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: '#D14B3D' }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Auto-fail conditions
@@ -419,11 +419,11 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           )}
 
           {/* Coaching note */}
-          <div>
+          <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
             <label className="text-xs font-semibold uppercase tracking-wider block mb-2" style={{ color: 'rgba(26,30,35,.45)' }}>Coaching note</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
               placeholder="What should this agent do differently next time?"
-              className="g-input w-full rounded-xl px-3 py-2.5 text-sm resize-none" style={{ color: '#1A1E23' }} />
+              className="w-full text-sm resize-none" style={{ color: '#1A1E23', border: 'none', outline: 'none', background: 'transparent', padding: 0 }} />
           </div>
 
           {/* Actions */}
