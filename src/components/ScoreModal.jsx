@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from '../context/NavigationContext'
 import { useToast } from './Toast'
-import { authFetch, buildFewShotExamples } from '../lib/api'
+import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
 import TicketTranscript from './TicketTranscript'
@@ -27,11 +27,6 @@ function useCountUp(target, duration = 700) {
   return val
 }
 
-const RefreshIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
-  </svg>
-)
 
 // Rich verdict styling — colors come from the shared tokens (lib/verdict)
 const VERDICT = {
@@ -509,12 +504,11 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function ScoreModal({ score, onClose, actions = false, variant = null }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory, openScoreEditor } = useApp()
+  const { agents, deleteScore, acknowledgeScore, markReviewed, reopenReview, scoreHistory, openScoreEditor } = useApp()
   const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
-  const [rescoring,       setRescoring]       = useState(false)
   const [liveScore,       setLiveScore]       = useState(null)
   const [acknowledging,   setAcknowledging]   = useState(false)
   const [notifying,         setNotifying]         = useState(false)
@@ -594,18 +588,6 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
     }
   }
 
-  const rescore = async () => {
-    setRescoring(true)
-    try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
-      const data = await res.json()
-      if (!res.ok) { toast.error(data.error || 'Re-score failed'); return }
-      const entry = await addScore(data)
-      setLiveScore({ ...data, scoreId: entry?.id, reviewerNote: '', overrideVerdict: null, overrideScore: null, overrideNote: null, overrideAt: null })
-      toast.success('Ticket re-scored')
-    } catch { toast.error('Could not reach the server') }
-    finally { setRescoring(false) }
-  }
 
   // Mark reviewed — opens a confirmation with an optional Slack notify
   const canNotify = matchedAgents.some(a => a.email)
@@ -631,12 +613,14 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [onClose, variant])
 
-  // Close the "⋯" menu on any outside click (deferred so the opening click doesn't close it)
+  // Close the "⋯" menu on any outside click. Capture phase so it still fires
+  // even though the modal container stops click propagation.
+  const menuRef = useRef(null)
   useEffect(() => {
     if (!menuOpen) return
-    const close = () => setMenuOpen(false)
-    const t = setTimeout(() => document.addEventListener('click', close), 0)
-    return () => { clearTimeout(t); document.removeEventListener('click', close) }
+    const onDown = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
   }, [menuOpen])
 
   const inner = (
@@ -725,14 +709,14 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
               )}
               {/* Secondary actions — collapsed into a "⋯" menu */}
               {s.scoreId && !confirmDelete && (
-                <div className="relative">
-                  <button onClick={() => setMenuOpen(o => !o)} disabled={rescoring || notifying}
+                <div className="relative" ref={menuRef}>
+                  <button onClick={() => setMenuOpen(o => !o)} disabled={notifying}
                     className="flex items-center justify-center rounded-lg transition-all"
                     style={{ background: menuOpen ? '#F6F2EF' : '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.6)', width: 30, height: 30 }}
                     onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF' }}
                     onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background='#FFFFFF' }}
                     title="More actions">
-                    {(rescoring || notifying)
+                    {notifying
                       ? <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
                       : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>}
                   </button>
@@ -747,11 +731,6 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
                           Notify on Slack
                         </button>
                       )}
-                      <button onClick={() => { setMenuOpen(false); rescore() }}
-                        className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
-                        onMouseEnter={e => e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <RefreshIcon /> Re-score with AI
-                      </button>
                       {isAdmin && (
                         <button onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
                           className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: '#D14B3D' }}
