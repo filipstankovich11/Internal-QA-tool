@@ -1159,7 +1159,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
       <div className="rounded-2xl w-full overflow-hidden modal-enter flex"
-        style={{ maxWidth: 1120, height: '88vh', background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
+        style={{ maxWidth: 1240, height: '90vh', background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
         onClick={e => e.stopPropagation()}>
         {transcriptPane}
         <div className="h-full overflow-y-auto shrink-0" style={{ width: 560, borderLeft: '1px solid #EEEEEE' }}>

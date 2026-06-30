@@ -183,7 +183,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
   useEffect(() => { setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, allCrit])
 
   const content = (
-    <div className={embedded ? '' : 'max-w-5xl mx-auto px-8 pt-8 pb-14'}>
+    <div className={embedded ? '' : 'max-w-6xl mx-auto px-8 pt-8 pb-14'}>
       {!embedded && (
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>

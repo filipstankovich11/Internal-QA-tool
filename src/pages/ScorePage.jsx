@@ -457,7 +457,7 @@ export default function ScorePage() {
 
   return (
     <div className="panel-push">
-    <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
+    <div className="max-w-6xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
       <div className="mb-6">
         <h1 className="mb-1" style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>Score</h1>
