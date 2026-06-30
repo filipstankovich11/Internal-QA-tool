@@ -100,7 +100,21 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
   const [focusIdx, setFocusIdx] = useState(0)
   const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted
-  const evidenceIds = activeCrit ? (aiMeta[activeCrit]?.evidence || []) : []
+  // Manual evidence the grader tags per criterion: { critId: [msgId, …] }
+  const [manualEvidence, setManualEvidence] = useState({})
+  // Evidence for the active criterion — AI's when editing, the grader's when manual
+  const evidenceIds = activeCrit
+    ? (editing ? (aiMeta[activeCrit]?.evidence || []) : (manualEvidence[activeCrit] || []))
+    : []
+  const critName = (id) => dims.flatMap(d => d.criteria).find(c => c.id === id)?.name || ''
+  const toggleEvidence = (critId, msgId) => {
+    if (!critId) return
+    const key = String(msgId)
+    setManualEvidence(prev => {
+      const cur = prev[critId] || []
+      return { ...prev, [critId]: cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key] }
+    })
+  }
 
   const dimAvg = (d) => {
     const vals = d.criteria.map(c => scores[c.id]).filter(v => v != null)
@@ -126,7 +140,10 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     const scoresObj = {}
     dims.forEach(d => {
       const dim = { dimension_average: +dimAvg(d).toFixed(2) }
-      d.criteria.forEach(c => { dim[c.id] = { score: scores[c.id], notes: '' } })
+      d.criteria.forEach(c => {
+        const ev = manualEvidence[c.id] || []
+        dim[c.id] = { score: scores[c.id], notes: '', ...(ev.length ? { evidence: ev } : {}) }
+      })
       scoresObj[d.id] = dim
     })
     const agent = agents.find(a => a.id === agentId)
@@ -161,8 +178,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     return () => window.removeEventListener('keydown', onKey)
   }, [focusIdx, allCrit, canScore, submitted, scores, autoFails, note, agentId, ticketUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Evidence highlight follows the focused criterion (keyboard or click)
-  useEffect(() => { if (editing) setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, editing, allCrit])
+  // Evidence highlight / tagging target follows the focused criterion (keyboard or click)
+  useEffect(() => { setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, allCrit])
 
   const content = (
     <div className={embedded ? '' : 'max-w-5xl mx-auto px-8 pt-8 pb-14'}>
@@ -211,7 +228,10 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                 <>
                   <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer"
                     className="text-sm font-medium" style={{ color: '#B84A2E' }}>→ Open ticket #{ticketId} in Gorgias</a>
-                  <TicketTranscript ticketId={ticketId} maxHeight={440} />
+                  <TicketTranscript ticketId={ticketId} maxHeight={440}
+                    evidenceIds={evidenceIds}
+                    onToggleMessage={activeCrit ? (id) => toggleEvidence(activeCrit, id) : undefined}
+                    taggingLabel={activeCrit ? critName(activeCrit) : null} />
                 </>
               )}
             </>
@@ -277,7 +297,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                   const ai = aiScores[c.id]
                   const diff = editing && ai != null && scores[c.id] !== ai
                   const conf = editing ? CONF[aiMeta[c.id]?.confidence] : null
-                  const ev = editing ? (aiMeta[c.id]?.evidence || []) : []
+                  const ev = editing ? (aiMeta[c.id]?.evidence || []) : (manualEvidence[c.id] || [])
                   return (
                     <div key={c.id} onClick={() => setFocusIdx(idx)}
                       className="rounded-lg px-2 py-2 -mx-2 transition-colors cursor-pointer"
@@ -301,9 +321,16 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                           <span className="font-medium" style={{ color: 'rgba(26,30,35,.45)' }}>AI: </span>{aiNotes[c.id]}
                         </p>
                       )}
-                      {ev.length > 0 && (
+                      {editing && ev.length > 0 && (
                         <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
                           {focused ? `↖ Highlighted ${ev.length} cited message${ev.length > 1 ? 's' : ''} in the transcript` : `${ev.length} cited message${ev.length > 1 ? 's' : ''} — click to highlight`}
+                        </p>
+                      )}
+                      {!editing && ticketId && (focused || ev.length > 0) && (
+                        <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
+                          {focused
+                            ? (ev.length ? `${ev.length} message${ev.length > 1 ? 's' : ''} tagged · click messages to toggle` : 'Click messages in the conversation to tag evidence')
+                            : `${ev.length} tagged`}
                         </p>
                       )}
                     </div>

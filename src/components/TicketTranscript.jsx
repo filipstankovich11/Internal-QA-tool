@@ -30,7 +30,7 @@ function loadMessages(ticketId) {
  *  - maxHeight:   optional px to make the list internally scrollable (else the
  *                 parent scrolls)
  */
-export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight, className = '' }) {
+export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight, className = '', onToggleMessage, taggingLabel }) {
   const [messages, setMessages] = useState(() => cache.get(String(ticketId)) || null)
   const [loading, setLoading]   = useState(!cache.has(String(ticketId)))
   const [failed, setFailed]     = useState(false)
@@ -67,10 +67,15 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
         {ev.length > 0 && (
           <span className="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
             <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
-            {ev.length} cited
+            {ev.length} {onToggleMessage ? 'tagged' : 'cited'}
           </span>
         )}
       </div>
+      {onToggleMessage && taggingLabel && (
+        <p className="text-xs mb-2 leading-relaxed" style={{ color: '#B84A2E' }}>
+          Tagging evidence for <b style={{ fontWeight: 600 }}>{taggingLabel}</b> — click a message to tag it.
+        </p>
+      )}
       {loading ? (
         <p className="text-xs py-6 text-center" style={{ color: 'rgba(26,30,35,.45)' }}>Loading conversation…</p>
       ) : (messages && messages.length) ? (
@@ -78,19 +83,26 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
           {messages.map(m => {
             const lit = ev.includes(String(m.id))
             const agent = m.from_agent
+            const clickable = !!onToggleMessage
             return (
               <div key={m.id} ref={el => { rowRefs.current[String(m.id)] = el }} style={{ alignSelf: agent ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
                 <div className="flex items-center gap-1.5 mb-0.5 text-xs" style={{ color: 'rgba(26,30,35,.45)', justifyContent: agent ? 'flex-end' : 'flex-start' }}>
                   <span className="font-medium" style={{ color: 'rgba(26,30,35,.6)' }}>{m.author || (agent ? 'Agent' : 'Customer')}</span>
                   {!m.public && <span className="px-1 rounded" style={{ background: '#F1ECE8' }}>internal</span>}
+                  {lit && clickable && <span style={{ color: '#B84A2E', fontWeight: 600 }}>✓ evidence</span>}
                 </div>
-                <div className="text-sm leading-relaxed px-3.5 py-2.5 whitespace-pre-wrap" style={{
+                <div onClick={clickable ? () => onToggleMessage(m.id) : undefined}
+                  className="text-sm leading-relaxed px-3.5 py-2.5 whitespace-pre-wrap" style={{
                   background: agent ? '#FFF4F1' : '#F6F4F2', color: '#1A1E23',
                   border: `1px solid ${lit ? '#FF9780' : (agent ? '#FFB39A' : '#D6CEC5')}`,
                   borderRadius: 16, borderTopRightRadius: agent ? 4 : 16, borderTopLeftRadius: agent ? 16 : 4,
                   boxShadow: lit ? '0 0 0 2px rgba(255,151,128,.35), 0 1px 6px rgba(255,151,128,.25)' : 'none',
                   transition: 'box-shadow .2s ease, border-color .2s ease',
-                }}>{(m.body || '').trim() || '(no text)'}</div>
+                  cursor: clickable ? 'pointer' : 'default',
+                }}
+                  onMouseEnter={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255,151,128,.25)' }) : undefined}
+                  onMouseLeave={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = 'none' }) : undefined}>
+                  {(m.body || '').trim() || '(no text)'}</div>
               </div>
             )
           })}
