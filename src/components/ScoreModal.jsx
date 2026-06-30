@@ -1125,6 +1125,14 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
       </div>
   ) : null
 
+  // Per-message AI annotations: { msgId: [{ type, note }] }
+  const annMap = {}
+  ;(s.annotations || []).forEach(a => {
+    if (a?.message_id == null) return
+    const id = String(a.message_id)
+    ;(annMap[id] = annMap[id] || []).push({ type: a.type === 'good' ? 'good' : 'bad', note: a.note || '' })
+  })
+
   // Conversation transcript (left) — shared by the page + modal two-pane layouts
   const transcriptPane = (
     <div className="flex-1 min-w-0 h-full overflow-y-auto px-6 py-6" style={{ background: '#FFF9F4' }}>
@@ -1136,7 +1144,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
           Back
         </button>
       )}
-      <TicketTranscript ticketId={s.ticket_id} evidenceIds={activeEvidence} />
+      <TicketTranscript ticketId={s.ticket_id} evidenceIds={activeEvidence} annotations={annMap} />
     </div>
   )
 

@@ -30,7 +30,7 @@ function loadMessages(ticketId) {
  *  - maxHeight:   optional px to make the list internally scrollable (else the
  *                 parent scrolls)
  */
-export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds = [], maxHeight, className = '', onToggleMessage, taggingLabel }) {
+export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds = [], annotations = {}, maxHeight, className = '', onToggleMessage, taggingLabel }) {
   const [messages, setMessages] = useState(() => cache.get(String(ticketId)) || null)
   const [loading, setLoading]   = useState(!cache.has(String(ticketId)))
   const [failed, setFailed]     = useState(false)
@@ -106,6 +106,16 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
                   onMouseEnter={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255,151,128,.25)' }) : undefined}
                   onMouseLeave={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = 'none' }) : undefined}>
                   {(m.body || '').trim() || '(no text)'}</div>
+                {(annotations[String(m.id)] || []).map((a, i) => {
+                  const good = a.type === 'good'
+                  return (
+                    <div key={i} className="flex items-start gap-1.5 mt-1 text-xs leading-snug"
+                      style={{ color: good ? '#2F8F5B' : '#D14B3D', justifyContent: agent ? 'flex-end' : 'flex-start', textAlign: agent ? 'right' : 'left' }}>
+                      <span className="font-semibold shrink-0" style={{ order: agent ? 2 : 0 }}>{good ? '✓' : '✗'}</span>
+                      <span>{a.note}</span>
+                    </div>
+                  )
+                })}
               </div>
             )
           })}

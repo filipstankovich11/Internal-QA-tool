@@ -184,10 +184,20 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
 
   // ── Derived for the layout ───────────────────────────────────────────────────
   const agentChips = editing ? (initialScore.agent_senders || []).map(a => a.name).filter(Boolean) : []
-  const wentWell = editing
-    ? dims.flatMap(d => d.criteria).filter(c => (aiScores[c.id] || 0) >= 4 && aiNotes[c.id]).map(c => aiNotes[c.id]).slice(0, 3)
-    : []
+  // What went well: AI's `strengths` when present, else derive from high-scoring criteria notes
+  const derivedWell = dims.flatMap(d => d.criteria).filter(c => (aiScores[c.id] || 0) >= 4 && aiNotes[c.id]).map(c => aiNotes[c.id]).slice(0, 3)
+  const wentWell = editing ? (initialScore.strengths?.length ? initialScore.strengths : derivedWell) : []
   const toFix = editing ? improvements : []
+  // Per-message inline annotations from the AI: { msgId: [{ type, note }] }
+  const annotationMap = useMemo(() => {
+    const m = {}
+    ;(initialScore?.annotations || []).forEach(a => {
+      if (a?.message_id == null) return
+      const id = String(a.message_id)
+      ;(m[id] = m[id] || []).push({ type: a.type === 'good' ? 'good' : 'bad', note: a.note || '' })
+    })
+    return m
+  }, [initialScore])
 
   // Save / restore a manual draft in localStorage, keyed by ticket
   const draftKey = (!editing && ticketId) ? `qa-draft-${ticketId}` : null
@@ -215,8 +225,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
   const content = (
     <div className={embedded ? '' : 'max-w-6xl mx-auto px-8 pt-8 pb-14'}>
       <div className="grid lg:grid-cols-2 gap-6 items-start">
-        {/* Left — ticket + conversation (pinned so it stays in view while grading) */}
-        <div className="p-6 flex flex-col gap-5 lg:sticky lg:top-4 lg:self-start" style={CARD}>
+        {/* Left — ticket + conversation (pinned + self-scrolling so the page scroll only moves the criteria) */}
+        <div className="p-6 flex flex-col gap-5 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto" style={CARD}>
           {/* Manual: ticket link */}
           {!editing && (
             <div>
@@ -286,10 +296,10 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
             </div>
           )}
 
-          {/* Conversation transcript */}
+          {/* Conversation transcript — flows within the pinned column's own scroll */}
           {ticketId ? (
-            <TicketTranscript ticketId={ticketId} maxHeight={editing ? 520 : 440}
-              evidenceIds={evidenceIds} taggedIds={editing ? [] : allTagged}
+            <TicketTranscript ticketId={ticketId}
+              evidenceIds={evidenceIds} taggedIds={editing ? [] : allTagged} annotations={editing ? annotationMap : {}}
               onToggleMessage={!editing && activeCrit ? (id) => toggleEvidence(activeCrit, id) : undefined}
               taggingLabel={!editing && activeCrit ? critName(activeCrit) : null} />
           ) : !editing ? (

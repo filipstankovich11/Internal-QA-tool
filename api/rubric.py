@@ -277,6 +277,12 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
         "most directly justify the score). Cite 1–3 message ids; use an empty list only if no "
         "single message is decisive.",
         "",
+        "Also return `strengths`: 2–4 short, concrete things the agent did well (one phrase each, "
+        "for a 'what went well' summary). And `annotations`: for the most telling individual "
+        "messages, an inline note tied to that message — each is {\"message_id\": <MSG id>, "
+        "\"type\": \"good\" or \"bad\", \"note\": \"<short, specific observation>\"}. Add 2–6 "
+        "annotations across the thread; keep each note under ~8 words. Use [] if none apply.",
+        "",
     ]
 
     output_template = {
@@ -286,7 +292,11 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
         "weighted_score": "<float, 1 decimal, 0-100>",
         "verdict": "<PASS|NEEDS_REVIEW|FAIL>",
         "summary": "<2-3 sentence overall assessment focusing on what the agent did well and what needs improvement>",
+        "strengths": ["<short phrase — something the agent did well>"],
         "key_improvements": ["<string — specific, actionable improvement>"],
+        "annotations": [
+            {"message_id": "<MSG id>", "type": "<good|bad>", "note": "<short observation>"}
+        ],
     }
     lines.append(json.dumps(output_template, indent=2))
 
