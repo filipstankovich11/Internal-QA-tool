@@ -222,11 +222,12 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     } catch { /* ignore */ }
   }, [draftKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // One framed shell; each pane scrolls independently (modal fills its card, embedded fits the viewport)
+  const gridHeight = embedded ? 'calc(100vh - 11rem)' : '100%'
   const content = (
-    <div className={embedded ? '' : 'max-w-6xl mx-auto px-8 pt-8 pb-14'}>
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
-        {/* Left — ticket + conversation (pinned + self-scrolling so the page scroll only moves the criteria) */}
-        <div className="p-6 flex flex-col gap-5 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto" style={CARD}>
+    <div className="grid lg:grid-cols-2 overflow-hidden" style={{ ...CARD, height: gridHeight }}>
+        {/* Left — ticket + conversation */}
+        <div className="p-6 flex flex-col gap-5 overflow-y-auto" style={{ borderRight: '1px solid #EEEEEE' }}>
           {/* Manual: ticket link */}
           {!editing && (
             <div>
@@ -307,8 +308,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           ) : null}
         </div>
 
-        {/* Right — scoring (flat: dividers + boxed auto-fail/coaching, no outer card) */}
-        <div className="flex flex-col gap-5">
+        {/* Right — scoring (flat: dividers + boxed auto-fail/coaching) */}
+        <div className="p-6 flex flex-col gap-5 overflow-y-auto">
           {/* Live score */}
           <div>
             <div className="flex items-start justify-between mb-2.5 gap-3">
@@ -450,16 +451,15 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           )}
         </div>
       </div>
-    </div>
   )
 
   if (asModal) return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto" style={{ background: 'rgba(26,30,35,.45)', backdropFilter: 'blur(3px)' }}
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(26,30,35,.45)', backdropFilter: 'blur(3px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
       <button onClick={onClose} aria-label="Close"
         className="fixed right-5 top-5 z-[71] w-9 h-9 rounded-full flex items-center justify-center"
         style={{ background: '#fff', border: '1px solid #EEEEEE', color: 'rgba(26,30,35,.6)', boxShadow: '0 1px 3px rgba(0,0,0,.1)' }}>✕</button>
-      <div className="min-h-full" style={{ background: '#FFF9F4' }} onClick={e => e.stopPropagation()}>
+      <div className="w-full modal-enter" style={{ maxWidth: 1240, height: '90vh' }} onClick={e => e.stopPropagation()}>
         {content}
       </div>
     </div>
