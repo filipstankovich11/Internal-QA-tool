@@ -38,7 +38,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
 
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => { onClick(); if (e.detail) e.currentTarget.blur() }}
       title={collapsed ? label : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
