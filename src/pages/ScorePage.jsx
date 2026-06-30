@@ -6,7 +6,6 @@ import { authFetchJson, buildFewShotExamples } from '../lib/api'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, gradeColor } from '../lib/verdict'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import ScoringProgress from '../components/ScoringProgress'
-import ScoreFormPage from './ScoreFormPage'
 import DatePicker from '../components/DatePicker'
 import Segmented from '../components/Segmented'
 import Dropdown from '../components/Dropdown'
@@ -361,7 +360,6 @@ export default function ScorePage() {
   const { canScore } = useAuth()
 
   const [mode,        setMode]        = useState('single')
-  const [method,      setMethod]      = useState('ai')  // 'ai' = AI scoring · 'manual' = grade by hand
 
   // Open a scored ticket in the full-page two-pane detail (same surface everywhere).
   const openPanel = openScore
@@ -461,16 +459,9 @@ export default function ScorePage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="mb-1" style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>Score</h1>
-        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>{method === 'ai' ? 'Score a single ticket, upload a CSV, or pull from a Gorgias view' : 'Grade a ticket by hand against the rubric — no AI involved.'}</p>
+        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
       </div>
 
-      {/* Method: AI scoring vs manual grade */}
-      <div className="mb-7">
-        <Segmented options={[{ id: 'ai', label: 'Score with AI' }, { id: 'manual', label: 'Grade manually' }]}
-          value={method} onChange={setMethod} segWidth={142} fontPx={14} padY={9} />
-      </div>
-
-      {method === 'ai' && (<>
       {/* Mode toggle */}
       <div className="mb-6">
         <ModeToggle mode={mode} setMode={switchMode} />
@@ -766,9 +757,6 @@ export default function ScorePage() {
           )}
         </>
       )}
-      </>)}
-
-      {method === 'manual' && <ScoreFormPage embedded />}
 
       </div>
     </div>
