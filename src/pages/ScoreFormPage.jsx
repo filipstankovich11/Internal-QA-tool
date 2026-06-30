@@ -351,10 +351,10 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                     const ev = editing ? (aiMeta[c.id]?.evidence || []) : (manualEvidence[c.id] || [])
                     return (
                       <div key={c.id} onClick={() => setFocusIdx(idx)}
-                        className="rounded-lg px-2 py-2 -mx-2 transition-colors cursor-pointer"
-                        style={{ background: focused ? '#FFF4F1' : 'transparent', boxShadow: focused ? 'inset 0 0 0 1px #FFD2C9' : 'none' }}>
+                        className="rounded-lg px-2.5 py-2 -mx-2.5 transition-colors cursor-pointer"
+                        style={{ background: focused ? '#FBF7F3' : 'transparent' }}>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: 'rgba(26,30,35,.72)' }}>
+                          <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: '#1A1E23' }}>
                             {c.name}
                             {conf && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
@@ -367,9 +367,9 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                           </span>
                           <Pills value={scores[c.id]} onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
                         </div>
-                        {editing && aiNotes[c.id] && (
-                          <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'rgba(26,30,35,.55)' }}>
-                            <span className="font-medium" style={{ color: 'rgba(26,30,35,.45)' }}>AI: </span>{aiNotes[c.id]}
+                        {editing && focused && aiNotes[c.id] && (
+                          <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
+                            <span className="font-semibold" style={{ color: '#B84A2E' }}>AI rationale · </span>{aiNotes[c.id]}
                           </p>
                         )}
                         {editing && ev.length > 0 && (
