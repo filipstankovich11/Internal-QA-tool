@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
-import Dropdown from '../components/Dropdown'
 import TicketTranscript from '../components/TicketTranscript'
-import { gorgiasTicketUrl, parseTicketId } from '../lib/gorgias'
+import { gorgiasTicketUrl } from '../lib/gorgias'
 import { gradeColor } from '../lib/verdict'
 
 const CONF = {
@@ -36,15 +35,17 @@ function Pills({ value, onChange }) {
   )
 }
 
-export default function ScoreFormPage({ initialScore = null, asModal = false, onClose, onSaved, initialTicketUrl = '', embedded = false }) {
-  const { rubric, agents, addScore, overrideScore } = useApp()
+// Full-page editor for a committed score — opened via "Edit score". Pre-filled
+// with the AI's grades; saving records a human override.
+export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
+  const { rubric, overrideScore } = useApp()
   const { canScore } = useAuth()
   const toast = useToast()
 
   const dims = rubric?.dimensions || []
   const thresholds = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
   const autoFailConds = rubric?.auto_fail_conditions || []
-  const editing = !!initialScore   // editing an existing (AI-)scored ticket
+  const ticketId = initialScore.ticket_id
 
   // The AI's original per-criterion scores — baseline for the agree/override read-out
   const aiScores = useMemo(() => {
@@ -56,7 +57,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     return m
   }, [initialScore, dims])
 
-  // The AI's per-criterion rationale (its notes) — shown under each criterion when editing
+  // The AI's per-criterion rationale (its notes) — shown under the focused criterion
   const aiNotes = useMemo(() => {
     const m = {}
     if (initialScore?.scores) dims.forEach(d => d.criteria.forEach(c => {
@@ -65,6 +66,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     }))
     return m
   }, [initialScore, dims])
+
   // Per-criterion AI confidence + evidence (message ids) — present on newly-scored tickets
   const aiMeta = useMemo(() => {
     const m = {}
@@ -74,9 +76,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     }))
     return m
   }, [initialScore, dims])
-  const improvements = initialScore?.key_improvements || []   // AI coaching snippets
 
-  // criterionId -> 1..5 (pre-filled from the AI score when editing, else neutral 3)
+  // criterionId -> 1..5 (pre-filled from the AI score)
   const [scores, setScores] = useState(() => {
     const init = {}
     dims.forEach(d => d.criteria.forEach(c => { init[c.id] = aiScores[c.id] ?? 3 }))
@@ -87,34 +88,11 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     const names = initialScore.auto_fail.conditions || []
     return autoFailConds.filter(c => names.includes(c.name)).map(c => c.id)
   })
-  const [note, setNote]   = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
-  const [ticketUrl, setTicketUrl] = useState(initialTicketUrl)
-  const [agentId, setAgentId] = useState(() => {
-    const senders = initialScore?.agent_senders || []
-    return agents.find(a => senders.some(s =>
-      (s.email && a.email?.toLowerCase() === s.email?.toLowerCase()) ||
-      (s.gorgias_user_id && a.gorgias_user_id === s.gorgias_user_id)))?.id || ''
-  })
-  const [submitted, setSubmitted] = useState(false)
+  const [note, setNote] = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
   const [focusIdx, setFocusIdx] = useState(0)
   const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted
-  // Manual evidence the grader tags per criterion: { critId: [msgId, …] }
-  const [manualEvidence, setManualEvidence] = useState({})
-  // Evidence for the active criterion — AI's when editing, the grader's when manual
-  const evidenceIds = activeCrit
-    ? (editing ? (aiMeta[activeCrit]?.evidence || []) : (manualEvidence[activeCrit] || []))
-    : []
-  const critName = (id) => dims.flatMap(d => d.criteria).find(c => c.id === id)?.name || ''
-  const allTagged = useMemo(() => [...new Set(Object.values(manualEvidence).flat())], [manualEvidence])
-  const toggleEvidence = (critId, msgId) => {
-    if (!critId) return
-    const key = String(msgId)
-    setManualEvidence(prev => {
-      const cur = prev[critId] || []
-      return { ...prev, [critId]: cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key] }
-    })
-  }
+  const evidenceIds = activeCrit ? (aiMeta[activeCrit]?.evidence || []) : []
 
   const dimAvg = (d) => {
     const vals = d.criteria.map(c => scores[c.id]).filter(v => v != null)
@@ -127,67 +105,40 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
 
   const toggleAutoFail = (id) => setAutoFails(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
-  const ticketId = editing ? initialScore.ticket_id : parseTicketId(ticketUrl)
-
   const submit = async () => {
-    // Editing a committed score → record the human revision as an override
-    if (editing) {
-      await overrideScore(initialScore.scoreId, { verdict, score: total, note: note.trim() })
-      toast.success('Score revised')
-      onSaved?.()
-      return
-    }
-    const scoresObj = {}
-    dims.forEach(d => {
-      const dim = { dimension_average: +dimAvg(d).toFixed(2) }
-      d.criteria.forEach(c => {
-        const ev = manualEvidence[c.id] || []
-        dim[c.id] = { score: scores[c.id], notes: '', ...(ev.length ? { evidence: ev } : {}) }
-      })
-      scoresObj[d.id] = dim
-    })
-    const agent = agents.find(a => a.id === agentId)
-    const saved = await addScore({
-      ticket_id:      ticketId || `manual-${Date.now()}`,
-      ticket_subject: '',
-      verdict,
-      weighted_score: total,
-      summary:        note.trim(),
-      scores:         scoresObj,
-      key_improvements: [],
-      agent_senders:  agent ? [{ name: agent.name, email: agent.email, gorgias_user_id: agent.gorgias_user_id }] : [],
-      auto_fail:      { triggered: autoFails.length > 0, conditions: autoFails.map(id => autoFailConds.find(c => c.id === id)?.name).filter(Boolean) },
-      manual:         true,
-    })
-    if (saved?.error) { toast.error(`Couldn't save the score: ${saved.error.message || 'database error'}`); return }
-    if (ticketId) { try { localStorage.removeItem(`qa-draft-${ticketId}`) } catch { /* ignore */ } }
-    setSubmitted(true)
-    toast.success('Score submitted')
+    await overrideScore(initialScore.scoreId, { verdict, score: total, note: note.trim() })
+    toast.success('Score revised')
+    onSaved?.()
   }
 
-  // Keyboard scoring: 1–5 score the focused criterion, ↑/↓ move, ⌘↵ submit
+  // Keyboard scoring: 1–5 score the focused criterion, ↑/↓ move, ⌘↵ submit.
+  // Subscribe once and read the latest values through a ref (avoids re-binding
+  // the listener on every keystroke in the coaching note).
+  const latest = useRef(null)
+  latest.current = { focusIdx, canScore, submit, allCrit }
   useEffect(() => {
     const onKey = (e) => {
       const tag = e.target.tagName
       if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return
+      const { focusIdx, canScore, submit, allCrit } = latest.current
       if (e.key >= '1' && e.key <= '5' && allCrit[focusIdx]) { setScores(s => ({ ...s, [allCrit[focusIdx]]: +e.key })) }
       else if (e.key === 'ArrowDown') { e.preventDefault(); setFocusIdx(i => Math.min(i + 1, allCrit.length - 1)) }
       else if (e.key === 'ArrowUp')   { e.preventDefault(); setFocusIdx(i => Math.max(i - 1, 0)) }
-      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (canScore && !submitted) submit() }
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (canScore) submit() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [focusIdx, allCrit, canScore, submitted, scores, autoFails, note, agentId, ticketUrl]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Evidence highlight / tagging target follows the focused criterion (keyboard or click)
+  // Evidence highlight follows the focused criterion (keyboard or click)
   useEffect(() => { setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, allCrit])
 
   // ── Derived for the layout ───────────────────────────────────────────────────
-  const agentChips = editing ? (initialScore.agent_senders || []).map(a => a.name).filter(Boolean) : []
+  const agentChips = (initialScore.agent_senders || []).map(a => a.name).filter(Boolean)
   // What went well: AI's `strengths` when present, else derive from high-scoring criteria notes
   const derivedWell = dims.flatMap(d => d.criteria).filter(c => (aiScores[c.id] || 0) >= 4 && aiNotes[c.id]).map(c => aiNotes[c.id]).slice(0, 3)
-  const wentWell = editing ? (initialScore.strengths?.length ? initialScore.strengths : derivedWell) : []
-  const toFix = editing ? improvements : []
+  const wentWell = initialScore.strengths?.length ? initialScore.strengths : derivedWell
+  const toFix = initialScore?.key_improvements || []
   // Per-message inline annotations from the AI: { msgId: [{ type, note }] }
   const annotationMap = useMemo(() => {
     const m = {}
@@ -199,77 +150,33 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     return m
   }, [initialScore])
 
-  // Save / restore a manual draft in localStorage, keyed by ticket
-  const draftKey = (!editing && ticketId) ? `qa-draft-${ticketId}` : null
-  const saveDraft = () => {
-    if (!draftKey) { toast.info('Paste a ticket link first'); return }
-    try { localStorage.setItem(draftKey, JSON.stringify({ scores, autoFails, note, agentId, manualEvidence })) } catch { /* ignore */ }
-    toast.success('Draft saved')
-  }
-  const restoredKey = useRef(null)
-  useEffect(() => {
-    if (!draftKey || restoredKey.current === draftKey) return
-    restoredKey.current = draftKey
-    try {
-      const d = JSON.parse(localStorage.getItem(draftKey) || 'null')
-      if (!d) return
-      if (d.scores) setScores(s => ({ ...s, ...d.scores }))
-      if (d.autoFails) setAutoFails(d.autoFails)
-      if (typeof d.note === 'string') setNote(d.note)
-      if (d.agentId) setAgentId(d.agentId)
-      if (d.manualEvidence) setManualEvidence(d.manualEvidence)
-      toast.info('Draft restored')
-    } catch { /* ignore */ }
-  }, [draftKey]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // One framed shell; each pane scrolls independently (modal fills its card, embedded fits the viewport)
-  const gridHeight = embedded ? 'calc(100vh - 11rem)' : '100%'
+  // One framed shell; each pane scrolls independently within the editor's height
   const content = (
-    <div className="grid lg:grid-cols-2 overflow-hidden" style={{ ...CARD, height: gridHeight }}>
+    <div className="grid lg:grid-cols-2 overflow-hidden" style={{ ...CARD, height: '100%' }}>
         {/* Left — ticket + conversation */}
         <div className="p-6 flex flex-col gap-5 overflow-y-auto" style={{ borderRight: '1px solid #EEEEEE' }}>
-          {/* Manual: ticket link */}
-          {!editing && (
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider block mb-1.5" style={{ color: 'rgba(26,30,35,.45)' }}>Ticket</label>
-              <input value={ticketUrl} onChange={e => setTicketUrl(e.target.value)}
-                placeholder="https://yourcompany.gorgias.com/app/ticket/…"
-                className="g-input rounded-lg px-3 py-2.5 text-sm w-full" />
-            </div>
-          )}
-
           {/* Ticket meta + title */}
-          {ticketId && (
-            <div>
-              <div className="flex items-center gap-2 text-xs mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>
-                <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" className="font-medium" style={{ color: '#B84A2E' }}>#{ticketId}</a>
-                <span>·</span><span>Gorgias</span>
-              </div>
-              {editing && initialScore.ticket_subject && (
-                <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", lineHeight: 1.3 }}>{initialScore.ticket_subject}</h2>
-              )}
+          <div>
+            <div className="flex items-center gap-2 text-xs mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+              <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" className="font-medium" style={{ color: '#B84A2E' }}>#{ticketId}</a>
+              <span>·</span><span>Gorgias</span>
             </div>
-          )}
+            {initialScore.ticket_subject && (
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", lineHeight: 1.3 }}>{initialScore.ticket_subject}</h2>
+            )}
+          </div>
 
-          {/* Agent — chips (editing) or picker (manual) */}
-          {editing ? (
-            agentChips.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {agentChips.map((n, i) => (
-                  <span key={i} className="text-xs px-2.5 py-1 rounded-lg font-medium" style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFE0D6' }}>{n}</span>
-                ))}
-              </div>
-            )
-          ) : (
-            <div>
-              <label className="text-xs block mb-1.5" style={{ color: 'rgba(26,30,35,.6)' }}>Agent graded</label>
-              <Dropdown value={agentId} onChange={setAgentId} width="100%" avatars
-                options={[{ value: '', label: 'No agent' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
+          {/* Agent chips */}
+          {agentChips.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {agentChips.map((n, i) => (
+                <span key={i} className="text-xs px-2.5 py-1 rounded-lg font-medium" style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFE0D6' }}>{n}</span>
+              ))}
             </div>
           )}
 
           {/* Conversation highlights (AI) */}
-          {editing && (wentWell.length > 0 || toFix.length > 0) && (
+          {(wentWell.length > 0 || toFix.length > 0) && (
             <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.45)' }}>Conversation highlights</p>
               {wentWell.length > 0 && (
@@ -297,18 +204,11 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
             </div>
           )}
 
-          {/* Conversation transcript — flows within the pinned column's own scroll */}
-          {ticketId ? (
-            <TicketTranscript ticketId={ticketId}
-              evidenceIds={evidenceIds} taggedIds={editing ? [] : allTagged} annotations={editing ? annotationMap : {}}
-              onToggleMessage={!editing && activeCrit ? (id) => toggleEvidence(activeCrit, id) : undefined}
-              taggingLabel={!editing && activeCrit ? critName(activeCrit) : null} />
-          ) : !editing ? (
-            <p className="text-xs py-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.5)' }}>Paste a ticket link above to load its conversation here, then grade each criterion on the right.</p>
-          ) : null}
+          {/* Conversation transcript — clicking a criterion rings its cited messages */}
+          <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} annotations={annotationMap} />
         </div>
 
-        {/* Right — scoring (flat: dividers + boxed auto-fail/coaching) */}
+        {/* Right — scoring (flat: dividers + boxed live-score/auto-fail/coaching) */}
         <div className="p-6 flex flex-col gap-5 overflow-y-auto">
           {/* Live score */}
           <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
@@ -347,9 +247,9 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                     const idx = allCrit.indexOf(c.id)
                     const focused = idx === focusIdx
                     const ai = aiScores[c.id]
-                    const diff = editing && ai != null && scores[c.id] !== ai
-                    const conf = editing ? CONF[aiMeta[c.id]?.confidence] : null
-                    const ev = editing ? (aiMeta[c.id]?.evidence || []) : (manualEvidence[c.id] || [])
+                    const diff = ai != null && scores[c.id] !== ai
+                    const conf = CONF[aiMeta[c.id]?.confidence]
+                    const ev = aiMeta[c.id]?.evidence || []
                     return (
                       <div key={c.id} onClick={() => setFocusIdx(idx)}
                         className="rounded-lg px-2.5 py-2 -mx-2.5 transition-colors cursor-pointer"
@@ -360,7 +260,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                             {conf && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
                             )}
-                            {editing && ai != null && (
+                            {ai != null && (
                               <span className="text-xs font-medium" style={{ color: diff ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
                                 {diff ? `overrode ${ai}→${scores[c.id]}` : `matches AI (${ai})`}
                               </span>
@@ -368,21 +268,14 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                           </span>
                           <Pills value={scores[c.id]} onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
                         </div>
-                        {editing && focused && aiNotes[c.id] && (
+                        {focused && aiNotes[c.id] && (
                           <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
                             <span className="font-semibold" style={{ color: '#B84A2E' }}>AI rationale · </span>{aiNotes[c.id]}
                           </p>
                         )}
-                        {editing && ev.length > 0 && (
+                        {ev.length > 0 && (
                           <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
                             {focused ? `↖ Highlighted ${ev.length} cited message${ev.length > 1 ? 's' : ''} in the transcript` : `${ev.length} cited message${ev.length > 1 ? 's' : ''} — click to highlight`}
-                          </p>
-                        )}
-                        {!editing && ticketId && (focused || ev.length > 0) && (
-                          <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
-                            {focused
-                              ? (ev.length ? `${ev.length} message${ev.length > 1 ? 's' : ''} tagged · click messages to toggle` : 'Click messages in the conversation to tag evidence')
-                              : `${ev.length} tagged`}
                           </p>
                         )}
                       </div>
@@ -428,44 +321,20 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           </div>
 
           {/* Actions */}
-          {submitted ? (
-            <div className="flex items-center gap-2 text-sm rounded-xl px-3 py-2.5" style={{ background: '#E6F4EC', border: '1px solid #BFE3CD', color: '#2F8F5B' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Score submitted — {total}/100 · {VERDICT_LABEL[verdict]}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'rgba(26,30,35,.6)' }}>1–5</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>↑↓</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>⌘↵</b></p>
-              <div className="flex items-center gap-2 ml-auto">
-                {!editing && (
-                  <button onClick={saveDraft} className="g-btn-ghost text-sm px-4 py-2.5 rounded-xl">Save draft</button>
-                )}
-                <button onClick={submit} disabled={!canScore}
-                  className="g-btn-primary text-sm px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2"
-                  style={{ opacity: canScore ? 1 : 0.5 }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  {editing ? 'Save revision' : 'Submit score'}
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'rgba(26,30,35,.6)' }}>1–5</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>↑↓</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>⌘↵</b></p>
+            <button onClick={submit} disabled={!canScore}
+              className="g-btn-primary text-sm px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2 ml-auto"
+              style={{ opacity: canScore ? 1 : 0.5 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Save revision
+            </button>
+          </div>
         </div>
       </div>
   )
 
-  if (asModal) return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(26,30,35,.45)', backdropFilter: 'blur(3px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
-      <button onClick={onClose} aria-label="Close"
-        className="fixed right-5 top-5 z-[71] w-9 h-9 rounded-full flex items-center justify-center"
-        style={{ background: '#fff', border: '1px solid #EEEEEE', color: 'rgba(26,30,35,.6)', boxShadow: '0 1px 3px rgba(0,0,0,.1)' }}>✕</button>
-      <div className="w-full modal-enter" style={{ maxWidth: 1240, height: '90vh' }} onClick={e => e.stopPropagation()}>
-        {content}
-      </div>
-    </div>
-  )
-  if (embedded) return content
-  // Full-page editor (opened from "Edit score")
+  // Full-page editor shell (opened from "Edit score")
   return (
     <div className="h-screen flex flex-col" style={{ background: '#FFF9F4' }}>
       <div className="flex items-center gap-3 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid #EEEEEE', background: '#fff' }}>
@@ -476,7 +345,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           Back
         </button>
         <span className="text-sm font-semibold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
-          {editing ? 'Score ticket' : 'Grade a ticket'}{ticketId ? ` · #${ticketId}` : ''}
+          Score ticket{ticketId ? ` · #${ticketId}` : ''}
         </span>
       </div>
       <div className="flex-1 min-h-0 px-6 py-5">

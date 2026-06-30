@@ -215,10 +215,10 @@ export default function ReviewQueuePage() {
     !isClaimActive(s) ? null : (s.claimedBy === user?.id ? 'You' : (profiles[s.claimedBy] || 'Another reviewer'))
 
   // Queue buckets
-  const needsReview = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
-  const disputed    = scoreHistory.filter(s => !s.reviewedAt && s.disputed)
-  const failed      = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict)
-  const allQueued   = useMemo(() => [...new Map([...disputed, ...needsReview, ...failed].map(s => [s.id, s])).values()], [scoreHistory])
+  const needsReview = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict), [scoreHistory])
+  const disputed    = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.disputed), [scoreHistory])
+  const failed      = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict), [scoreHistory])
+  const allQueued   = useMemo(() => [...new Map([...disputed, ...needsReview, ...failed].map(s => [s.id, s])).values()], [disputed, needsReview, failed])
 
   const totalCount  = allQueued.length
   const avgWaitDays = allQueued.length
