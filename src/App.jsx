@@ -39,6 +39,7 @@ const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
 const MyQueuePage      = lazy(() => import('./pages/MyQueuePage'))
+const ScoreFormPage    = lazy(() => import('./pages/ScoreFormPage'))
 const ScoreModal       = lazy(() => import('./components/ScoreModal'))
 
 const Spinner = () => (
@@ -68,12 +69,16 @@ function Router({ page, role }) {
 // a score is open (the review queue opens its own modal instead). Navigating
 // to another page closes the detail.
 function MainContent({ page, role }) {
-  const { viewingScore, closeScore } = useApp()
-  useEffect(() => { closeScore() }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { viewingScore, closeScore, scoreToEdit, closeScoreEditor } = useApp()
+  useEffect(() => { closeScore(); closeScoreEditor() }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <ErrorBoundary>
       <Suspense fallback={<Spinner />}>
-        {viewingScore ? (
+        {scoreToEdit ? (
+          <ScoreFormPage initialScore={scoreToEdit}
+            onClose={closeScoreEditor}
+            onSaved={() => { closeScoreEditor(); closeScore() }} />
+        ) : viewingScore ? (
           <ScoreModal score={viewingScore.score} actions={viewingScore.actions} variant="page" onClose={closeScore} />
         ) : (
           <div key={page} className="page-enter">

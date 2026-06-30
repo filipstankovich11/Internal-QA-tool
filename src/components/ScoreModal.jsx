@@ -6,7 +6,6 @@ import { useToast } from './Toast'
 import { authFetch, buildFewShotExamples } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
-import ScoreFormPage from '../pages/ScoreFormPage'
 import TicketTranscript from './TicketTranscript'
 
 function useCountUp(target, duration = 700) {
@@ -540,7 +539,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false, variant = null }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory } = useApp()
+  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory, openScoreEditor } = useApp()
   const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
   const toast = useToast()
@@ -560,7 +559,6 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   const reviewed  = !!record?.reviewedAt
   const [reviewing,      setReviewing]      = useState(false)
   const [confirmReview,  setConfirmReview]  = useState(false)
-  const [editingScore,   setEditingScore]   = useState(false)
   const [notifyOnReview, setNotifyOnReview] = useState(true)
   const [activeEvidence, setActiveEvidence] = useState([])  // criterion's cited message ids → transcript highlight
   const [menuOpen,       setMenuOpen]       = useState(false) // header "⋯" overflow menu
@@ -673,12 +671,6 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
 
   const inner = (
     <>
-    {/* Edit score — opens the grading form pre-filled with this score */}
-    {editingScore && (
-      <ScoreFormPage initialScore={s} asModal
-        onClose={() => setEditingScore(false)}
-        onSaved={() => { setEditingScore(false); onClose() }} />
-    )}
     {/* Mark-reviewed confirmation */}
     {confirmReview && (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)' }}
@@ -751,7 +743,7 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               )}
               {/* Primary: edit score */}
               {isAdmin && s.scoreId && !confirmDelete && (
-                <button onClick={() => setEditingScore(true)}
+                <button onClick={() => openScoreEditor(s)}
                   className="flex items-center gap-1.5 text-xs font-medium rounded-lg px-3 py-1.5 transition-all"
                   style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.72)' }}
                   onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='#B84A2E'; e.currentTarget.style.borderColor='#FFD2C9' }}

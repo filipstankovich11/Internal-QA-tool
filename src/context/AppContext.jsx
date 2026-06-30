@@ -107,6 +107,12 @@ export function AppProvider({ children }) {
     setActiveOverlay(o => o === 'score' ? null : o)
   }, [])
 
+  // Editing a committed score opens the grading form full-page (App swaps the
+  // routed content), rather than a modal stacked on the detail.
+  const [scoreToEdit, setScoreToEdit] = useState(null)
+  const openScoreEditor  = useCallback((score) => { setScoreToEdit(score); setActiveOverlay('score') }, [])
+  const closeScoreEditor = useCallback(() => { setScoreToEdit(null) }, [])
+
   // ── Resolve the current user's agent record (agents only) ───────────────────
   const myAgentId = useMemo(
     () => role === 'agent' ? (agents.find(a => a.user_id === user?.id)?.id ?? null) : null,
@@ -414,6 +420,7 @@ export function AppProvider({ children }) {
       teams, agents, scoreHistory: visibleScoreHistory, rubric, dataLoading, myAgentId,
       activeOverlay, setActiveOverlay,
       viewingScore, openScore, closeScore,
+      scoreToEdit, openScoreEditor, closeScoreEditor,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,

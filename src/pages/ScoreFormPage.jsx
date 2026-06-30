@@ -464,5 +464,24 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
       </div>
     </div>
   )
-  return content
+  if (embedded) return content
+  // Full-page editor (opened from "Edit score")
+  return (
+    <div className="h-screen flex flex-col" style={{ background: '#FFF9F4' }}>
+      <div className="flex items-center gap-3 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid #EEEEEE', background: '#fff' }}>
+        <button onClick={onClose}
+          className="inline-flex items-center gap-1.5 text-sm transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Back
+        </button>
+        <span className="text-sm font-semibold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
+          {editing ? 'Score ticket' : 'Grade a ticket'}{ticketId ? ` · #${ticketId}` : ''}
+        </span>
+      </div>
+      <div className="flex-1 min-h-0 px-6 py-5">
+        {content}
+      </div>
+    </div>
+  )
 }
