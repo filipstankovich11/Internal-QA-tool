@@ -37,7 +37,7 @@ function Pills({ value, onChange }) {
   )
 }
 
-export default function ScoreFormPage({ initialScore = null, asModal = false, onClose, onSaved, initialTicketUrl = '' }) {
+export default function ScoreFormPage({ initialScore = null, asModal = false, onClose, onSaved, initialTicketUrl = '', embedded = false }) {
   const { rubric, agents, addScore, overrideScore } = useApp()
   const { canScore } = useAuth()
   const toast = useToast()
@@ -165,7 +165,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
   useEffect(() => { if (editing) setActiveCrit(allCrit[focusIdx] || null) }, [focusIdx, editing, allCrit])
 
   const content = (
-    <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
+    <div className={embedded ? '' : 'max-w-5xl mx-auto px-8 pt-8 pb-14'}>
+      {!embedded && (
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <h1 style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>{editing ? 'Score ticket' : 'Grade a ticket'}</h1>
@@ -180,6 +181,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
           </span>
         )}
       </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-5 items-start">
         {/* Left — ticket context */}

@@ -361,7 +361,7 @@ export default function ScorePage() {
   const { canScore } = useAuth()
 
   const [mode,        setMode]        = useState('single')
-  const [manualOpen,  setManualOpen]  = useState(false) // manual (no-AI) grading form
+  const [method,      setMethod]      = useState('ai')  // 'ai' = AI scoring · 'manual' = grade by hand
 
   // Open a scored ticket in the full-page two-pane detail (same surface everywhere).
   const openPanel = openScore
@@ -459,11 +459,18 @@ export default function ScorePage() {
     <div className="panel-push">
     <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="mb-1" style={{ fontSize: 30, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>Score</h1>
-        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
+        <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>{method === 'ai' ? 'Score a single ticket, upload a CSV, or pull from a Gorgias view' : 'Grade a ticket by hand against the rubric — no AI involved.'}</p>
       </div>
 
+      {/* Method: AI scoring vs manual grade */}
+      <div className="mb-7">
+        <Segmented options={[{ id: 'ai', label: 'Score with AI' }, { id: 'manual', label: 'Grade manually' }]}
+          value={method} onChange={setMethod} segWidth={142} fontPx={14} padY={9} />
+      </div>
+
+      {method === 'ai' && (<>
       {/* Mode toggle */}
       <div className="mb-6">
         <ModeToggle mode={mode} setMode={switchMode} />
@@ -509,13 +516,6 @@ export default function ScorePage() {
           </div>
 
           {urlError && <p className="text-xs mt-2 ml-1" style={{ color: '#C8841E' }}>⚠ {urlError}</p>}
-          {canScore && (
-            <button onClick={() => setManualOpen(true)}
-              className="text-xs mt-2 ml-1 transition-colors" style={{ color: 'rgba(26,30,35,.55)' }}
-              onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.55)'}>
-              or grade manually without AI →
-            </button>
-          )}
           <ScoringProgress loading={loading} />
           {error && <p className="text-xs text-center mt-2" style={{ color: '#D14B3D' }}>{error}</p>}
 
@@ -766,12 +766,11 @@ export default function ScorePage() {
           )}
         </>
       )}
+      </>)}
+
+      {method === 'manual' && <ScoreFormPage embedded />}
 
       </div>
-      {manualOpen && (
-        <ScoreFormPage asModal initialTicketUrl={ticketUrl}
-          onClose={() => setManualOpen(false)} onSaved={() => setManualOpen(false)} />
-      )}
     </div>
   )
 }
