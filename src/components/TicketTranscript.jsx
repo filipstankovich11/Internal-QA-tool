@@ -30,7 +30,7 @@ function loadMessages(ticketId) {
  *  - maxHeight:   optional px to make the list internally scrollable (else the
  *                 parent scrolls)
  */
-export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight, className = '', onToggleMessage, taggingLabel }) {
+export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds = [], maxHeight, className = '', onToggleMessage, taggingLabel }) {
   const [messages, setMessages] = useState(() => cache.get(String(ticketId)) || null)
   const [loading, setLoading]   = useState(!cache.has(String(ticketId)))
   const [failed, setFailed]     = useState(false)
@@ -49,6 +49,7 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
   }, [ticketId])
 
   const ev = evidenceIds.map(String)
+  const taggedSet = new Set(taggedIds.map(String))   // tagged for ANY criterion (coverage)
 
   // Scroll the first cited message into view when the highlight changes
   const rowRefs = useRef({})
@@ -81,7 +82,8 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
       ) : (messages && messages.length) ? (
         <div className="flex flex-col gap-2.5 pr-1" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
           {messages.map(m => {
-            const lit = ev.includes(String(m.id))
+            const lit = ev.includes(String(m.id))            // evidence for the focused criterion
+            const tagged = !lit && taggedSet.has(String(m.id)) // evidence for another criterion
             const agent = m.from_agent
             const clickable = !!onToggleMessage
             return (
@@ -90,11 +92,12 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], maxHeight
                   <span className="font-medium" style={{ color: 'rgba(26,30,35,.6)' }}>{m.author || (agent ? 'Agent' : 'Customer')}</span>
                   {!m.public && <span className="px-1 rounded" style={{ background: '#F1ECE8' }}>internal</span>}
                   {lit && clickable && <span style={{ color: '#B84A2E', fontWeight: 600 }}>✓ evidence</span>}
+                  {tagged && clickable && <span style={{ color: 'rgba(184,74,46,.6)' }}>• tagged elsewhere</span>}
                 </div>
                 <div onClick={clickable ? () => onToggleMessage(m.id) : undefined}
                   className="text-sm leading-relaxed px-3.5 py-2.5 whitespace-pre-wrap" style={{
                   background: agent ? '#FFF4F1' : '#F6F4F2', color: '#1A1E23',
-                  border: `1px solid ${lit ? '#FF9780' : (agent ? '#FFB39A' : '#D6CEC5')}`,
+                  border: `1px solid ${lit ? '#FF9780' : tagged ? '#FFC2AE' : (agent ? '#FFB39A' : '#D6CEC5')}`,
                   borderRadius: 16, borderTopRightRadius: agent ? 4 : 16, borderTopLeftRadius: agent ? 16 : 4,
                   boxShadow: lit ? '0 0 0 2px rgba(255,151,128,.35), 0 1px 6px rgba(255,151,128,.25)' : 'none',
                   transition: 'box-shadow .2s ease, border-color .2s ease',

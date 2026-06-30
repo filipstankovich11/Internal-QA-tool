@@ -107,6 +107,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
     ? (editing ? (aiMeta[activeCrit]?.evidence || []) : (manualEvidence[activeCrit] || []))
     : []
   const critName = (id) => dims.flatMap(d => d.criteria).find(c => c.id === id)?.name || ''
+  const allTagged = useMemo(() => [...new Set(Object.values(manualEvidence).flat())], [manualEvidence])
   const toggleEvidence = (critId, msgId) => {
     if (!critId) return
     const key = String(msgId)
@@ -201,8 +202,8 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
       )}
 
       <div className="grid lg:grid-cols-2 gap-5 items-start">
-        {/* Left — ticket context */}
-        <div className="p-5 flex flex-col gap-4" style={CARD}>
+        {/* Left — ticket context (pinned so the conversation stays in view while grading) */}
+        <div className="p-5 flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start" style={CARD}>
           <p className="g-label" style={{ margin: 0 }}>Ticket</p>
           {editing ? (
             <>
@@ -229,7 +230,7 @@ export default function ScoreFormPage({ initialScore = null, asModal = false, on
                   <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer"
                     className="text-sm font-medium" style={{ color: '#B84A2E' }}>→ Open ticket #{ticketId} in Gorgias</a>
                   <TicketTranscript ticketId={ticketId} maxHeight={440}
-                    evidenceIds={evidenceIds}
+                    evidenceIds={evidenceIds} taggedIds={allTagged}
                     onToggleMessage={activeCrit ? (id) => toggleEvidence(activeCrit, id) : undefined}
                     taggingLabel={activeCrit ? critName(activeCrit) : null} />
                 </>
