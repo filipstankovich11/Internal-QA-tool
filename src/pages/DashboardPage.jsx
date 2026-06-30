@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import DatePicker from '../components/DatePicker'
 import Dropdown from '../components/Dropdown'
+import Segmented from '../components/Segmented'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, VERDICT_DESC } from '../lib/verdict'
 
@@ -35,7 +36,7 @@ function useCountUp(target, duration = 650) {
 }
 
 // Stat-card icons (stroke, inherit color from the accent chip)
-const svg = (children) => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
+const svg = (children) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>{children}</svg>
 const STAT_ICONS = {
   total:  svg(<><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></>),
   avg:    svg(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>),
@@ -219,33 +220,77 @@ const selectStyle = {
 }
 
 // Full-width average-score area chart with a pass-threshold reference line
+// Average score grouped into month or week buckets, oldest → newest (last `limit`)
+function bucketAverages(scores, granularity, limit = 12) {
+  const map = new Map()
+  for (const s of scores) {
+    const v = s.effectiveScore
+    if (v == null) continue
+    const d = new Date(s.scoredAt)
+    let key, label
+    if (granularity === 'monthly') {
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      label = d.toLocaleDateString('en-US', { month: 'short' })
+    } else {
+      const w = new Date(d); w.setDate(w.getDate() - ((w.getDay() + 6) % 7)); w.setHours(0, 0, 0, 0)
+      key = w.toISOString().slice(0, 10)
+      label = w.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    if (!map.has(key)) map.set(key, { key, label, sum: 0, n: 0 })
+    const b = map.get(key); b.sum += v; b.n++
+  }
+  return [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).slice(-limit)
+    .map(b => ({ label: b.label, avg: b.sum / b.n }))
+}
+
 function AvgTrendChart({ scores, passLine = 80 }) {
-  const pts = useMemo(() => buildTrendData(scores, 30), [scores])
-  const W = 900, H = 170, padX = 14, padTop = 16, padBot = 26
+  const [gran, setGran] = useState('monthly')
+  const pts = useMemo(() => bucketAverages(scores, gran), [scores, gran])
   const card = { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }
+  const toggle = (
+    <Segmented options={[{ id: 'weekly', label: 'Weekly' }, { id: 'monthly', label: 'Monthly' }]}
+      value={gran} onChange={setGran} segWidth={84} fontPx={13} padY={6} />
+  )
 
   if (pts.length < 2) return (
     <div className="p-5 mb-6" style={card}>
-      <p className="g-label" style={{ margin: 0 }}>Average score — last 30 days</p>
-      <p className="text-xs text-center py-10" style={{ color: 'rgba(26,30,35,.45)' }}>Not enough data yet — need scores across 2+ days.</p>
+      <div className="flex items-center justify-between mb-3"><p className="g-label" style={{ margin: 0 }}>Average score over time</p>{toggle}</div>
+      <p className="text-xs text-center py-10" style={{ color: 'rgba(26,30,35,.45)' }}>Not enough data yet — need scores across 2+ {gran === 'monthly' ? 'months' : 'weeks'}.</p>
     </div>
   )
 
-  const maxDay = Math.max(...pts.map(p => p.day), 29) || 1
-  const x = (d) => padX + (d / maxDay) * (W - padX * 2)
-  const y = (v) => padTop + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - padTop - padBot)
-  const coords = pts.map(p => ({ x: x(p.day), y: y(p.avg) }))
+  const W = 900, H = 210, padL = 34, padR = 16, padTop = 16, padBot = 30
+  const vals = pts.map(p => p.avg)
+  const lo = Math.max(0, Math.floor((Math.min(...vals, passLine) - 6) / 10) * 10)
+  let hi = Math.min(100, Math.ceil((Math.max(...vals, passLine) + 6) / 10) * 10)
+  if (hi - lo < 20) hi = Math.min(100, lo + 20)
+  const x = (i) => padL + (pts.length === 1 ? 0.5 : i / (pts.length - 1)) * (W - padL - padR)
+  const y = (v) => padTop + (1 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * (H - padTop - padBot)
+  const coords = pts.map((p, i) => ({ x: x(i), y: y(p.avg) }))
   const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
   const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${H - padBot} L${coords[0].x.toFixed(1)},${H - padBot} Z`
-  const yPass = y(passLine)
+  const step = (hi - lo) / 2 >= 30 ? 20 : 10
+  const ticks = []; for (let v = lo; v <= hi; v += step) ticks.push(v)
+  const current = pts[pts.length - 1].avg
+  const delta = current - pts[pts.length - 2].avg
+  const dir = delta > 0.5 ? 'up' : delta < -0.5 ? 'down' : 'steady'
+  const trendColor = dir === 'down' ? '#D14B3D' : dir === 'up' ? '#2F8F5B' : 'rgba(26,30,35,.5)'
 
   return (
     <div className="p-5 mb-6" style={card}>
-      <div className="flex items-center justify-between mb-3">
-        <p className="g-label" style={{ margin: 0 }}>Average score — last 30 days</p>
-        <span className="flex items-center gap-1.5 text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
-          <span style={{ width: 14, borderTop: '1px dashed #2F8F5B' }} /> Pass threshold {passLine}
-        </span>
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <p className="g-label" style={{ margin: 0 }}>Average score over time</p>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: trendColor }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              {dir === 'down'
+                ? <><polyline points="3 7 9 13 13 9 21 17"/><polyline points="21 12 21 17 16 17"/></>
+                : <><polyline points="3 17 9 11 13 15 21 7"/><polyline points="21 12 21 7 16 7"/></>}
+            </svg>
+            {delta >= 0 ? '+' : ''}{delta.toFixed(1)} {gran === 'monthly' ? 'this month' : 'this week'}
+          </span>
+        </div>
+        {toggle}
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
         <defs>
@@ -254,15 +299,25 @@ function AvgTrendChart({ scores, passLine = 80 }) {
             <stop offset="100%" stopColor="#FF9780" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <line x1={padX} y1={yPass} x2={W - padX} y2={yPass} stroke="#2F8F5B" strokeWidth="1" strokeDasharray="5 5" opacity="0.55" />
+        {ticks.map(v => (
+          <g key={v}>
+            <line x1={padL} y1={y(v)} x2={W - padR} y2={y(v)} stroke="#F0ECE9" strokeWidth="1" />
+            <text x={padL - 8} y={y(v)} dominantBaseline="central" textAnchor="end" style={{ fontSize: 11, fill: 'rgba(26,30,35,.4)' }}>{v}</text>
+          </g>
+        ))}
+        <line x1={padL} y1={y(passLine)} x2={W - padR} y2={y(passLine)} stroke="#C8841E" strokeWidth="1" strokeDasharray="5 5" opacity="0.7" />
         <path d={area} fill="url(#avgtrend-fill)" />
         <path d={line} fill="none" stroke="#FF9780" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {coords.map((c, i) => <circle key={i} cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r="2.5" fill="#FF9780" />)}
+        {coords.map((c, i) => {
+          const last = i === coords.length - 1
+          return <circle key={i} cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r={last ? 4 : 3} fill={last ? '#FF9780' : '#fff'} stroke="#FF9780" strokeWidth="2" />
+        })}
+        {pts.map((p, i) => <text key={i} x={x(i)} y={H - 8} textAnchor="middle" style={{ fontSize: 11, fill: 'rgba(26,30,35,.5)' }}>{p.label}</text>)}
       </svg>
-      <div className="flex justify-between mt-1">
-        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>30 days ago</span>
-        <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>Today</span>
-      </div>
+      <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: 'rgba(26,30,35,.5)' }}>
+        <span style={{ width: 16, borderTop: '1px dashed #C8841E', display: 'inline-block' }} />
+        Pass threshold reference ({passLine}) · current average {current.toFixed(1)}, trending {dir}
+      </p>
     </div>
   )
 }

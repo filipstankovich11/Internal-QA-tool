@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import Linkify from './Linkify'
 import { gradeColor, VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS } from '../lib/verdict'
 
 function relTime(ts) {
@@ -99,7 +100,7 @@ export default function DisputeResolution({ score, onClose, onResolved }) {
             {score.fullScore?.summary && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.45)' }}>Summary</p>
-                <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{score.fullScore.summary}</p>
+                <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}><Linkify text={score.fullScore.summary} /></p>
               </div>
             )}
           </div>
@@ -116,7 +117,7 @@ export default function DisputeResolution({ score, onClose, onResolved }) {
                       <span className="text-xs font-semibold" style={{ color: '#1A1E23' }}>{m.author_name}{!isAgent && <span className="ml-1.5 font-normal" style={{ color: 'rgba(26,30,35,.45)' }}>· reviewer</span>}</span>
                       {m.created_at && <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>{relTime(m.created_at)}</span>}
                     </div>
-                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{m.body}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={m.body} /></p>
                   </div>
                 )
               })}

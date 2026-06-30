@@ -3,10 +3,11 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from '../context/NavigationContext'
 import { useToast } from './Toast'
-import { authFetch, buildFewShotExamples } from '../lib/api'
+import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
 import TicketTranscript from './TicketTranscript'
+import Linkify from './Linkify'
 
 function useCountUp(target, duration = 700) {
   const [val, setVal] = useState(0)
@@ -27,11 +28,6 @@ function useCountUp(target, duration = 700) {
   return val
 }
 
-const RefreshIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
-  </svg>
-)
 
 // Rich verdict styling — colors come from the shared tokens (lib/verdict)
 const VERDICT = {
@@ -61,35 +57,6 @@ function ScoreDots({ score }) {
           }} />
       ))}
     </div>
-  )
-}
-
-// ── Line-clamped text with an inline Read more / Show less toggle ─────────────
-// Used in the concise side panel; the toggle only appears when the text actually
-// overflows the clamp.
-function ClampText({ text, lines = 3, className, style }) {
-  const ref = useRef(null)
-  const [expanded, setExpanded] = useState(false)
-  const [overflowing, setOverflowing] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (el) setOverflowing(el.scrollHeight > el.clientHeight + 1)
-  }, [text])
-  const clamp = expanded ? {} : {
-    display: '-webkit-box', WebkitLineClamp: lines, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-  }
-  return (
-    <>
-      <p ref={ref} className={className} style={{ ...style, ...clamp }}>{text}</p>
-      {overflowing && (
-        <button onClick={() => setExpanded(e => !e)} className="text-xs mt-1 transition-colors"
-          style={{ color: '#FF9780' }}
-          onMouseEnter={e => e.target.style.color = '#ffb39a'}
-          onMouseLeave={e => e.target.style.color = '#FF9780'}>
-          {expanded ? 'Show less' : 'Read more'}
-        </button>
-      )}
-    </>
   )
 }
 
@@ -140,7 +107,7 @@ function SubScoreRow({ label, data, onActivate }) {
       </button>
       {open && (
         <div className="mt-2 ml-6">
-          <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{notes}</p>
+          <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}><Linkify text={notes} /></p>
           {(conf || ev.length > 0) && (
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               {conf && (
@@ -426,7 +393,7 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
   )
 }
 
-function WhatWentWell({ scores, panel }) {
+function WhatWentWell({ scores }) {
   // Collect all criteria across dimensions, sort by score desc, take top 2
   if (!scores) return null
   const all = Object.values(scores).flatMap(dim =>
@@ -444,8 +411,7 @@ function WhatWentWell({ scores, panel }) {
         {top.map((c, i) => (
           <div key={i} className="flex items-start gap-2.5">
             <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color: '#2F8F5B' }}>✓</span>
-            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)',
-              ...(panel ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{c.notes}</p>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={c.notes} /></p>
           </div>
         ))}
       </div>
@@ -538,13 +504,12 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
-export default function ScoreModal({ score, onClose, onExpand, panel = false, actions = false, variant = null }) {
-  const { agents, addScore, deleteScore, acknowledgeScore, markReviewed, reopenReview, rubric, scoreHistory, openScoreEditor } = useApp()
+export default function ScoreModal({ score, onClose, actions = false, variant = null }) {
+  const { agents, deleteScore, acknowledgeScore, markReviewed, reopenReview, scoreHistory, openScoreEditor } = useApp()
   const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
   const toast = useToast()
   const [confirmDelete,   setConfirmDelete]   = useState(false)
-  const [rescoring,       setRescoring]       = useState(false)
   const [liveScore,       setLiveScore]       = useState(null)
   const [acknowledging,   setAcknowledging]   = useState(false)
   const [notifying,         setNotifying]         = useState(false)
@@ -624,18 +589,6 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     }
   }
 
-  const rescore = async () => {
-    setRescoring(true)
-    try {
-      const res  = await authFetch('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: String(s.ticket_id), rubric, few_shot_examples: buildFewShotExamples(scoreHistory) }) })
-      const data = await res.json()
-      if (!res.ok) { toast.error(data.error || 'Re-score failed'); return }
-      const entry = await addScore(data)
-      setLiveScore({ ...data, scoreId: entry?.id, reviewerNote: '', overrideVerdict: null, overrideScore: null, overrideNote: null, overrideAt: null })
-      toast.success('Ticket re-scored')
-    } catch { toast.error('Could not reach the server') }
-    finally { setRescoring(false) }
-  }
 
   // Mark reviewed — opens a confirmation with an optional Slack notify
   const canNotify = matchedAgents.some(a => a.email)
@@ -657,16 +610,18 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    if (!panel) document.body.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
-  }, [onClose, panel, variant])
+  }, [onClose, variant])
 
-  // Close the "⋯" menu on any outside click (deferred so the opening click doesn't close it)
+  // Close the "⋯" menu on any outside click. Capture phase so it still fires
+  // even though the modal container stops click propagation.
+  const menuRef = useRef(null)
   useEffect(() => {
     if (!menuOpen) return
-    const close = () => setMenuOpen(false)
-    const t = setTimeout(() => document.addEventListener('click', close), 0)
-    return () => { clearTimeout(t); document.removeEventListener('click', close) }
+    const onDown = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
   }, [menuOpen])
 
   const inner = (
@@ -755,14 +710,14 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               )}
               {/* Secondary actions — collapsed into a "⋯" menu */}
               {s.scoreId && !confirmDelete && (
-                <div className="relative">
-                  <button onClick={() => setMenuOpen(o => !o)} disabled={rescoring || notifying}
+                <div className="relative" ref={menuRef}>
+                  <button onClick={() => setMenuOpen(o => !o)} disabled={notifying}
                     className="flex items-center justify-center rounded-lg transition-all"
                     style={{ background: menuOpen ? '#F6F2EF' : '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.6)', width: 30, height: 30 }}
                     onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF' }}
                     onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background='#FFFFFF' }}
                     title="More actions">
-                    {(rescoring || notifying)
+                    {notifying
                       ? <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
                       : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>}
                   </button>
@@ -777,11 +732,6 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
                           Notify on Slack
                         </button>
                       )}
-                      <button onClick={() => { setMenuOpen(false); rescore() }}
-                        className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
-                        onMouseEnter={e => e.currentTarget.style.background='#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-                        <RefreshIcon /> Re-score with AI
-                      </button>
                       {isAdmin && (
                         <button onClick={() => { setMenuOpen(false); setConfirmDelete(true) }}
                           className="w-full flex items-center gap-2.5 text-left text-xs px-3.5 py-2.5 transition-colors" style={{ color: '#D14B3D' }}
@@ -810,18 +760,6 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
               )}
               <div style={{ width: '1px', height: '20px', background: '#EEEEEE', margin: '0 2px' }} />
               </>)}
-              {panel && onExpand && (
-                <button onClick={onExpand} title="Expand to full view"
-                  className="flex items-center justify-center rounded-lg transition-all"
-                  style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.45)', width: 30, height: 30 }}
-                  onMouseEnter={e => { e.currentTarget.style.background='#F6F2EF'; e.currentTarget.style.color='rgba(26,30,35,.72)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#FFFFFF'; e.currentTarget.style.color='rgba(26,30,35,.45)' }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
-                    <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
-                  </svg>
-                </button>
-              )}
               <button onClick={onClose} title="Close"
                 className="flex items-center justify-center rounded-lg transition-all"
                 style={{ background: '#FFFFFF', border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.45)', width: 30, height: 30, fontSize: 18, lineHeight: 1 }}
@@ -897,39 +835,28 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
           {/* Summary */}
           <div className="rounded-xl p-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Summary</p>
-            {panel
-              ? <ClampText text={s.summary} lines={3} className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }} />
-              : <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{s.summary}</p>}
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={s.summary} /></p>
           </div>
 
           {/* What went well */}
-          <WhatWentWell scores={s.scores} panel={panel} />
+          <WhatWentWell scores={s.scores} />
 
           {/* Coaching cards */}
           {s.key_improvements?.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Key Improvements</p>
               <div className="flex flex-col gap-2">
-                {(panel ? s.key_improvements.slice(0, 2) : s.key_improvements).map((imp, i) => (
+                {s.key_improvements.map((imp, i) => (
                   <div key={i} className="rounded-xl p-3.5 flex gap-3"
                     style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
                       style={{ background: '#FFEAE6', color: '#B84A2E' }}>
                       {i + 1}
                     </div>
-                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)',
-                      ...(panel ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : {}) }}>{imp}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}><Linkify text={imp} /></p>
                   </div>
                 ))}
               </div>
-              {panel && onExpand && s.key_improvements.length > 2 && (
-                <button onClick={onExpand} className="text-xs mt-2 transition-colors"
-                  style={{ color: '#FF9780' }}
-                  onMouseEnter={e => e.target.style.color = '#ffb39a'}
-                  onMouseLeave={e => e.target.style.color = '#FF9780'}>
-                  +{s.key_improvements.length - 2} more — expand
-                </button>
-              )}
             </div>
           )}
 
@@ -1153,8 +1080,8 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
     </>
   )
 
-  // Large centered two-pane modal — used in the review queue
-  if (variant === 'modal') return (
+  // Large centered two-pane modal — the default (used in the review queue)
+  return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
       style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(8px)' }} onClick={onClose}>
@@ -1165,39 +1092,6 @@ export default function ScoreModal({ score, onClose, onExpand, panel = false, ac
         <div className="h-full overflow-y-auto shrink-0" style={{ width: 560, borderLeft: '1px solid #EEEEEE' }}>
           {inner}
         </div>
-      </div>
-    </div>
-    {notifyEl}
-    </>
-  )
-
-  if (panel) return (
-    <>
-    {/* Dimmed backdrop — click outside panel to close */}
-    <div className="fixed inset-0" style={{ zIndex: 39, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)', animation: 'fadeIn 180ms ease' }} onClick={onClose} />
-    <div
-      className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
-      style={{ width: 560, background: '#FFFFFF', borderTopLeftRadius: 10, borderBottomLeftRadius: 10, borderLeft: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
-    >
-      {inner}
-    </div>
-    {notifyEl}
-    </>
-  )
-
-  return (
-    <>
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
-      style={{ background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(8px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="rounded-2xl w-full max-w-[38.4rem] max-h-[90vh] overflow-y-auto modal-enter"
-        style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {inner}
       </div>
     </div>
     {notifyEl}

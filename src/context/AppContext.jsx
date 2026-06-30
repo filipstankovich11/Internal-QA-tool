@@ -324,6 +324,14 @@ export function AppProvider({ children }) {
     return !error
   }
 
+  // Assign a ticket's review to a specific reviewer (sets the claim on their behalf)
+  const assignScore = async (id, userId) => {
+    const { error } = await supabase.from('scores').update({ claimed_by: userId, claimed_at: new Date().toISOString() }).eq('id', id)
+    if (error) { console.error('assignScore failed:', error); return error }
+    setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, claimedBy: userId, claimedAt: Date.now() } : s))
+    return null
+  }
+
   // Mark a ticket reviewed (the reviewer finished with it) — also releases the
   // claim, since the work is done. Removes it from the review queue.
   const markReviewed = async (id) => {
@@ -424,7 +432,7 @@ export function AppProvider({ children }) {
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,
-      claimScore, unclaimScore, markReviewed, reopenReview,
+      claimScore, unclaimScore, assignScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,
     }}>

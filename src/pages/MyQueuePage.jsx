@@ -23,7 +23,6 @@ function ago(ts) {
   return `${Math.max(1, Math.floor(ms / 60000))}m`
 }
 
-const PlayIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
 const PenIcon  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
 
 const CARD_SHADOW = '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)'
@@ -125,11 +124,6 @@ export default function MyQueuePage() {
           </div>
           <p className="text-sm mt-1" style={{ color: 'rgba(26,30,35,.6)' }}>Tickets you've claimed — score them before the wait runs out.</p>
         </div>
-        <button onClick={() => open.length && openScore(open[0])} disabled={!open.length}
-          className="g-btn-primary inline-flex items-center gap-2 text-sm px-4 rounded-lg font-medium shrink-0"
-          style={{ height: 40, opacity: open.length ? 1 : 0.5, cursor: open.length ? 'pointer' : 'not-allowed' }}>
-          <PlayIcon /> Start scoring
-        </button>
       </div>
 
       {/* Stat ribbon */}

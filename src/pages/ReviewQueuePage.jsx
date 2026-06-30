@@ -180,7 +180,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function ReviewQueuePage() {
-  const { scoreHistory, agents, acknowledgeScore, claimScore, unclaimScore } = useApp()
+  const { scoreHistory, agents, claimScore, unclaimScore, assignScore } = useApp()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
 
@@ -191,23 +191,34 @@ export default function ReviewQueuePage() {
   const [selected,     setSelected]     = useState(new Set())
   const [statusFilter, setStatusFilter] = useState(null) // null | 'needs_review' | 'disputed' | 'fails'
   const [bulkWorking,  setBulkWorking]  = useState(false)
+  const [assignOpen,   setAssignOpen]   = useState(false) // "Assign to…" reviewer menu
   const [visibleCount, setVisibleCount] = useState(QUEUE_PAGE_SIZE) // progressive reveal
   const [profiles,     setProfiles]     = useState({})   // id → name, for "claimed by" display
+  const [reviewers,    setReviewers]    = useState([])   // assignable reviewers (non-agents)
 
-  // Resolve claimer names once (claims store a user id)
+  // Resolve claimer names + the list of reviewers a ticket can be assigned to
   useEffect(() => {
-    supabase.from('profiles').select('id, name').then(({ data }) => {
+    supabase.from('profiles').select('id, name, role').then(({ data }) => {
       const map = {}; (data || []).forEach(p => { map[p.id] = p.name }); setProfiles(map)
+      setReviewers((data || []).filter(p => p.role && p.role !== 'agent' && p.name))
     })
   }, [])
+
+  // Close the assign menu on any outside click
+  useEffect(() => {
+    if (!assignOpen) return
+    const close = () => setAssignOpen(false)
+    const t = setTimeout(() => document.addEventListener('click', close), 0)
+    return () => { clearTimeout(t); document.removeEventListener('click', close) }
+  }, [assignOpen])
   const claimedName = (s) =>
     !isClaimActive(s) ? null : (s.claimedBy === user?.id ? 'You' : (profiles[s.claimedBy] || 'Another reviewer'))
 
   // Queue buckets
-  const needsReview = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict)
-  const disputed    = scoreHistory.filter(s => !s.reviewedAt && s.disputed)
-  const failed      = scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict)
-  const allQueued   = useMemo(() => [...new Map([...disputed, ...needsReview, ...failed].map(s => [s.id, s])).values()], [scoreHistory])
+  const needsReview = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict), [scoreHistory])
+  const disputed    = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.disputed), [scoreHistory])
+  const failed      = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'FAIL' && !s.acknowledged && !s.overrideVerdict), [scoreHistory])
+  const allQueued   = useMemo(() => [...new Map([...disputed, ...needsReview, ...failed].map(s => [s.id, s])).values()], [disputed, needsReview, failed])
 
   const totalCount  = allQueued.length
   const avgWaitDays = allQueued.length
@@ -244,13 +255,24 @@ export default function ReviewQueuePage() {
   const selectAll    = () => setSelected(new Set(sorted.map(s => s.id)))
   const clearSelect  = () => setSelected(new Set())
 
-  // Bulk acknowledge
-  const bulkAcknowledge = async () => {
+  // Bulk claim — take the selected tickets for yourself
+  const bulkClaim = async () => {
     if (!selected.size) return
     setBulkWorking(true)
-    await Promise.all([...selected].map(id => acknowledgeScore(id)))
+    await Promise.all([...selected].map(id => claimScore(id)))
     setBulkWorking(false)
-    toast.success(`${selected.size} ticket${selected.size > 1 ? 's' : ''} acknowledged`)
+    toast.success(`Claimed ${selected.size} ticket${selected.size > 1 ? 's' : ''}`)
+    clearSelect()
+  }
+
+  // Bulk assign — hand the selected tickets to a specific reviewer
+  const bulkAssign = async (reviewer) => {
+    setAssignOpen(false)
+    if (!selected.size) return
+    setBulkWorking(true)
+    await Promise.all([...selected].map(id => assignScore(id, reviewer.id)))
+    setBulkWorking(false)
+    toast.success(`Assigned ${selected.size} ticket${selected.size > 1 ? 's' : ''} to ${reviewer.name}`)
     clearSelect()
   }
 
@@ -391,11 +413,43 @@ export default function ReviewQueuePage() {
                 ) : (
                   <>
                     <span className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>{selected.size} selected</span>
-                    <button onClick={bulkAcknowledge} disabled={bulkWorking}
-                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-                      style={{ background: '#E7F3EC', color: '#2F8F5B', border: '1px solid #CDE6D8', opacity: bulkWorking ? 0.6 : 1 }}>
-                      {bulkWorking ? 'Working…' : '✓ Acknowledge all'}
+                    {/* Claim — take the selected for yourself */}
+                    <button onClick={bulkClaim} disabled={bulkWorking}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5"
+                      style={{ background: '#FFFFFF', color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF', opacity: bulkWorking ? 0.6 : 1 }}
+                      onMouseEnter={e => { e.currentTarget.style.color = '#1A1E23'; e.currentTarget.style.borderColor = '#E1DCD7' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+                      Claim
                     </button>
+
+                    {/* Assign to… — hand to a specific reviewer */}
+                    <div className="relative">
+                      <button onClick={(e) => { e.stopPropagation(); setAssignOpen(o => !o) }} disabled={bulkWorking}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5"
+                        style={{ background: assignOpen ? '#F6F2EF' : '#FFFFFF', color: 'rgba(26,30,35,.72)', border: `1px solid ${assignOpen ? '#E1DCD7' : '#E7E3DF'}`, opacity: bulkWorking ? 0.6 : 1 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+                        Assign to…
+                      </button>
+                      {assignOpen && (
+                        <div className="absolute z-30 left-0 py-1 rounded-xl"
+                          style={{ top: 'calc(100% + 4px)', minWidth: 184, maxHeight: 260, overflowY: 'auto', background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 12px 32px rgba(0,0,0,.16)' }}
+                          onClick={e => e.stopPropagation()}>
+                          {reviewers.length === 0 ? (
+                            <p className="text-xs px-3.5 py-2.5" style={{ color: 'rgba(26,30,35,.45)' }}>No reviewers found</p>
+                          ) : reviewers.map(r => (
+                            <button key={r.id} onClick={() => bulkAssign(r)}
+                              className="w-full flex items-center gap-2 text-left text-xs px-3.5 py-2 transition-colors" style={{ color: 'rgba(26,30,35,.78)' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#F6F2EF'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: '#FFEAE6', color: '#B84A2E' }}>{r.name?.[0]?.toUpperCase() || '?'}</span>
+                              {r.name}{r.id === user?.id ? ' (you)' : ''}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Export the selected rows as CSV */}
                     <button onClick={bulkExport}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors inline-flex items-center gap-1.5"
                       style={{ background: '#FFFFFF', color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF' }}
