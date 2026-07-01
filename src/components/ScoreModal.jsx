@@ -32,7 +32,7 @@ function useCountUp(target, duration = 700) {
 // Rich verdict styling — colors come from the shared tokens (lib/verdict)
 const VERDICT = {
   PASS:         { label: 'PASS',         icon: '✓', text: VERDICT_COLOR.PASS,         bg: VERDICT_BG.PASS,         border: VERDICT_BORDER.PASS,         wash: VERDICT_WASH.PASS         },
-  NEEDS_REVIEW: { label: 'NEEDS REVIEW', icon: '~', text: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW, border: VERDICT_BORDER.NEEDS_REVIEW, wash: VERDICT_WASH.NEEDS_REVIEW },
+  NEEDS_REVIEW: { label: 'NEEDS REVIEW', icon: '',  text: VERDICT_COLOR.NEEDS_REVIEW, bg: VERDICT_BG.NEEDS_REVIEW, border: VERDICT_BORDER.NEEDS_REVIEW, wash: VERDICT_WASH.NEEDS_REVIEW },
   FAIL:         { label: 'FAIL',         icon: '✗', text: VERDICT_COLOR.FAIL,         bg: VERDICT_BG.FAIL,         border: VERDICT_BORDER.FAIL,         wash: VERDICT_WASH.FAIL         },
 }
 
@@ -307,7 +307,7 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
             {saved && <span className="text-xs" style={{ color: '#2F8F5B' }}>Saved</span>}
             <span className="text-xs px-2 py-0.5 rounded-full"
               style={{ color: vc.text, background: vc.bg, border: `1px solid ${vc.border}` }}>
-              {vc.icon} {vc.label} · {overrideScore?.toFixed(0)}/100
+              {vc.icon && `${vc.icon} `}{vc.label} · {overrideScore?.toFixed(0)}/100
             </span>
           </div>
           {canEdit && (
@@ -789,7 +789,7 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
           <div className="flex items-center gap-3 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
               style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
-              {vc.icon} {vc.label}
+              {vc.icon && `${vc.icon} `}{vc.label}
             </span>
             <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>
               {animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.45)' }}>/100</span>

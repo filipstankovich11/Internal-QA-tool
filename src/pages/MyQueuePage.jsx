@@ -11,7 +11,7 @@ import { gradeColor } from '../lib/verdict'
 function statusOf(s) {
   if (s.disputed)                      return { label: '⚑ DISPUTED', color: '#B84A2E', bg: '#FFEAE6' }
   if (s.effectiveVerdict === 'FAIL')   return { label: '✕ FAIL',     color: '#D14B3D', bg: '#FCE9E6' }
-  return { label: '~ REVIEW', color: '#C8841E', bg: '#FBEBD3' }
+  return { label: 'REVIEW', color: '#C8841E', bg: '#FBEBD3' }
 }
 
 function ago(ts) {
