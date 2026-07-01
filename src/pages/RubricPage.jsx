@@ -53,7 +53,6 @@ const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, on
   return (
     <div className="rounded-2xl" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
       <div className="flex items-center gap-3 mb-4">
-        <span className="shrink-0 text-base select-none" style={{ color: 'rgba(26,30,35,.3)', cursor: 'grab' }} title="Drag to reorder">⋮⋮</span>
         <input value={dim.name} onChange={e => update({ ...dim, name: e.target.value })}
           className="flex-1 rounded-lg px-3 py-2 g-input"
           style={{ fontFamily: "'Inter Tight'", fontSize: 15, fontWeight: 600 }}
