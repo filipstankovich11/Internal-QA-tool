@@ -81,13 +81,16 @@
     flex: 1;
     min-width: 0;
   }
-  /* Right panel: fixed width, own scroll-free column, divider on the left edge */
+  /* Right panel: equal half, divider on the left edge, content centered
+     within the column so it doesn't hug the left/divider side */
   .login-container {
     max-width: none;
-    width: 520px;
-    flex: none;
+    width: auto;
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: center;
     padding: 56px 60px;
     margin: 0;
@@ -95,6 +98,11 @@
   }
   .form-card {
     width: 100%;
+    max-width: 380px;
+  }
+  .form-header {
+    width: 100%;
+    max-width: 380px;
   }
   .page-logo, .page-tagline {
     display: none;
