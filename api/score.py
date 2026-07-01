@@ -445,7 +445,16 @@ def ticket_messages():
                 'created_at': m.get('created_datetime', ''),
                 'body':       body or '(no text content)',
             })
-        return jsonify({'messages': out})
+
+        ticket = gorgias.get_ticket(ticket_id)
+        ticket_info = {
+            'subject':  ticket.get('subject', ''),
+            'status':   ticket.get('status', ''),
+            'priority': ticket.get('priority', ''),
+            'channel':  ticket.get('channel', ''),
+            'tags':     [t.get('name') for t in (ticket.get('tags') or []) if t.get('name')],
+        }
+        return jsonify({'messages': out, 'ticket': ticket_info})
     except Exception as e:
         return jsonify({'error': str(e)}), 502
 
