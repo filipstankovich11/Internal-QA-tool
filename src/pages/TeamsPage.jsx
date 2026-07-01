@@ -651,7 +651,7 @@ export default function TeamsPage() {
   const [newName, setNewName] = useState('')
   const [adding,  setAdding]  = useState(false)
   const [sort,    setSort]    = useState('avg')
-  const [period,  setPeriod]  = useState('all')
+  const [period,  setPeriod]  = useState('week')
   const [view,    setView]    = useState('cards')
   const [detailTeamId, setDetailTeamId] = useState(null)
 
