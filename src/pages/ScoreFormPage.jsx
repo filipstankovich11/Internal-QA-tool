@@ -92,27 +92,24 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   const [note, setNote] = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
   const [focusIdx, setFocusIdx] = useState(-1)  // -1 = nothing focused yet — no default evidence highlight
-  const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted / being tagged
-  const critName = (id) => dims.flatMap(d => d.criteria).find(c => c.id === id)?.name || ''
+  const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted
+  const criteriaOptions = useMemo(() => dims.flatMap(d => d.criteria.map(c => ({ id: c.id, name: c.name }))), [dims])
 
   // Reviewer-tagged evidence (persisted, separate from the AI's own citations) —
-  // live off scoreHistory so edits round-trip through the DB write.
+  // live off scoreHistory so edits round-trip through the DB write. Tagging a
+  // message isn't tied to which criterion is focused — the transcript's own
+  // popover lets you pick any criterion directly.
   const reviewerEvidence = scoreHistory.find(s => s.id === initialScore.scoreId)?.reviewerEvidence || {}
   const toggleReviewerEvidence = (critId, msgId) => {
-    if (!critId) return
     const key = String(msgId)
     const cur = reviewerEvidence[critId] || []
     const next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
     updateReviewerEvidence(initialScore.scoreId, { ...reviewerEvidence, [critId]: next })
   }
-  // Transcript highlight for the focused criterion = AI's citations + the reviewer's own tags
+  // Transcript ring for the focused criterion = AI's citations + the reviewer's own tags
   const evidenceIds = activeCrit
     ? [...new Set([...(aiMeta[activeCrit]?.evidence || []), ...(reviewerEvidence[activeCrit] || [])])]
     : []
-  // Coverage: messages the reviewer has tagged for any OTHER criterion
-  const taggedElsewhere = [...new Set(
-    Object.entries(reviewerEvidence).flatMap(([critId, ids]) => critId === activeCrit ? [] : (ids || []).map(String))
-  )]
 
   const dimAvg = (d) => {
     const vals = d.criteria.map(c => scores[c.id]).filter(v => v != null)
@@ -224,12 +221,10 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Conversation transcript — click a criterion to see its evidence, click a
-              message to tag/untag it as evidence for whichever criterion is focused */}
+          {/* Conversation transcript — click a criterion to ring its evidence, or click
+              any message directly to tag it against one or more criteria */}
           <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} annotations={annotationMap}
-            taggedIds={taggedElsewhere}
-            onToggleMessage={activeCrit ? (id) => toggleReviewerEvidence(activeCrit, id) : undefined}
-            taggingLabel={activeCrit ? critName(activeCrit) : null} />
+            criteriaOptions={criteriaOptions} evidenceMap={reviewerEvidence} onToggleEvidence={toggleReviewerEvidence} />
         </div>
 
         {/* Right — scoring (flat: dividers + boxed live-score/auto-fail/coaching) */}
