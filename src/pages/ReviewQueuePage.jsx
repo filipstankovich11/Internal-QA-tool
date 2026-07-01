@@ -46,7 +46,7 @@ function priorityOf(item) {
 const BADGES = {
   // DISPUTED is its own status (not a verdict) — coral tint / coral text
   DISPUTED:     { label: '⚑ DISPUTED', color: '#B84A2E',                  bg: '#FFEAE6',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
-  NEEDS_REVIEW: { label: '~ REVIEW',   color: '#C8841E',                  bg: '#FBEBD3',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
+  NEEDS_REVIEW: { label: 'REVIEW',     color: '#C8841E',                  bg: '#FBEBD3',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
   FAIL:         { label: '✕ FAIL',     color: '#D14B3D',                  bg: '#FCE9E6',               border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
 }
 
