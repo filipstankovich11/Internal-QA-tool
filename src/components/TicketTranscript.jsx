@@ -5,8 +5,8 @@ import Linkify from './Linkify'
 
 // Session cache so reopening a ticket is instant and doesn't re-spend the
 // Gorgias rate budget. Keyed by ticket id; also dedupes concurrent fetches.
-const cache = new Map()      // ticketId -> messages[]
-const inflight = new Map()   // ticketId -> Promise<messages[]>
+const cache = new Map()      // ticketId -> { messages[], ticket }
+const inflight = new Map()   // ticketId -> Promise<{ messages[], ticket }>
 
 function loadMessages(ticketId) {
   const key = String(ticketId)
@@ -14,10 +14,10 @@ function loadMessages(ticketId) {
   if (inflight.has(key)) return inflight.get(key)
   const p = authFetchJson(`/api/ticket-messages?ticket_id=${ticketId}`)
     .then(({ data }) => {
-      const msgs = data?.messages || []
-      cache.set(key, msgs)
+      const result = { messages: data?.messages || [], ticket: data?.ticket || null }
+      cache.set(key, result)
       inflight.delete(key)
-      return msgs
+      return result
     })
     .catch(err => { inflight.delete(key); throw err })
   inflight.set(key, p)
@@ -67,7 +67,8 @@ export default function TicketTranscript({
   ticketId, evidenceIds = [], annotations = {}, maxHeight, className = '',
   criteriaOptions = [], evidenceMap = {}, onToggleEvidence,
 }) {
-  const [messages, setMessages] = useState(() => cache.get(String(ticketId)) || null)
+  const [messages, setMessages] = useState(() => cache.get(String(ticketId))?.messages || null)
+  const [ticketInfo, setTicketInfo] = useState(() => cache.get(String(ticketId))?.ticket || null)
   const [loading, setLoading]   = useState(!cache.has(String(ticketId)))
   const [failed, setFailed]     = useState(false)
   const [openMsgId, setOpenMsgId] = useState(null)   // message currently showing the tag popover
@@ -75,11 +76,11 @@ export default function TicketTranscript({
   useEffect(() => {
     if (!ticketId) return
     const cached = cache.get(String(ticketId))
-    if (cached) { setMessages(cached); setLoading(false); setFailed(false); return }
+    if (cached) { setMessages(cached.messages); setTicketInfo(cached.ticket); setLoading(false); setFailed(false); return }
     let cancelled = false
     setLoading(true); setFailed(false)
     loadMessages(ticketId)
-      .then(msgs => { if (!cancelled) setMessages(msgs) })
+      .then(result => { if (!cancelled) { setMessages(result.messages); setTicketInfo(result.ticket) } })
       .catch(() => { if (!cancelled) { setMessages([]); setFailed(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
@@ -118,6 +119,27 @@ export default function TicketTranscript({
           </span>
         )}
       </div>
+      {ticketInfo && (ticketInfo.status || ticketInfo.priority || ticketInfo.channel || ticketInfo.tags?.length > 0) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-3">
+          {(ticketInfo.tags || []).length > 0 && (
+            <span className="text-xs inline-flex items-center gap-1 font-medium" style={{ color: 'rgba(26,30,35,.4)' }} title="Tags applied to this ticket in Gorgias">
+              <TagIcon /> Tags:
+            </span>
+          )}
+          {(ticketInfo.tags || []).map((t, i) => (
+            <span key={i} className="text-xs px-2 py-0.5 rounded-full font-medium" title="Ticket tag" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>{t}</span>
+          ))}
+          {ticketInfo.status && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket status" style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.65)' }}>{ticketInfo.status}</span>
+          )}
+          {ticketInfo.priority && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket priority" style={{ background: '#FBEBD3', color: '#8A6116' }}>{ticketInfo.priority}</span>
+          )}
+          {ticketInfo.channel && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket channel" style={{ background: '#E6F0FA', color: '#2563AF' }}>{ticketInfo.channel}</span>
+          )}
+        </div>
+      )}
       {clickable && (
         <p className="text-xs mb-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.5)' }}>
           Click a message to tag it as evidence for one or more criteria.
