@@ -36,6 +36,11 @@ const LockIcon = () => (
     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>
 )
+const TagIcon = () => (
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1"/>
+  </svg>
+)
 
 function Avatar({ letter, bg, color }) {
   return (
@@ -47,15 +52,25 @@ function Avatar({ letter, bg, color }) {
 
 /**
  * Renders a ticket's conversation as agent/customer bubbles.
- *  - ticketId:    Gorgias ticket id to fetch
- *  - evidenceIds: optional string[] of message ids to ring (evidence highlight)
- *  - maxHeight:   optional px to make the list internally scrollable (else the
- *                 parent scrolls)
+ *  - ticketId:        Gorgias ticket id to fetch
+ *  - evidenceIds:      optional string[] of message ids to ring (e.g. the
+ *                      focused criterion's AI + reviewer evidence)
+ *  - criteriaOptions:  optional [{id, name}] — when provided (with
+ *                      onToggleEvidence), clicking a message opens a
+ *                      checklist popover to tag/untag it per criterion
+ *  - evidenceMap:      { [criterionId]: string[] } reviewer-tagged message ids
+ *  - onToggleEvidence: (criterionId, messageId) => void
+ *  - maxHeight:        optional px to make the list internally scrollable
+ *                      (else the parent scrolls)
  */
-export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds = [], annotations = {}, maxHeight, className = '', onToggleMessage, taggingLabel }) {
+export default function TicketTranscript({
+  ticketId, evidenceIds = [], annotations = {}, maxHeight, className = '',
+  criteriaOptions = [], evidenceMap = {}, onToggleEvidence,
+}) {
   const [messages, setMessages] = useState(() => cache.get(String(ticketId)) || null)
   const [loading, setLoading]   = useState(!cache.has(String(ticketId)))
   const [failed, setFailed]     = useState(false)
+  const [openMsgId, setOpenMsgId] = useState(null)   // message currently showing the tag popover
 
   useEffect(() => {
     if (!ticketId) return
@@ -71,7 +86,7 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
   }, [ticketId])
 
   const ev = evidenceIds.map(String)
-  const taggedSet = new Set(taggedIds.map(String))   // tagged for ANY criterion (coverage)
+  const clickable = criteriaOptions.length > 0 && !!onToggleEvidence
 
   // Scroll the first cited message into view when the highlight changes
   const rowRefs = useRef({})
@@ -83,6 +98,15 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [evKey, messages]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Close the tag popover on outside click
+  const popoverRef = useRef(null)
+  useEffect(() => {
+    if (openMsgId == null) return
+    const onDown = (e) => { if (popoverRef.current && !popoverRef.current.contains(e.target)) setOpenMsgId(null) }
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
+  }, [openMsgId])
+
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-2">
@@ -90,13 +114,13 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
         {ev.length > 0 && (
           <span className="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
             <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
-            {ev.length} {onToggleMessage ? 'tagged' : 'cited'}
+            {ev.length} evidence
           </span>
         )}
       </div>
-      {onToggleMessage && taggingLabel && (
-        <p className="text-xs mb-2 leading-relaxed" style={{ color: '#B84A2E' }}>
-          Tagging evidence for <b style={{ fontWeight: 600 }}>{taggingLabel}</b> — click a message to tag it.
+      {clickable && (
+        <p className="text-xs mb-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.5)' }}>
+          Click a message to tag it as evidence for one or more criteria.
         </p>
       )}
       {loading ? (
@@ -104,13 +128,13 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
       ) : (messages && messages.length) ? (
         <div className="flex flex-col gap-4 pr-1" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
           {messages.map(m => {
-            const lit = ev.includes(String(m.id))            // evidence for the focused criterion
-            const tagged = !lit && taggedSet.has(String(m.id)) // evidence for another criterion
+            const lit = ev.includes(String(m.id))
+            const taggedFor = criteriaOptions.filter(c => (evidenceMap[c.id] || []).map(String).includes(String(m.id)))
             const agent = m.from_agent
             const internal = !m.public
-            const clickable = !!onToggleMessage
             const initials = (m.author || (agent ? 'A' : 'C'))[0]?.toUpperCase() || '?'
             const time = fmtTime(m.created_at)
+            const open = openMsgId === m.id
 
             // Distinct treatment per message type — internal notes read as notes
             // (amber tint + label), not just another coral-outlined chat bubble.
@@ -133,23 +157,51 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
                       <LockIcon /> internal
                     </span>
                   )}
-                  {lit && clickable && <span style={{ color: '#B84A2E', fontWeight: 600 }}>✓ evidence</span>}
-                  {tagged && clickable && <span style={{ color: 'rgba(184,74,46,.6)' }}>• tagged elsewhere</span>}
+                  {lit && <span style={{ color: '#B84A2E', fontWeight: 600 }}>✓ evidence</span>}
+                  {!lit && taggedFor.length > 0 && (
+                    <span className="inline-flex items-center gap-1" style={{ color: 'rgba(184,74,46,.7)' }} title={taggedFor.map(c => c.name).join(', ')}>
+                      <TagIcon /> tagged ({taggedFor.length})
+                    </span>
+                  )}
                   {agent && <Avatar letter={initials} bg={palette.avatarBg} color={palette.avatarColor} />}
                 </div>
-                <div onClick={clickable ? () => onToggleMessage(m.id) : undefined}
+                <div onClick={clickable ? () => setOpenMsgId(id => id === m.id ? null : m.id) : undefined}
                   className="text-sm leading-relaxed px-4 py-3 whitespace-pre-wrap" style={{
                   background: palette.bg, color: '#1A1E23',
                   borderRadius: 18, borderTopRightRadius: agent ? 6 : 18, borderTopLeftRadius: agent ? 18 : 6,
-                  boxShadow: lit ? `0 0 0 2px ${palette.ring}, 0 2px 10px rgba(0,0,0,.08)`
-                    : tagged ? `0 0 0 1.5px ${palette.ring}`
+                  boxShadow: (lit || open) ? `0 0 0 2px ${palette.ring}, 0 2px 10px rgba(0,0,0,.08)`
+                    : taggedFor.length > 0 ? `0 0 0 1.5px ${palette.ring}`
                     : '0 1px 2px rgba(0,0,0,.05)',
                   transition: 'box-shadow .2s ease',
                   cursor: clickable ? 'pointer' : 'default',
                 }}
-                  onMouseEnter={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${palette.ring}` }) : undefined}
-                  onMouseLeave={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,.05)' }) : undefined}>
+                  onMouseEnter={clickable && !lit && !open ? (e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${palette.ring}` }) : undefined}
+                  onMouseLeave={clickable && !lit && !open ? (e => { e.currentTarget.style.boxShadow = taggedFor.length > 0 ? `0 0 0 1.5px ${palette.ring}` : '0 1px 2px rgba(0,0,0,.05)' }) : undefined}>
                   <Linkify text={(m.body || '').trim() || '(no text)'} /></div>
+
+                {open && (
+                  <div ref={popoverRef} className="rounded-xl p-1.5 mt-1.5 flex flex-col gap-0.5"
+                    style={{ background: '#fff', border: '1px solid #EEEEEE', boxShadow: '0 8px 24px rgba(0,0,0,.14)', minWidth: 210 }}>
+                    <p className="text-xs font-semibold px-2.5 pt-1.5 pb-1" style={{ color: 'rgba(26,30,35,.45)' }}>Tag as evidence for…</p>
+                    {criteriaOptions.map(c => {
+                      const checked = (evidenceMap[c.id] || []).map(String).includes(String(m.id))
+                      return (
+                        <button key={c.id} type="button" onClick={() => onToggleEvidence(c.id, m.id)}
+                          className="flex items-center gap-2 text-left text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                          style={{ color: '#1A1E23' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <span className="w-4 h-4 rounded flex items-center justify-center shrink-0"
+                            style={{ border: `1.5px solid ${checked ? '#FF9780' : '#E1DCD7'}`, background: checked ? '#FF9780' : '#fff' }}>
+                            {checked && <svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </span>
+                          {c.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
                 {(annotations[String(m.id)] || []).map((a, i) => {
                   const good = a.type === 'good'
                   return (

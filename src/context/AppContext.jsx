@@ -38,6 +38,8 @@ function dbToScore(row) {
     claimedAt:       row.claimed_at      ? new Date(row.claimed_at).getTime() : null,
     reviewedBy:      row.reviewed_by     || null,
     reviewedAt:      row.reviewed_at     ? new Date(row.reviewed_at).getTime() : null,
+    // Reviewer-tagged evidence while editing/overriding: { [criterionId]: [messageId, ...] }
+    reviewerEvidence: row.reviewer_evidence || {},
   }
 }
 
@@ -283,6 +285,13 @@ export function AppProvider({ children }) {
     )
   }
 
+  // Reviewer-tagged evidence — overwrites the whole { [criterionId]: [msgId,...] } map
+  const updateReviewerEvidence = async (id, evidenceMap) => {
+    const { error } = await supabase.from('scores').update({ reviewer_evidence: evidenceMap }).eq('id', id)
+    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, reviewerEvidence: evidenceMap } : s))
+    return !error
+  }
+
   const updateScoreNote = async (id, note) => {
     const { error } = await supabase
       .from('scores').update({ notes: note }).eq('id', id)
@@ -431,7 +440,7 @@ export function AppProvider({ children }) {
       scoreToEdit, openScoreEditor, closeScoreEditor,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
-      addScore, deleteScore, updateScoreNote, overrideScore, flagScore, clearDispute, acknowledgeScore,
+      addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore,
       claimScore, unclaimScore, assignScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,
