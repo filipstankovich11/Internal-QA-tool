@@ -244,7 +244,7 @@ function bucketAverages(scores, granularity, limit = 12) {
 }
 
 function AvgTrendChart({ scores, passLine = 80 }) {
-  const [gran, setGran] = useState('monthly')
+  const [gran, setGran] = useState('weekly')
   const pts = useMemo(() => bucketAverages(scores, gran), [scores, gran])
   const card = { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }
   const toggle = (
