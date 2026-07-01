@@ -560,7 +560,7 @@ export default function DashboardPage() {
               type="text"
               value={ticketSearch}
               onChange={e => setTicketSearch(e.target.value)}
-              placeholder="Search by ticket URL or ID…"
+              placeholder="Paste ticket URL or ID"
               className="w-full rounded-lg pl-11 pr-10 py-3 text-sm outline-none transition-all"
               style={{
                 background: '#FFFFFF',
