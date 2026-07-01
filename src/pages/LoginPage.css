@@ -18,31 +18,55 @@
 
 /* ── Page ── */
 .login-page {
-  background: var(--bg);
+  background: #EFE7E1;
   min-height: 100vh;
   display: flex;
-  align-items: stretch;
-  font-family: 'Space Grotesk', sans-serif;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body, 'Roboto'), sans-serif;
+  padding: 24px;
+}
+
+/* ── Card shell — the floating split panel ── */
+.login-card {
+  width: 100%;
+  max-width: 1120px;
+  min-height: 680px;
+  background: var(--bg);
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 12px 32px rgba(26,30,35,.08);
+  display: flex;
+  align-items: stretch;
 }
 
 /* ── Left panel (testimonials) ── */
 .login-left {
   display: none;
   position: relative;
-  background: #FBF7F3;
-  border-right: 1px solid #EEEEEE;
+  overflow: hidden;
   opacity: 0;
   align-items: center;
   justify-content: center;
+  padding: 56px 60px;
 }
 .login-left.visible {
   animation: lp-pageIn 0.55s ease 0.1s forwards;
 }
+.login-left-glow {
+  position: absolute;
+  top: -80px;
+  left: -60px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,151,128,.30), transparent 70%);
+  pointer-events: none;
+}
 .login-left-inner {
+  position: relative;
   width: 100%;
-  max-width: 360px;
-  padding: 48px 32px;
+  max-width: 440px;
   display: flex;
   flex-direction: column;
   gap: 36px;
@@ -57,33 +81,28 @@
 .login-left-header { display: flex; flex-direction: column; gap: 2px; }
 
 @media (min-width: 860px) {
-  /* Switch to grid so columns are equal and explicit */
-  .login-page {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: stretch;
-  }
   .login-left {
     display: flex;
+    flex: 1;
+    min-width: 0;
   }
-  /* Right panel: center content within its grid cell */
+  /* Right panel: fixed width, own scroll-free column, divider on the left edge */
   .login-container {
     max-width: none;
-    width: 100%;
+    width: 520px;
+    flex: none;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    padding: 48px 56px;
+    padding: 56px 60px;
     margin: 0;
+    border-left: 1px solid #EEEEEE;
   }
   .form-card {
     width: 100%;
-    max-width: 380px;
   }
-  .page-logo, .page-tagline, .page-footer {
-    width: 100%;
-    max-width: 380px;
+  .page-logo, .page-tagline {
+    display: none;
   }
 }
 
@@ -95,12 +114,12 @@
 }
 .tc-card {
   background: #FFFFFF;
-  border: 1px solid #EEEEEE;
-  box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
-  border-radius: 16px;
-  padding: 28px;
+  border: 1px solid #EFE7E1;
+  box-shadow: 0 18px 40px -20px rgba(26,30,35,.18);
+  border-radius: 20px;
+  padding: 28px 30px;
   overflow: hidden;
-  min-height: 190px;
+  min-height: 220px;
   display: flex;
   align-items: flex-start;
 }
@@ -121,24 +140,26 @@
   gap: 3px;
 }
 .tc-quote {
-  color: var(--ink72);
-  font-size: 14px;
-  line-height: 1.65;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.6;
   margin: 0;
   font-style: italic;
+  font-family: var(--font-display, 'Inter Tight'), sans-serif;
+  font-weight: 400;
 }
 .tc-author {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 13px;
 }
 .tc-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #FFEAE6;
   color: #B84A2E;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -344,14 +365,25 @@
   margin-bottom: 28px;
 }
 
-/* Card */
+/* Welcome heading, above the form */
+.form-header { margin-bottom: 28px; }
+.form-h1 {
+  font-family: var(--font-display, 'Inter Tight'), sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.form-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+/* Card — flat, no chrome; fields sit directly on the panel */
 .form-card {
   width: 100%;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04);
-  border-radius: 16px;
-  padding: 28px 28px 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -365,33 +397,35 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.lp-field input {
-  background: #FFFFFF;
-  border: 1px solid #E1DCD7;
-  border-radius: 9px;
-  height: 44px;
+.lp-field-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
   padding: 0 14px;
-  color: var(--ink);
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 14px;
-  outline: none;
+  border: 1px solid #E1DCD7;
+  border-radius: 8px;
   transition: border-color 0.2s, box-shadow 0.2s;
-  width: 100%;
 }
-.lp-field input::placeholder { color: var(--ink45); }
-.lp-field input:focus {
+.lp-field-box:focus-within {
   border-color: var(--border-hover);
   box-shadow: 0 0 0 3px rgba(255, 151, 128, 0.15);
 }
+.lp-field-box svg { color: var(--ink45); flex-shrink: 0; }
+.lp-field-box input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font-family: var(--font-body, 'Roboto'), sans-serif;
+  font-size: 14px;
+}
+.lp-field-box input::placeholder { color: var(--ink45); }
 
-/* Password wrapper + eye toggle */
-.input-wrap { position: relative; }
-.input-wrap input { padding-right: 40px; }
+/* Password eye toggle — trailing flex item inside the field box */
 .eye-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
@@ -400,6 +434,7 @@
   transition: color 0.2s;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 .eye-btn:hover { color: var(--coral-text); }
 .eye-btn svg { width: 18px; height: 18px; }
@@ -419,9 +454,9 @@
   color: var(--ink);
   border: none;
   border-radius: 10px;
-  height: 46px;
+  height: 50px;
   width: 100%;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-body, 'Roboto'), sans-serif;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -457,7 +492,7 @@
   transition: color 0.2s;
   background: none;
   border: none;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-body, 'Roboto'), sans-serif;
   padding: 0;
 }
 .back-link:hover { color: var(--coral-text); }
