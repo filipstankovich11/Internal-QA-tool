@@ -24,6 +24,27 @@ function loadMessages(ticketId) {
   return p
 }
 
+function fmtTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+const LockIcon = () => (
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>
+)
+
+function Avatar({ letter, bg, color }) {
+  return (
+    <div className="shrink-0 rounded-full flex items-center justify-center font-bold" style={{ width: 20, height: 20, fontSize: 10, background: bg, color }}>
+      {letter}
+    </div>
+  )
+}
+
 /**
  * Renders a ticket's conversation as agent/customer bubbles.
  *  - ticketId:    Gorgias ticket id to fetch
@@ -81,38 +102,61 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
       {loading ? (
         <p className="text-xs py-6 text-center" style={{ color: 'rgba(26,30,35,.45)' }}>Loading conversation…</p>
       ) : (messages && messages.length) ? (
-        <div className="flex flex-col gap-2.5 pr-1" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
+        <div className="flex flex-col gap-4 pr-1" style={maxHeight ? { maxHeight, overflowY: 'auto' } : undefined}>
           {messages.map(m => {
             const lit = ev.includes(String(m.id))            // evidence for the focused criterion
             const tagged = !lit && taggedSet.has(String(m.id)) // evidence for another criterion
             const agent = m.from_agent
+            const internal = !m.public
             const clickable = !!onToggleMessage
+            const initials = (m.author || (agent ? 'A' : 'C'))[0]?.toUpperCase() || '?'
+            const time = fmtTime(m.created_at)
+
+            // Distinct treatment per message type — internal notes read as notes
+            // (amber accent), not just another coral-outlined chat bubble.
+            const palette = internal
+              ? { bg: '#FFF8E8', avatarBg: '#F3D48A', avatarColor: '#8A6116', accent: '#E8B84B', ring: 'rgba(232,184,75,.55)' }
+              : agent
+              ? { bg: '#FFF1EC', avatarBg: '#FFD2C9', avatarColor: '#B84A2E', accent: null, ring: 'rgba(255,151,128,.55)' }
+              : { bg: '#F5F3F1', avatarBg: '#E5DFD9', avatarColor: '#5B534C', accent: null, ring: 'rgba(93,82,71,.3)' }
+
             return (
-              <div key={m.id} ref={el => { rowRefs.current[String(m.id)] = el }} style={{ alignSelf: agent ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
-                <div className="flex items-center gap-1.5 mb-0.5 text-xs" style={{ color: 'rgba(26,30,35,.45)', justifyContent: agent ? 'flex-end' : 'flex-start' }}>
-                  <span className="font-medium" style={{ color: 'rgba(26,30,35,.6)' }}>{m.author || (agent ? 'Agent' : 'Customer')}</span>
-                  {!m.public && <span className="px-1 rounded" style={{ background: '#F1ECE8' }}>internal</span>}
+              <div key={m.id} ref={el => { rowRefs.current[String(m.id)] = el }}
+                className="flex flex-col"
+                style={{ alignSelf: agent ? 'flex-end' : 'flex-start', alignItems: agent ? 'flex-end' : 'flex-start', maxWidth: '90%' }}>
+                <div className="flex items-center gap-1.5 mb-1 text-xs" style={{ color: 'rgba(26,30,35,.45)', justifyContent: agent ? 'flex-end' : 'flex-start' }}>
+                  {!agent && <Avatar letter={initials} bg={palette.avatarBg} color={palette.avatarColor} />}
+                  <span className="font-medium" style={{ color: 'rgba(26,30,35,.65)' }}>{m.author || (agent ? 'Agent' : 'Customer')}</span>
+                  {time && <span style={{ color: 'rgba(26,30,35,.35)' }}>· {time}</span>}
+                  {internal && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wide" style={{ fontSize: 10, background: '#FBE8B9', color: '#8A6116' }}>
+                      <LockIcon /> internal
+                    </span>
+                  )}
                   {lit && clickable && <span style={{ color: '#B84A2E', fontWeight: 600 }}>✓ evidence</span>}
                   {tagged && clickable && <span style={{ color: 'rgba(184,74,46,.6)' }}>• tagged elsewhere</span>}
+                  {agent && <Avatar letter={initials} bg={palette.avatarBg} color={palette.avatarColor} />}
                 </div>
                 <div onClick={clickable ? () => onToggleMessage(m.id) : undefined}
-                  className="text-sm leading-relaxed px-3.5 py-2.5 whitespace-pre-wrap" style={{
-                  background: agent ? '#FFF4F1' : '#F6F4F2', color: '#1A1E23',
-                  border: `1px solid ${lit ? '#FF9780' : tagged ? '#FFC2AE' : (agent ? '#FFB39A' : '#D6CEC5')}`,
-                  borderRadius: 16, borderTopRightRadius: agent ? 4 : 16, borderTopLeftRadius: agent ? 16 : 4,
-                  boxShadow: lit ? '0 0 0 2px rgba(255,151,128,.35), 0 1px 6px rgba(255,151,128,.25)' : 'none',
-                  transition: 'box-shadow .2s ease, border-color .2s ease',
+                  className="text-sm leading-relaxed px-4 py-3 whitespace-pre-wrap" style={{
+                  background: palette.bg, color: '#1A1E23',
+                  borderRadius: 18, borderTopRightRadius: agent ? 6 : 18, borderTopLeftRadius: agent ? 18 : 6,
+                  borderLeft: palette.accent ? `3px solid ${palette.accent}` : 'none',
+                  boxShadow: lit ? `0 0 0 2px ${palette.ring}, 0 2px 10px rgba(0,0,0,.08)`
+                    : tagged ? `0 0 0 1.5px ${palette.ring}`
+                    : '0 1px 2px rgba(0,0,0,.05)',
+                  transition: 'box-shadow .2s ease',
                   cursor: clickable ? 'pointer' : 'default',
                 }}
-                  onMouseEnter={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = '0 0 0 2px rgba(255,151,128,.25)' }) : undefined}
-                  onMouseLeave={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = 'none' }) : undefined}>
+                  onMouseEnter={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${palette.ring}` }) : undefined}
+                  onMouseLeave={clickable && !lit ? (e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,.05)' }) : undefined}>
                   <Linkify text={(m.body || '').trim() || '(no text)'} /></div>
                 {(annotations[String(m.id)] || []).map((a, i) => {
                   const good = a.type === 'good'
                   return (
-                    <div key={i} className="flex items-start gap-1.5 mt-1 text-xs leading-snug"
-                      style={{ color: good ? '#2F8F5B' : '#D14B3D', justifyContent: agent ? 'flex-end' : 'flex-start', textAlign: agent ? 'right' : 'left' }}>
-                      <span className="font-semibold shrink-0" style={{ order: agent ? 2 : 0 }}>{good ? '✓' : '✗'}</span>
+                    <div key={i} className="inline-flex items-start gap-1.5 mt-1.5 px-2.5 py-1 rounded-full text-xs leading-snug"
+                      style={{ background: good ? '#E6F4EC' : '#FCE9E6', color: good ? '#2F8F5B' : '#D14B3D' }}>
+                      <span className="font-semibold shrink-0">{good ? '✓' : '✗'}</span>
                       <span>{a.note}</span>
                     </div>
                   )
