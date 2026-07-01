@@ -113,12 +113,12 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
             const time = fmtTime(m.created_at)
 
             // Distinct treatment per message type — internal notes read as notes
-            // (amber accent), not just another coral-outlined chat bubble.
+            // (amber tint + label), not just another coral-outlined chat bubble.
             const palette = internal
-              ? { bg: '#FFF8E8', avatarBg: '#F3D48A', avatarColor: '#8A6116', accent: '#E8B84B', ring: 'rgba(232,184,75,.55)' }
+              ? { bg: '#FFF8E8', avatarBg: '#F3D48A', avatarColor: '#8A6116', ring: 'rgba(232,184,75,.55)' }
               : agent
-              ? { bg: '#FFF1EC', avatarBg: '#FFD2C9', avatarColor: '#B84A2E', accent: null, ring: 'rgba(255,151,128,.55)' }
-              : { bg: '#F5F3F1', avatarBg: '#E5DFD9', avatarColor: '#5B534C', accent: null, ring: 'rgba(93,82,71,.3)' }
+              ? { bg: '#FFF1EC', avatarBg: '#FFD2C9', avatarColor: '#B84A2E', ring: 'rgba(255,151,128,.55)' }
+              : { bg: '#F5F3F1', avatarBg: '#E5DFD9', avatarColor: '#5B534C', ring: 'rgba(93,82,71,.3)' }
 
             return (
               <div key={m.id} ref={el => { rowRefs.current[String(m.id)] = el }}
@@ -141,7 +141,6 @@ export default function TicketTranscript({ ticketId, evidenceIds = [], taggedIds
                   className="text-sm leading-relaxed px-4 py-3 whitespace-pre-wrap" style={{
                   background: palette.bg, color: '#1A1E23',
                   borderRadius: 18, borderTopRightRadius: agent ? 6 : 18, borderTopLeftRadius: agent ? 18 : 6,
-                  borderLeft: palette.accent ? `3px solid ${palette.accent}` : 'none',
                   boxShadow: lit ? `0 0 0 2px ${palette.ring}, 0 2px 10px rgba(0,0,0,.08)`
                     : tagged ? `0 0 0 1.5px ${palette.ring}`
                     : '0 1px 2px rgba(0,0,0,.05)',
