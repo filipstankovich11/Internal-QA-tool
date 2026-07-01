@@ -39,7 +39,7 @@ function Pills({ value, onChange }) {
 // Full-page editor for a committed score — opened via "Edit score". Pre-filled
 // with the AI's grades; saving records a human override.
 export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
-  const { rubric, overrideScore } = useApp()
+  const { rubric, overrideScore, scoreHistory, updateReviewerEvidence } = useApp()
   const { canScore } = useAuth()
   const toast = useToast()
 
@@ -91,9 +91,28 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   })
   const [note, setNote] = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
-  const [focusIdx, setFocusIdx] = useState(0)
-  const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted
-  const evidenceIds = activeCrit ? (aiMeta[activeCrit]?.evidence || []) : []
+  const [focusIdx, setFocusIdx] = useState(-1)  // -1 = nothing focused yet — no default evidence highlight
+  const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted / being tagged
+  const critName = (id) => dims.flatMap(d => d.criteria).find(c => c.id === id)?.name || ''
+
+  // Reviewer-tagged evidence (persisted, separate from the AI's own citations) —
+  // live off scoreHistory so edits round-trip through the DB write.
+  const reviewerEvidence = scoreHistory.find(s => s.id === initialScore.scoreId)?.reviewerEvidence || {}
+  const toggleReviewerEvidence = (critId, msgId) => {
+    if (!critId) return
+    const key = String(msgId)
+    const cur = reviewerEvidence[critId] || []
+    const next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
+    updateReviewerEvidence(initialScore.scoreId, { ...reviewerEvidence, [critId]: next })
+  }
+  // Transcript highlight for the focused criterion = AI's citations + the reviewer's own tags
+  const evidenceIds = activeCrit
+    ? [...new Set([...(aiMeta[activeCrit]?.evidence || []), ...(reviewerEvidence[activeCrit] || [])])]
+    : []
+  // Coverage: messages the reviewer has tagged for any OTHER criterion
+  const taggedElsewhere = [...new Set(
+    Object.entries(reviewerEvidence).flatMap(([critId, ids]) => critId === activeCrit ? [] : (ids || []).map(String))
+  )]
 
   const dimAvg = (d) => {
     const vals = d.criteria.map(c => scores[c.id]).filter(v => v != null)
@@ -205,8 +224,12 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Conversation transcript — clicking a criterion rings its cited messages */}
-          <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} annotations={annotationMap} />
+          {/* Conversation transcript — click a criterion to see its evidence, click a
+              message to tag/untag it as evidence for whichever criterion is focused */}
+          <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} annotations={annotationMap}
+            taggedIds={taggedElsewhere}
+            onToggleMessage={activeCrit ? (id) => toggleReviewerEvidence(activeCrit, id) : undefined}
+            taggingLabel={activeCrit ? critName(activeCrit) : null} />
         </div>
 
         {/* Right — scoring (flat: dividers + boxed live-score/auto-fail/coaching) */}
@@ -251,6 +274,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                     const diff = ai != null && scores[c.id] !== ai
                     const conf = CONF[aiMeta[c.id]?.confidence]
                     const ev = aiMeta[c.id]?.evidence || []
+                    const tagged = reviewerEvidence[c.id] || []
                     return (
                       <div key={c.id} onClick={() => setFocusIdx(idx)}
                         className="rounded-lg px-2.5 py-2 -mx-2.5 transition-colors cursor-pointer"
@@ -274,9 +298,11 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                             <span className="font-semibold" style={{ color: '#B84A2E' }}>AI rationale · </span><Linkify text={aiNotes[c.id]} />
                           </p>
                         )}
-                        {ev.length > 0 && (
+                        {(ev.length > 0 || tagged.length > 0) && (
                           <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
-                            {focused ? `↖ Highlighted ${ev.length} cited message${ev.length > 1 ? 's' : ''} in the transcript` : `${ev.length} cited message${ev.length > 1 ? 's' : ''} — click to highlight`}
+                            {focused
+                              ? [ev.length && `${ev.length} AI cited`, tagged.length && `${tagged.length} you tagged`].filter(Boolean).join(' · ') + ' — click a message to tag/untag'
+                              : [ev.length && `${ev.length} cited`, tagged.length && `${tagged.length} tagged`].filter(Boolean).join(' · ') + ' — click to focus'}
                           </p>
                         )}
                       </div>
