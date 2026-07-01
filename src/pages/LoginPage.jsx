@@ -6,97 +6,70 @@ import './LoginPage.css'
 const TESTIMONIALS = [
   {
     quote: "Just got 100% on my latest ticket! The rubric finally made it click — I knew exactly what a perfect response looked like.",
+    initial: "F",
     name: "Filip",
     role: "Support Agent · 100% score",
-    rating: 5,
   },
   {
-    quote: "100% on a billing dispute ticket I thought was impossible to nail. The coaching notes made all the difference.",
+    quote: "Calibration sessions ended the 'why did I get this score' debates. We're finally grading the same way.",
+    initial: "K",
     name: "Katarina",
-    role: "Support Agent · 100% score",
-    rating: 5,
+    role: "Team Lead · L2 Support",
   },
   {
-    quote: "First perfect score! Seeing the breakdown after every ticket helps me know exactly where to improve next time.",
+    quote: "I can see exactly where my team needs coaching in seconds. Reviews that took an afternoon now take minutes.",
+    initial: "O",
     name: "Ognjen",
-    role: "Support Agent · 100% score",
-    rating: 5,
+    role: "QA Manager",
   },
 ]
 
-function Stars({ count }) {
-  return (
-    <div className="tc-stars">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill={i < count ? '#FF9780' : 'none'} stroke="#FF9780" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-      ))}
-    </div>
-  )
-}
+const ROTATE_MS = 4500
 
 function TestimonialCarousel() {
   const [index, setIndex] = useState(0)
-  const [animKey, setAnimKey] = useState(0)
-  const [direction, setDirection] = useState('up')
   const timerRef = useRef(null)
 
-  const goTo = (next, dir = 'up') => {
-    setDirection(dir)
-    setIndex(next)
-    setAnimKey(k => k + 1)
-  }
-
-  const advance = useRef(() => {})
-  advance.current = () => {
-    goTo((index + 1) % TESTIMONIALS.length, 'up')
+  const resetTimer = () => {
+    clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => setIndex(i => (i + 1) % TESTIMONIALS.length), ROTATE_MS)
   }
 
   useEffect(() => {
-    timerRef.current = setInterval(() => advance.current(), 3000)
+    resetTimer()
     return () => clearInterval(timerRef.current)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleDot = (i) => {
-    if (i === index) return
-    clearInterval(timerRef.current)
-    goTo(i, i > index ? 'up' : 'down')
-    timerRef.current = setInterval(() => advance.current(), 3000)
-  }
-
-  const t = TESTIMONIALS[index]
-  const initials = t.name.split(' ').map(w => w[0]).join('')
+  const handleDot = (i) => { setIndex(i); resetTimer() }
 
   return (
-    <div className="tc-wrap">
-      <div className="tc-card">
-        <div
-          key={animKey}
-          className={`tc-content tc-slide-${direction}`}
-        >
-          <Stars count={t.rating} />
-          <p className="tc-quote">"{t.quote}"</p>
-          <div className="tc-author">
-            <div className="tc-avatar">{initials}</div>
-            <div>
-              <div className="tc-name">{t.name}</div>
-              <div className="tc-role">{t.role}</div>
+    <>
+      <div className="carousel">
+        {TESTIMONIALS.map((t, i) => (
+          <div key={t.name} className={`review${i === index ? ' is-active' : ''}`}>
+            <div className="stars">★★★★★</div>
+            <p className="quote">"{t.quote}"</p>
+            <div className="review-footer">
+              <div className="avatar">{t.initial}</div>
+              <div>
+                <div className="review-name">{t.name}</div>
+                <div className="review-role">{t.role}</div>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
-      <div className="tc-dots">
+      <div className="dots">
         {TESTIMONIALS.map((_, i) => (
           <button
             key={i}
-            className={`tc-dot${i === index ? ' active' : ''}`}
+            className={`dot${i === index ? ' is-active' : ''}`}
             onClick={() => handleDot(i)}
-            aria-label={`Go to testimonial ${i + 1}`}
+            aria-label={`Show review ${i + 1}`}
           />
         ))}
       </div>
-    </div>
+    </>
   )
 }
 
@@ -231,11 +204,11 @@ export default function LoginPage() {
             <div className="login-left-glow" />
             <div className="login-left-inner">
               <div className="login-left-header">
-                <div className="page-wordmark" style={{ marginBottom: 8 }}>
+                <div className="page-wordmark">
                   <span className="page-wordmark__name">Gorgias</span>
                   <span className="page-wordmark__badge">QA</span>
                 </div>
-                <p className="login-left-tagline">Internal quality control application</p>
+                <p className="login-left-tagline">Internal Quality<br />Control Application</p>
               </div>
               <TestimonialCarousel />
             </div>
