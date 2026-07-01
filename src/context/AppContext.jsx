@@ -157,7 +157,9 @@ export function AppProvider({ children }) {
         const mapped = dbToScore(payload.new)
         setScoreHistory(prev => {
           const idx = prev.findIndex(s => s.id === mapped.id)
-          if (idx === -1) return [mapped, ...prev]          // new score → newest first
+          // Cap at 500 like the initial load/addScore, so a long-running tab doesn't
+          // grow this array unbounded as other reviewers score tickets throughout the day.
+          if (idx === -1) return [mapped, ...prev].slice(0, 500)          // new score → newest first
           // Realtime can truncate/omit the large full_score jsonb — merge over the
           // existing row so an echo never wipes data we already hold (esp. fullScore).
           const existing = prev[idx]
