@@ -91,7 +91,6 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   })
   const [note, setNote] = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
-  const [focusIdx, setFocusIdx] = useState(-1)  // -1 = nothing focused yet — no default evidence highlight
   const [activeCrit, setActiveCrit] = useState(null)   // criterion whose evidence is highlighted / being tagged
   const critName = (id) => dims.flatMap(d => d.criteria).find(c => c.id === id)?.name || ''
 
