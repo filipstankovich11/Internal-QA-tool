@@ -122,16 +122,21 @@ export default function TicketTranscript({
       {ticketInfo && (ticketInfo.status || ticketInfo.priority || ticketInfo.channel || ticketInfo.tags?.length > 0) && (
         <div className="flex items-center gap-1.5 flex-wrap mb-3">
           {ticketInfo.status && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.65)' }}>{ticketInfo.status}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket status" style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.65)' }}>{ticketInfo.status}</span>
           )}
           {ticketInfo.priority && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" style={{ background: '#FBEBD3', color: '#8A6116' }}>{ticketInfo.priority}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket priority" style={{ background: '#FBEBD3', color: '#8A6116' }}>{ticketInfo.priority}</span>
           )}
           {ticketInfo.channel && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" style={{ background: '#E6F0FA', color: '#2563AF' }}>{ticketInfo.channel}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket channel" style={{ background: '#E6F0FA', color: '#2563AF' }}>{ticketInfo.channel}</span>
+          )}
+          {(ticketInfo.tags || []).length > 0 && (
+            <span className="text-xs inline-flex items-center gap-1 font-medium" style={{ color: 'rgba(26,30,35,.4)' }} title="Tags applied to this ticket in Gorgias">
+              <TagIcon /> Tags:
+            </span>
           )}
           {(ticketInfo.tags || []).map((t, i) => (
-            <span key={i} className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>{t}</span>
+            <span key={i} className="text-xs px-2 py-0.5 rounded-full font-medium" title="Ticket tag" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>{t}</span>
           ))}
         </div>
       )}
