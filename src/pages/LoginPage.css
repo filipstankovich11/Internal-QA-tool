@@ -16,26 +16,17 @@
   --dimmer: rgba(26, 30, 35, .5);
 }
 
-/* ── Page ── */
+/* ── Page — full viewport, no outer frame ── */
 .login-page {
-  background: #EFE7E1;
+  background: var(--bg);
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-family: var(--font-body, 'Roboto'), sans-serif;
-  padding: 24px;
 }
 
-/* ── Card shell — the floating split panel ── */
+/* ── Split layout — fills the page edge to edge (not a floating card) ── */
 .login-card {
   width: 100%;
-  max-width: 1120px;
-  min-height: 680px;
-  background: var(--bg);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 12px 32px rgba(26,30,35,.08);
+  min-height: 100vh;
   display: flex;
   align-items: stretch;
 }
