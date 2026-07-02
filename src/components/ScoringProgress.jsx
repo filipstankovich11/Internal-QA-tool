@@ -33,17 +33,12 @@ export default function ScoringProgress({ loading }) {
 
   if (progress === 0 && !finishing) return null
 
-  const pct = Math.min(100, Math.round(progress))
   const label = finishing ? 'Complete!' : 'Claude is scoring this ticket…'
 
   return (
     <div style={{ marginTop: 14, marginBottom: 4 }}>
-      {/* Label + percentage */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div style={{ marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: 'rgba(26,30,35,.6)' }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#B84A2E', fontVariantNumeric: 'tabular-nums' }}>
-          {pct}%
-        </span>
       </div>
 
       {/* Flying-files loader (see .loader-con / .pfile in index.css) */}
@@ -52,12 +47,6 @@ export default function ScoringProgress({ loading }) {
           <div key={i} className="pfile" style={{ '--i': i }} />
         ))}
       </div>
-
-      {!finishing && (
-        <p style={{ fontSize: 11, color: 'rgba(26,30,35,.45)', textAlign: 'center', marginTop: 7 }}>
-          Usually 15–30 seconds
-        </p>
-      )}
     </div>
   )
 }

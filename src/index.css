@@ -232,69 +232,6 @@
 }
 .g-btn-ghost:hover { color: var(--ink); background: #F6F2EF; }
 
-/* ── Animated arrow button (Analyze) — arrows swap through, a darker-coral
-   circle floods from the centre, an outer ring pulses away, and the press
-   scales down. Same palette as g-btn-primary, animation only. ── */
-.g-btn-analyze {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: var(--g-coral);
-  color: var(--ink);
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 0 0 0 rgba(255, 151, 128, 0.65);
-  transition: box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-              transform 0.15s ease, opacity 0.15s;
-}
-.g-btn-analyze:hover:not(:disabled) { box-shadow: 0 0 0 12px rgba(255, 151, 128, 0); }
-.g-btn-analyze:active:not(:disabled) { transform: scale(0.95); }
-.g-btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
-.g-btn-analyze .ab-text {
-  position: relative;
-  z-index: 1;
-  transform: translateX(-6px);
-  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-}
-.g-btn-analyze:hover:not(:disabled) .ab-text { transform: translateX(6px); }
-.g-btn-analyze .ab-arr-1,
-.g-btn-analyze .ab-arr-2 {
-  position: absolute;
-  top: 50%;
-  width: 16px;
-  height: 16px;
-  z-index: 1;
-  fill: var(--ink);
-  transform: translateY(-50%);
-  transition: left 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-              right 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-}
-.g-btn-analyze .ab-arr-1 { right: 12px; }
-.g-btn-analyze .ab-arr-2 { left: -25%; }
-.g-btn-analyze:hover:not(:disabled) .ab-arr-1 { right: -25%; }
-.g-btn-analyze:hover:not(:disabled) .ab-arr-2 { left: 12px; }
-.g-btn-analyze .ab-circle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--g-coral-h);
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  transition: width 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-              height 0.6s cubic-bezier(0.23, 1, 0.32, 1),
-              opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-}
-.g-btn-analyze:hover:not(:disabled) .ab-circle {
-  width: 240px;
-  height: 240px;
-  opacity: 1;
-}
-
 /* ── Transcript message blocks — hover lift + coral top-bar sweep ──────────── */
 .tt-block { position: relative; overflow: hidden; }
 .tt-block::before {
