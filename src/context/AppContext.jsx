@@ -261,6 +261,16 @@ export function AppProvider({ children }) {
       const filtered = prev.filter(s => s.ticketId !== scoreResult.ticket_id)
       return [entry, ...filtered].slice(0, 500)
     })
+    if (entry.agentIds.length) {
+      const verdict = { PASS: 'Pass', NEEDS_REVIEW: 'Needs review', FAIL: 'Fail' }[entry.effectiveVerdict] || entry.effectiveVerdict
+      notifyAgents(entry.agentIds, 'score_published',
+        `Your ticket #${entry.ticketId} was graded — ${Math.round(entry.effectiveScore)}/100 · ${verdict}`, entry.id)
+    }
+    if (scoreResult.auto_fail?.triggered) {
+      const conds = (scoreResult.auto_fail.conditions || []).join(', ')
+      notifyAdmins('auto_fail_triggered',
+        `Auto-fail triggered on ticket #${entry.ticketId}${conds ? ` — ${conds}` : ''}`, entry.id)
+    }
     return entry
   }
 
@@ -287,6 +297,21 @@ export function AppProvider({ children }) {
       p_type: type, p_message: message, p_score_id: scoreId,
     })
     if (error) console.error('notifyAdmins failed:', error)
+  }
+
+  // Direct user_id-targeted notifications (assignments, batch completion, …)
+  const notifyUsers = async (userIds, type, message, scoreId = null) => {
+    if (!userIds?.length) return
+    const { error } = await supabase.from('notifications').insert(
+      userIds.map(user_id => ({ user_id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
+    )
+    if (error) console.error('notifyUsers failed:', error)
+  }
+
+  // Notify the agents attached to a score, for callers that only hold its id
+  const notifyScoreAgents = (scoreId, type, message) => {
+    const s = scoreHistory.find(x => x.id === scoreId)
+    if (s?.agentIds?.length) notifyAgents(s.agentIds, type, message, scoreId)
   }
 
   // Reviewer-tagged evidence — overwrites the whole { [criterionId]: [msgId,...] } map
@@ -342,6 +367,11 @@ export function AppProvider({ children }) {
     const { error } = await supabase.from('scores').update({ claimed_by: userId, claimed_at: new Date().toISOString() }).eq('id', id)
     if (error) { console.error('assignScore failed:', error); return error }
     setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, claimedBy: userId, claimedAt: Date.now() } : s))
+    if (userId && userId !== user?.id) {
+      const s = scoreHistory.find(x => x.id === id)
+      notifyUsers([userId], 'score_assigned',
+        `${profile?.name || 'A lead'} assigned you ticket #${s?.ticketId || id} to review`, id)
+    }
     return null
   }
 
@@ -429,7 +459,10 @@ export function AppProvider({ children }) {
     const { error } = await supabase.from('rubric').upsert({
       id: 1, config, updated_by: user?.id, updated_at: new Date().toISOString(),
     })
-    if (!error) setRubric(config)
+    if (!error) {
+      setRubric(config)
+      notifyAdmins('rubric_updated', `${profile?.name || 'Someone'} updated the QA guidance`)
+    }
     return !error
   }
 
@@ -453,7 +486,8 @@ export function AppProvider({ children }) {
       scoreToEdit, openScoreEditor, closeScoreEditor,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
-      addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore, notifyAdmins,
+      addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore,
+      notifyAdmins, notifyUsers, notifyScoreAgents,
       claimScore, unclaimScore, assignScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,

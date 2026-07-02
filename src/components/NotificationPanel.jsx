@@ -10,6 +10,12 @@ const TYPE_META = {
   dispute_cleared:    { icon: '✓', color: '#10b981', label: 'Cleared' },
   calibration_open:   { icon: '🎯', color: '#FF9780', label: 'Calibration' },
   score_acknowledged: { icon: '👁', color: '#2F8F5B', label: 'Seen' },
+  score_published:    { icon: '📊', color: '#FF9780', label: 'Graded' },
+  dispute_reply:      { icon: '💬', color: '#f59e0b', label: 'Reply' },
+  score_assigned:     { icon: '📋', color: '#3B7DD8', label: 'Assigned' },
+  auto_fail_triggered:{ icon: '⚠️', color: '#D14B3D', label: 'Auto-fail' },
+  batch_complete:     { icon: '📦', color: '#818cf8', label: 'Batch' },
+  rubric_updated:     { icon: '📐', color: '#2F8F5B', label: 'Guidance' },
 }
 
 function timeAgo(ts) {

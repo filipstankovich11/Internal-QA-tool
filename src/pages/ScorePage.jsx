@@ -356,8 +356,8 @@ function ResultRow({ result, onView }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ScorePage() {
-  const { scoreHistory, addScore, agents, rubric, openScore } = useApp()
-  const { canScore } = useAuth()
+  const { scoreHistory, addScore, agents, rubric, openScore, notifyUsers } = useApp()
+  const { canScore, user } = useAuth()
 
   const [mode,        setMode]        = useState('single')
 
@@ -430,19 +430,25 @@ export default function ScorePage() {
   const runBatch = async () => {
     if (!ticketIds.length || running) return
     setRunning(true); setResults([]); abortRef.current = false
+    let okCount = 0, failCount = 0
     for (const raw of ticketIds) {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//, '').trim()
       try {
         const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
-        if (!ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
+        if (!ok) { failCount++; setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
         const saved = await addScore(data)
-        if (saved?.error) { setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
+        if (saved?.error) { failCount++; setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
+        okCount++
         setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
-      } catch (e) { setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
+      } catch (e) { failCount++; setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
     }
     setRunning(false)
+    if (user?.id && (okCount || failCount)) {
+      notifyUsers([user.id], 'batch_complete',
+        `Batch finished — ${okCount} scored${failCount ? `, ${failCount} failed` : ''} of ${ticketIds.length} ticket${ticketIds.length !== 1 ? 's' : ''}`)
+    }
   }
 
   const switchMode = m => { setMode(m); setTicketIds([]); setResults([]) }
