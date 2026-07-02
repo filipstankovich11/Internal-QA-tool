@@ -273,18 +273,20 @@ export function AppProvider({ children }) {
   // ── Notifications ──────────────────────────────────────────────────────────
   const notifyAgents = async (agentIds, type, message, scoreId = null) => {
     if (!agentIds?.length) return
-    await supabase.from('notifications').insert(
+    const { error } = await supabase.from('notifications').insert(
       agentIds.map(agent_id => ({ agent_id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
     )
+    if (error) console.error('notifyAgents failed:', error)
   }
 
+  // RPC (security definer) rather than select-profiles-then-insert: profiles
+  // RLS is read-own-only for non-admins, so the client-side lookup silently
+  // returned zero admins whenever an agent triggered the notification.
   const notifyAdmins = async (type, message, scoreId = null) => {
-    const { data: admins } = await supabase
-      .from('profiles').select('id').in('role', ['admin', 'lead'])
-    if (!admins?.length) return
-    await supabase.from('notifications').insert(
-      admins.map(a => ({ user_id: a.id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
-    )
+    const { error } = await supabase.rpc('notify_admins', {
+      p_type: type, p_message: message, p_score_id: scoreId,
+    })
+    if (error) console.error('notifyAdmins failed:', error)
   }
 
   // Reviewer-tagged evidence — overwrites the whole { [criterionId]: [msgId,...] } map
