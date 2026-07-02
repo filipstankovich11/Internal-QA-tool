@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 import { startPrefetch } from '../lib/prefetch'
+import { diffRubric } from '../lib/rubricDiff'
 
 const AppContext = createContext(null)
 
@@ -459,12 +460,23 @@ export function AppProvider({ children }) {
   // ── Rubric ─────────────────────────────────────────────────────────────────
   const updateRubric = async (config) => {
     const { data: { user } } = await supabase.auth.getUser()
+    const changes = diffRubric(rubric, config)
     const { error } = await supabase.from('rubric').upsert({
       id: 1, config, updated_by: user?.id, updated_at: new Date().toISOString(),
     })
     if (!error) {
       setRubric(config)
-      notifyAdmins('rubric_updated', `${profile?.name || 'Someone'} updated the QA guidance`)
+      if (changes.length) {
+        // Snapshot for the change-history view on the QA Guidance page
+        const { error: revErr } = await supabase.from('rubric_revisions').insert({
+          config, summary: changes, changed_by: user?.id, changed_by_name: profile?.name || null,
+        })
+        if (revErr) console.error('rubric revision insert failed:', revErr)
+        const head = changes.slice(0, 2).join('; ')
+        const more = changes.length > 2 ? ` (+${changes.length - 2} more)` : ''
+        notifyAdmins('rubric_updated',
+          `${profile?.name || 'Someone'} updated the QA guidance — ${head}${more}`)
+      }
     }
     return !error
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
+import { supabase } from '../lib/supabase'
 
 const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
@@ -316,6 +317,73 @@ export default function RubricPage() {
           style={{ minHeight: 120 }}
           placeholder={"e.g. Our product is a customer support platform. Agents often use Loom videos for walkthroughs — always treat a Loom link as a strong forward-resolution signal. Escalating to Tier 2 is correct when a bug is confirmed; do not penalise for this."}
         />
+      </div>
+
+      {/* Change history */}
+      <RevisionHistory refreshKey={saved} />
+    </div>
+  )
+}
+
+// ── Change history — one row per save, with the precomputed diff summary ────
+function RevisionHistory({ refreshKey }) {
+  const [revisions, setRevisions] = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [expanded, setExpanded]   = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase.from('rubric_revisions')
+      .select('id, summary, changed_by_name, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) console.error('rubric revisions fetch failed:', error)
+        setRevisions(data || [])
+        setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [refreshKey])
+
+  if (loading || revisions.length === 0) return null
+
+  return (
+    <div className="rounded-2xl mt-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
+      <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Change history</p>
+      <p className="text-xs mb-3 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
+        What changed in each save, and by whom.
+      </p>
+      <div className="flex flex-col">
+        {revisions.map((r, i) => {
+          const lines = r.summary || []
+          const open = expanded === r.id
+          const shown = open ? lines : lines.slice(0, 3)
+          return (
+            <div key={r.id} className="py-3" style={{ borderTop: i > 0 ? '1px solid #F0ECE9' : 'none' }}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-xs font-semibold" style={{ color: '#1A1E23' }}>{r.changed_by_name || 'Unknown'}</span>
+                <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>
+                  · {new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>
+                  {lines.length} change{lines.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <ul className="flex flex-col gap-1">
+                {shown.map((line, j) => (
+                  <li key={j} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {line}</li>
+                ))}
+              </ul>
+              {lines.length > 3 && (
+                <button onClick={() => setExpanded(open ? null : r.id)}
+                  className="text-xs mt-1.5" style={{ color: '#B84A2E' }}>
+                  {open ? 'Show less' : `Show ${lines.length - 3} more`}
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
