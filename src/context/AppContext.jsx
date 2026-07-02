@@ -317,7 +317,7 @@ export function AppProvider({ children }) {
       setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, disputed: true, disputeNote: note, disputeAt: Date.now() } : s))
       const score = scoreHistory.find(s => s.id === id)
       notifyAdmins('dispute_submitted',
-        `An agent disputed a score for ticket #${score?.ticketId || id}`, id)
+        `${profile?.name || 'An agent'} disputed a score for ticket #${score?.ticketId || id}`, id)
     }
     return !error
   }
