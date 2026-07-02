@@ -29,9 +29,11 @@
    and login stay close together with balanced margins. The glow/white
    backgrounds are painted on .login-page (full-bleed) so there's no floating
    card edge; the card itself is transparent. ── */
+/* No width cap: the halves span the full viewport so each content cluster
+   centers within its own color field at any screen size — no stranded voids
+   at the outer edges on wide monitors. */
 .login-card {
   width: 100%;
-  max-width: 1240px;
   min-height: 100vh;
   display: flex;
   align-items: stretch;
