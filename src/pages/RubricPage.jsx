@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
+import { diffRubricDetailed } from '../lib/rubricDiff'
 
 const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
@@ -325,7 +326,8 @@ export default function RubricPage() {
   )
 }
 
-// ── Change history — one row per save, with the precomputed diff summary ────
+// ── Change history — one row per save; click a revision to see the full
+// before → after detail (computed against the previous snapshot) ────────────
 function RevisionHistory({ refreshKey }) {
   const [revisions, setRevisions] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -333,10 +335,12 @@ function RevisionHistory({ refreshKey }) {
 
   useEffect(() => {
     let cancelled = false
+    // Fetch one extra row so the oldest displayed revision still has a
+    // predecessor snapshot to diff against.
     supabase.from('rubric_revisions')
-      .select('id, summary, changed_by_name, created_at')
+      .select('id, config, summary, changed_by_name, created_at')
       .order('created_at', { ascending: false })
-      .limit(20)
+      .limit(21)
       .then(({ data, error }) => {
         if (cancelled) return
         if (error) console.error('rubric revisions fetch failed:', error)
@@ -348,20 +352,40 @@ function RevisionHistory({ refreshKey }) {
 
   if (loading || revisions.length === 0) return null
 
+  const valueBlock = (text, kind) => (
+    <div className="text-xs leading-relaxed rounded-lg px-2.5 py-1.5 whitespace-pre-wrap"
+      style={{
+        background: kind === 'before' ? '#FEF6F4' : '#E6F4EC',
+        border: `1px solid ${kind === 'before' ? '#F4DDD7' : '#BFE3CD'}`,
+        color: 'rgba(26,30,35,.75)',
+        maxHeight: 180, overflowY: 'auto',
+      }}>
+      <span className="font-semibold" style={{ color: kind === 'before' ? '#D14B3D' : '#2F8F5B' }}>
+        {kind === 'before' ? 'Before  ' : 'After  '}
+      </span>
+      {text === '' ? <i style={{ color: 'rgba(26,30,35,.4)' }}>(empty)</i> : text}
+    </div>
+  )
+
   return (
     <div className="rounded-2xl mt-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
       <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>Change history</p>
       <p className="text-xs mb-3 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
-        What changed in each save, and by whom.
+        What changed in each save, and by whom. Click a revision to see the full before → after detail.
       </p>
       <div className="flex flex-col">
-        {revisions.map((r, i) => {
+        {revisions.slice(0, 20).map((r, i) => {
           const lines = r.summary || []
           const open = expanded === r.id
-          const shown = open ? lines : lines.slice(0, 3)
+          // Predecessor snapshot: the next-older revision (if we have it)
+          const prevConfig = revisions[i + 1]?.config || null
+          const detailed = open && prevConfig ? diffRubricDetailed(prevConfig, r.config) : null
           return (
             <div key={r.id} className="py-3" style={{ borderTop: i > 0 ? '1px solid #F0ECE9' : 'none' }}>
-              <div className="flex items-center gap-2 mb-1.5">
+              <button onClick={() => setExpanded(open ? null : r.id)}
+                className="w-full flex items-center gap-2 text-left cursor-pointer"
+                style={{ background: 'none', border: 'none', padding: 0 }}>
+                <span className="shrink-0 transition-transform text-xs" style={{ color: 'rgba(26,30,35,.45)', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
                 <span className="text-xs font-semibold" style={{ color: '#1A1E23' }}>{r.changed_by_name || 'Unknown'}</span>
                 <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>
                   · {new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
@@ -369,17 +393,38 @@ function RevisionHistory({ refreshKey }) {
                 <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>
                   {lines.length} change{lines.length !== 1 ? 's' : ''}
                 </span>
-              </div>
-              <ul className="flex flex-col gap-1">
-                {shown.map((line, j) => (
-                  <li key={j} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {line}</li>
-                ))}
-              </ul>
-              {lines.length > 3 && (
-                <button onClick={() => setExpanded(open ? null : r.id)}
-                  className="text-xs mt-1.5" style={{ color: '#B84A2E' }}>
-                  {open ? 'Show less' : `Show ${lines.length - 3} more`}
-                </button>
+              </button>
+
+              {!open && (
+                <ul className="flex flex-col gap-1 mt-1.5 ml-5">
+                  {lines.slice(0, 3).map((line, j) => (
+                    <li key={j} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {line}</li>
+                  ))}
+                  {lines.length > 3 && (
+                    <li className="text-xs pl-3" style={{ color: '#B84A2E' }}>· +{lines.length - 3} more — click to expand</li>
+                  )}
+                </ul>
+              )}
+
+              {open && (
+                <div className="flex flex-col gap-3 mt-2 ml-5">
+                  {(detailed || lines.map(label => ({ label, before: null, after: null }))).map((c, j) => (
+                    <div key={j}>
+                      <p className="text-xs font-medium mb-1" style={{ color: '#1A1E23' }}>{c.label}</p>
+                      {(c.before != null || c.after != null) && (
+                        <div className="flex flex-col gap-1">
+                          {c.before != null && valueBlock(c.before, 'before')}
+                          {c.after != null && valueBlock(c.after, 'after')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!detailed && (
+                    <p className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>
+                      No earlier snapshot to compare against — showing the summary only.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )

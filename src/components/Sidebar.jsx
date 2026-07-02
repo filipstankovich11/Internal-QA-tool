@@ -281,6 +281,7 @@ export default function Sidebar({ page, setPage }) {
         <NotificationPanel
           onClose={() => { setShowNotifications(false); setActiveOverlay(o => o === 'notifications' ? null : o); fetchUnread() }}
           offsetLeft={collapsed ? 56 : 240}
+          onNavigate={setPage}
         />
       )}
     </aside>

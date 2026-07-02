@@ -26,8 +26,8 @@ function timeAgo(ts) {
   return `${Math.floor(secs / 86400)}d ago`
 }
 
-export default function NotificationPanel({ onClose, offsetLeft }) {
-  const { user } = useAuth()
+export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
+  const { user, isAdmin } = useAuth()
   const { agents, scoreHistory, openScore } = useApp()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -111,11 +111,18 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
   const renderRow = (n) => {
     const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
     const score = linkedScore(n)
+    // Guidance changes link to the QA Guidance page (admin-gated tab)
+    const guidanceLink = n.type === 'rubric_updated' && isAdmin && !!onNavigate
+    const clickable = !!score || guidanceLink
     return (
       <button key={n.id}
-        onClick={() => { markRead(n.id); if (score) openLinkedScore(score) }}
-        title={score ? `Open ticket #${score.ticketId}` : undefined}
-        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: score ? 'pointer' : 'default' }}
+        onClick={() => {
+          markRead(n.id)
+          if (score) openLinkedScore(score)
+          else if (guidanceLink) { onNavigate('rubric'); onClose() }
+        }}
+        title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : undefined}
+        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
         onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
         onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'}>
         <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 1 }}>{meta.icon}</span>
@@ -129,6 +136,12 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
               <>
                 <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
                 <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View ticket →</span>
+              </>
+            )}
+            {guidanceLink && (
+              <>
+                <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
+                <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View changes →</span>
               </>
             )}
           </div>
