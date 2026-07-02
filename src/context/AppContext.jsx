@@ -225,6 +225,9 @@ export function AppProvider({ children }) {
 
   // ── Scores ─────────────────────────────────────────────────────────────────
   const addScore = async (scoreResult) => {
+    // The model occasionally returns weighted_score as a JSON string; coerce
+    // before it reaches the DB column and the persisted full_score JSON.
+    scoreResult = { ...scoreResult, weighted_score: Number(scoreResult.weighted_score) || 0 }
     const agentIds = []
     for (const sender of scoreResult.agent_senders || []) {
       const match = agents.find(a =>

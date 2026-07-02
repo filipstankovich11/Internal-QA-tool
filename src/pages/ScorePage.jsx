@@ -347,7 +347,7 @@ function ResultRow({ result, onView }) {
       </a>
       <span className="text-xs flex-1 truncate" style={{ color: '#1A1E23' }}>{result.fullScore?.ticket_subject || '—'}</span>
       {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'rgba(26,30,35,.6)' }}>{result.agentName}</span>}
-      <span className="text-xs shrink-0 tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{result.weightedScore?.toFixed(0)}/100</span>
+      <span className="text-xs shrink-0 tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{Number(result.weightedScore ?? 0).toFixed(0)}/100</span>
       {color && <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>{VERDICT_LABEL[result.verdict]}</span>}
     </button>
   )
@@ -441,7 +441,7 @@ export default function ScorePage() {
         if (saved?.error) { failCount++; setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
         okCount++
-        setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
+        setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: Number(data.weighted_score) || 0, agentName, fullScore: data }])
       } catch (e) { failCount++; setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
     }
     setRunning(false)
