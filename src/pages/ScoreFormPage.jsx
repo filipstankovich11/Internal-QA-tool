@@ -110,6 +110,11 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   const evidenceIds = activeCrit
     ? [...new Set([...(aiMeta[activeCrit]?.evidence || []), ...(reviewerEvidence[activeCrit] || [])])]
     : []
+  // AI citations per criterion — shown read-only in the transcript's tag popover
+  const aiEvidenceMap = useMemo(
+    () => Object.fromEntries(Object.entries(aiMeta).map(([id, meta]) => [id, meta.evidence || []])),
+    [aiMeta]
+  )
 
   const dimAvg = (d) => {
     const vals = d.criteria.map(c => scores[c.id]).filter(v => v != null)
@@ -224,7 +229,8 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
           {/* Conversation transcript — click a criterion to ring its evidence, or click
               any message directly to tag it against one or more criteria */}
           <TicketTranscript ticketId={ticketId} evidenceIds={evidenceIds} annotations={annotationMap}
-            criteriaOptions={criteriaOptions} evidenceMap={reviewerEvidence} onToggleEvidence={toggleReviewerEvidence} />
+            criteriaOptions={criteriaOptions} evidenceMap={reviewerEvidence} aiEvidenceMap={aiEvidenceMap}
+            onToggleEvidence={toggleReviewerEvidence} />
         </div>
 
         {/* Right — scoring (flat: dividers + boxed live-score/auto-fail/coaching) */}
@@ -250,10 +256,10 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
             {autoFails.length > 0 && <p className="text-xs mt-2" style={{ color: '#D14B3D' }}>Auto-fail triggered — verdict forced to FAIL.</p>}
           </div>
 
-          {/* Dimensions — flat sections */}
-          <div className="flex flex-col">
+          {/* Dimensions — boxed cards, consistent with live-score/auto-fail/coaching */}
+          <div className="flex flex-col gap-5">
             {dims.map((d) => (
-              <div key={d.id} className="py-4" style={{ borderTop: '1px solid #EEEEEE' }}>
+              <div key={d.id} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-semibold flex items-center gap-2" style={{ fontSize: 15, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
                     {d.name}

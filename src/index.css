@@ -103,6 +103,65 @@
   animation: shimmer 1.6s ease-in-out infinite;
 }
 
+/* Flying-files scoring loader — ported from Uiverse.io by nawinasokan
+   (terrible-cheetah-45), recolored from purple to Gorgias coral. Small
+   "ticket" cards fly across, scaling up mid-flight, staggered via --i. */
+.loader-con {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  overflow: hidden;
+}
+.pfile {
+  position: absolute;
+  bottom: 25px;
+  width: 40px;
+  height: 50px;
+  background: linear-gradient(90deg, #ff6b4a, #FF9780);
+  border-radius: 4px;
+  transform-origin: center;
+  animation: flyRight 3s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.6s);
+  opacity: 0;
+}
+.pfile::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 4px;
+  background-color: #ffffff;
+  border-radius: 2px;
+}
+.pfile::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 6px;
+  width: 18px;
+  height: 4px;
+  background-color: #ffffff;
+  border-radius: 2px;
+}
+@keyframes flyRight {
+  0% {
+    left: -10%;
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    left: 45%;
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
 .stagger-item {
   animation: itemIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i, 0) * 40ms);
@@ -172,6 +231,116 @@
   transition: color 0.15s, background 0.15s;
 }
 .g-btn-ghost:hover { color: var(--ink); background: #F6F2EF; }
+
+/* ── Animated arrow button (Analyze) — arrows swap through, a darker-coral
+   circle floods from the centre, an outer ring pulses away, and the press
+   scales down. Same palette as g-btn-primary, animation only. ── */
+.g-btn-analyze {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--g-coral);
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(255, 151, 128, 0.65);
+  transition: box-shadow 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+              transform 0.15s ease, opacity 0.15s;
+}
+.g-btn-analyze:hover:not(:disabled) { box-shadow: 0 0 0 12px rgba(255, 151, 128, 0); }
+.g-btn-analyze:active:not(:disabled) { transform: scale(0.95); }
+.g-btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+.g-btn-analyze .ab-text {
+  position: relative;
+  z-index: 1;
+  transform: translateX(-6px);
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.g-btn-analyze:hover:not(:disabled) .ab-text { transform: translateX(6px); }
+.g-btn-analyze .ab-arr-1,
+.g-btn-analyze .ab-arr-2 {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  z-index: 1;
+  fill: var(--ink);
+  transform: translateY(-50%);
+  transition: left 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+              right 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.g-btn-analyze .ab-arr-1 { right: 12px; }
+.g-btn-analyze .ab-arr-2 { left: -25%; }
+.g-btn-analyze:hover:not(:disabled) .ab-arr-1 { right: -25%; }
+.g-btn-analyze:hover:not(:disabled) .ab-arr-2 { left: 12px; }
+.g-btn-analyze .ab-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--g-coral-h);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+              height 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+              opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.g-btn-analyze:hover:not(:disabled) .ab-circle {
+  width: 240px;
+  height: 240px;
+  opacity: 1;
+}
+
+/* ── Transcript message blocks — hover lift + coral top-bar sweep ──────────── */
+.tt-block { position: relative; overflow: hidden; }
+.tt-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  opacity: 0;
+  border-radius: 99px;
+  background: var(--g-coral, #FF9780);
+  transition: width 0.45s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+.tt-block:hover { transform: translateY(-2px); }
+.tt-block:hover::before { width: 100%; opacity: 1; }
+
+/* Glass-glare sweep over cited messages when a criterion is focused — a
+   skewed light band glides across the block like a reflection, instead of a
+   color flood. Remounted (keyed) per focus change so it restarts each time. */
+.tt-flash-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.tt-flash-overlay::before {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 55%;
+  transform: translateX(-130%) skewX(-18deg);
+  background: linear-gradient(105deg,
+    transparent,
+    rgba(255, 255, 255, 0.55) 45%,
+    rgba(255, 255, 255, 0.22) 60%,
+    transparent);
+  animation: ttGlassSweep 0.8s ease-in-out 0.15s 2;
+}
+@keyframes ttGlassSweep {
+  to { transform: translateX(320%) skewX(-18deg); }
+}
 
 /* ── Accessibility ──────────────────────────────────────────────────────────── */
 /* Visible keyboard-focus ring — shows only for keyboard nav (:focus-visible),

@@ -59,13 +59,16 @@ function Avatar({ letter, bg, color }) {
  *                      onToggleEvidence), clicking a message opens a
  *                      checklist popover to tag/untag it per criterion
  *  - evidenceMap:      { [criterionId]: string[] } reviewer-tagged message ids
+ *  - aiEvidenceMap:    { [criterionId]: string[] } AI-cited message ids —
+ *                      shown read-only in the tag popover so a highlighted
+ *                      message with no checked boxes is explainable
  *  - onToggleEvidence: (criterionId, messageId) => void
  *  - maxHeight:        optional px to make the list internally scrollable
  *                      (else the parent scrolls)
  */
 export default function TicketTranscript({
   ticketId, evidenceIds = [], annotations = {}, maxHeight, className = '',
-  criteriaOptions = [], evidenceMap = {}, onToggleEvidence,
+  criteriaOptions = [], evidenceMap = {}, aiEvidenceMap = {}, onToggleEvidence,
 }) {
   const [messages, setMessages] = useState(() => cache.get(String(ticketId))?.messages || null)
   const [ticketInfo, setTicketInfo] = useState(() => cache.get(String(ticketId))?.ticket || null)
@@ -89,14 +92,24 @@ export default function TicketTranscript({
   const ev = evidenceIds.map(String)
   const clickable = criteriaOptions.length > 0 && !!onToggleEvidence
 
-  // Scroll the first cited message into view when the highlight changes
+  // When the highlight changes (a criterion is focused), lead the eye to the
+  // evidence: center the first cited message in view and flash all cited ones.
+  // Suppressed while the tag popover is open — tagging also changes the
+  // evidence set, and yanking the scroll mid-interaction is disorienting.
   const rowRefs = useRef({})
+  const [flashKey, setFlashKey] = useState(0)
+  const openRef = useRef(null)
+  openRef.current = openMsgId
   const evKey = ev.join(',')
-  useEffect(() => {
-    if (!ev.length) return
+  const leadToEvidence = () => {
     const first = (messages || []).find(m => ev.includes(String(m.id)))
     const el = first && rowRefs.current[String(first.id)]
-    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setFlashKey(k => k + 1)
+  }
+  useEffect(() => {
+    if (!ev.length || openRef.current != null) return
+    leadToEvidence()
   }, [evKey, messages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close the tag popover on outside click
@@ -113,10 +126,14 @@ export default function TicketTranscript({
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.45)' }}>Conversation</p>
         {ev.length > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
+          <button type="button" onClick={leadToEvidence} title="Jump to the cited messages"
+            className="text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer transition-colors"
+            style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FFE9E2' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#FFF4F1' }}>
             <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
             {ev.length} evidence
-          </span>
+          </button>
         )}
       </div>
       {ticketInfo && (ticketInfo.status || ticketInfo.priority || ticketInfo.channel || ticketInfo.tags?.length > 0) && (
@@ -161,10 +178,19 @@ export default function TicketTranscript({
             // Distinct treatment per message type — internal notes read as notes
             // (amber tint + label), not just another coral-outlined chat bubble.
             const palette = internal
-              ? { bg: '#FFF8E8', avatarBg: '#F3D48A', avatarColor: '#8A6116', ring: 'rgba(232,184,75,.55)' }
+              ? { bg: '#FFF8E8', avatarBg: '#F3D48A', avatarColor: '#8A6116', ring: 'rgba(232,184,75,.32)' }
               : agent
-              ? { bg: '#FFF1EC', avatarBg: '#FFD2C9', avatarColor: '#B84A2E', ring: 'rgba(255,151,128,.55)' }
-              : { bg: '#F5F3F1', avatarBg: '#E5DFD9', avatarColor: '#5B534C', ring: 'rgba(93,82,71,.3)' }
+              ? { bg: '#FFF1EC', avatarBg: '#FFD2C9', avatarColor: '#B84A2E', ring: 'rgba(255,151,128,.32)' }
+              : { bg: '#F5F3F1', avatarBg: '#E5DFD9', avatarColor: '#5B534C', ring: 'rgba(93,82,71,.2)' }
+
+            // Rest/hover shadows: evidence ring states persist; hover adds the
+            // lifted drop-shadow (pairs with .tt-block's translateY + bar sweep).
+            const restShadow = (lit || open) ? `0 0 0 1.5px ${palette.ring}, 0 2px 10px rgba(0,0,0,.06)`
+              : taggedFor.length > 0 ? `0 0 0 1px ${palette.ring}`
+              : '0 1px 2px rgba(0,0,0,.05)'
+            const hoverShadow = (clickable && !lit && !open)
+              ? `0 0 0 1.5px ${palette.ring}, 0 10px 20px rgba(32,32,36,.12)`
+              : `${restShadow}, 0 10px 20px rgba(32,32,36,.12)`
 
             return (
               <div key={m.id} ref={el => { rowRefs.current[String(m.id)] = el }}
@@ -187,18 +213,17 @@ export default function TicketTranscript({
                   )}
                   {agent && <Avatar letter={initials} bg={palette.avatarBg} color={palette.avatarColor} />}
                 </div>
-                <div onClick={clickable ? () => setOpenMsgId(id => id === m.id ? null : m.id) : undefined}
-                  className="text-sm leading-relaxed px-4 py-3 whitespace-pre-wrap" style={{
+                <div onClick={clickable ? (e => { if (e.target.closest('a')) return; setOpenMsgId(id => id === m.id ? null : m.id) }) : undefined}
+                  className="tt-block text-sm leading-relaxed px-4 py-3 whitespace-pre-wrap" style={{
                   background: palette.bg, color: '#1A1E23',
                   borderRadius: 18, borderTopRightRadius: agent ? 6 : 18, borderTopLeftRadius: agent ? 18 : 6,
-                  boxShadow: (lit || open) ? `0 0 0 2px ${palette.ring}, 0 2px 10px rgba(0,0,0,.08)`
-                    : taggedFor.length > 0 ? `0 0 0 1.5px ${palette.ring}`
-                    : '0 1px 2px rgba(0,0,0,.05)',
-                  transition: 'box-shadow .2s ease',
+                  boxShadow: restShadow,
+                  transition: 'box-shadow .25s ease, transform .25s ease',
                   cursor: clickable ? 'pointer' : 'default',
                 }}
-                  onMouseEnter={clickable && !lit && !open ? (e => { e.currentTarget.style.boxShadow = `0 0 0 2px ${palette.ring}` }) : undefined}
-                  onMouseLeave={clickable && !lit && !open ? (e => { e.currentTarget.style.boxShadow = taggedFor.length > 0 ? `0 0 0 1.5px ${palette.ring}` : '0 1px 2px rgba(0,0,0,.05)' }) : undefined}>
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = hoverShadow }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = restShadow }}>
+                  {lit && <span key={flashKey} className="tt-flash-overlay" aria-hidden="true" />}
                   <Linkify text={(m.body || '').trim() || '(no text)'} /></div>
 
                 {open && (
@@ -207,6 +232,7 @@ export default function TicketTranscript({
                     <p className="text-xs font-semibold px-2.5 pt-1.5 pb-1" style={{ color: 'rgba(26,30,35,.45)' }}>Tag as evidence for…</p>
                     {criteriaOptions.map(c => {
                       const checked = (evidenceMap[c.id] || []).map(String).includes(String(m.id))
+                      const aiCited = (aiEvidenceMap[c.id] || []).map(String).includes(String(m.id))
                       return (
                         <button key={c.id} type="button" onClick={() => onToggleEvidence(c.id, m.id)}
                           className="flex items-center gap-2 text-left text-xs px-2.5 py-1.5 rounded-lg transition-colors"
@@ -218,6 +244,13 @@ export default function TicketTranscript({
                             {checked && <svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                           </span>
                           {c.name}
+                          {aiCited && (
+                            <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded-full font-medium"
+                              title="The AI cited this message for this criterion"
+                              style={{ fontSize: 10, background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
+                              AI cited
+                            </span>
+                          )}
                         </button>
                       )
                     })}

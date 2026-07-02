@@ -491,7 +491,7 @@ export default function ScorePage() {
               const disabled = loading || !ticketUrl.trim() || !!urlError || !canScore
               return (
             <button onClick={analyze} disabled={disabled}
-              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap"
+              className="g-btn-analyze text-sm px-6 py-3 rounded-xl whitespace-nowrap"
               style={disabled && !loading ? { background: '#FFD2C9', color: 'rgba(26,30,35,.5)' } : undefined}>
               {loading
                 ? <span className="flex items-center gap-2">
@@ -500,7 +500,16 @@ export default function ScorePage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>Analyzing…
                   </span>
-                : 'Analyze'}
+                : <>
+                    <svg className="ab-arr-2" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z" />
+                    </svg>
+                    <span className="ab-text">Analyze</span>
+                    <span className="ab-circle" aria-hidden="true" />
+                    <svg className="ab-arr-1" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z" />
+                    </svg>
+                  </>}
             </button>
               )
             })()}

@@ -46,25 +46,11 @@ export default function ScoringProgress({ loading }) {
         </span>
       </div>
 
-      {/* Track */}
-      <div style={{
-        width: '100%', height: 7, borderRadius: 999,
-        background: '#F0ECE9',
-        overflow: 'hidden', position: 'relative',
-      }}>
-        {/* Fill */}
-        <div style={{
-          height: '100%',
-          width: `${pct}%`,
-          borderRadius: 999,
-          background: 'linear-gradient(90deg, #FF9780 0%, #ff6b4a 60%, #f59e0b 100%)',
-          transition: 'width 100ms linear',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          {/* Shimmer */}
-          <div className="progress-shimmer" />
-        </div>
+      {/* Flying-files loader (see .loader-con / .pfile in index.css) */}
+      <div className="loader-con">
+        {[0, 1, 2, 3, 4, 5].map(i => (
+          <div key={i} className="pfile" style={{ '--i': i }} />
+        ))}
       </div>
 
       {!finishing && (
