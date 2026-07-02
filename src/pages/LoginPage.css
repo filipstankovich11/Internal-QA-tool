@@ -31,7 +31,7 @@
    card edge; the card itself is transparent. ── */
 .login-card {
   width: 100%;
-  max-width: 1120px;
+  max-width: 1240px;
   min-height: 100vh;
   display: flex;
   align-items: stretch;
@@ -75,51 +75,13 @@
 }
 .login-left-header { display: flex; flex-direction: column; gap: 2px; }
 
-@media (min-width: 860px) {
-  /* Full-bleed background split, painted behind the centered card:
-     glow-tinted cream on the left half, white on the right half. The card's
-     divider sits at the card centre; because the card is centered and its two
-     halves are equal, that divider lands exactly on the 50% line — so the
-     background split lines up with it with no seam. */
-  .login-page {
-    background:
-      radial-gradient(1000px 780px at 16% 10%, rgba(255,151,128,.20), transparent 58%),
-      linear-gradient(to right, var(--bg) 0 50%, #fff 50% 100%);
-  }
-
-  /* Equal halves; content centered within each. Since each half is only
-     ~560px, centered content naturally sits close to the divider without
-     stranding empty space between the panels. */
-  .login-left {
-    display: flex;
-    flex: 1;
-    align-items: center;
-  }
-  .login-container {
-    flex: 1;
-    max-width: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 56px 60px;
-    margin: 0;
-    background: transparent;
-  }
-  /* Comfortable reading width for the form content. */
-  .form-header,
-  .form-card,
-  .page-footer {
-    width: 100%;
-    max-width: 400px;
-  }
-}
-
 /* ── Testimonial carousel — fixed-size crossfade (all reviews stacked,
    toggled via .is-active) ── */
 .carousel {
   position: relative;
   margin-top: 48px;
-  width: 420px;
+  width: 100%;
+  max-width: 420px;
   height: 262px;
 }
 .review {
@@ -521,9 +483,44 @@
   100% { filter: drop-shadow(0 0 0px rgba(255, 151, 128, 0)); }
 }
 
-/* Kept last on purpose — must win the cascade over the base .page-logo/.page-tagline
-   rules above once the left panel takes over at desktop widths. */
+/* ── Desktop layout — kept LAST on purpose. The base .login-container /
+   .page-logo rules above share specificity with these; source order decides,
+   so this whole block must come after every base rule to win the cascade. ── */
 @media (min-width: 860px) {
+  /* Full-bleed background split, painted behind the centered card:
+     glow-tinted cream on the left half, white on the right half. The card's
+     divider sits at the card centre; because the card is centered and its two
+     halves are equal, that divider lands exactly on the 50% line — so the
+     background split lines up with it with no seam. */
+  .login-page {
+    background:
+      radial-gradient(1000px 780px at 16% 10%, rgba(255,151,128,.20), transparent 58%),
+      linear-gradient(to right, var(--bg) 0 50%, #fff 50% 100%);
+  }
+
+  /* Equal halves; content centered within each. */
+  .login-left {
+    display: flex;
+    flex: 1;
+    align-items: center;
+  }
+  .login-container {
+    flex: 1;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px 60px;
+    margin: 0;
+    background: transparent;
+  }
+  /* Comfortable reading width for the form content. */
+  .form-header,
+  .form-card,
+  .page-footer {
+    width: 100%;
+    max-width: 400px;
+  }
   .page-logo, .page-tagline {
     display: none;
   }
