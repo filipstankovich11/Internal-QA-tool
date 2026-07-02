@@ -22,7 +22,7 @@ function timeAgo(ts) {
 
 export default function NotificationPanel({ onClose, offsetLeft }) {
   const { user } = useAuth()
-  const { agents } = useApp()
+  const { agents, scoreHistory, openScore } = useApp()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -81,11 +81,35 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
     <p style={{ padding: '12px 16px 4px', fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.4)' }}>{children}</p>
   )
 
+  // Notifications that reference a score open it full-page on click.
+  const linkedScore = (n) => n.score_id ? scoreHistory.find(s => s.id === n.score_id) : null
+
+  const openLinkedScore = (s) => {
+    openScore({
+      ...s.fullScore,
+      scoreId:         s.id,
+      reviewerNote:    s.notes,
+      overrideVerdict: s.overrideVerdict,
+      overrideScore:   s.overrideScore,
+      overrideNote:    s.overrideNote,
+      overrideAt:      s.overrideAt,
+      disputed:        s.disputed,
+      disputeNote:     s.disputeNote,
+      disputeAt:       s.disputeAt,
+      acknowledged:    s.acknowledged,
+      acknowledgedAt:  s.acknowledgedAt,
+    })
+    onClose()
+  }
+
   const renderRow = (n) => {
     const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
+    const score = linkedScore(n)
     return (
-      <button key={n.id} onClick={() => markRead(n.id)}
-        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: 'default' }}
+      <button key={n.id}
+        onClick={() => { markRead(n.id); if (score) openLinkedScore(score) }}
+        title={score ? `Open ticket #${score.ticketId}` : undefined}
+        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: score ? 'pointer' : 'default' }}
         onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
         onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'}>
         <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 1 }}>{meta.icon}</span>
@@ -95,6 +119,12 @@ export default function NotificationPanel({ onClose, offsetLeft }) {
             <span style={{ fontSize: 10, color: meta.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{meta.label}</span>
             <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
             <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>{timeAgo(n.created_at)}</span>
+            {score && (
+              <>
+                <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
+                <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View ticket →</span>
+              </>
+            )}
           </div>
         </div>
         {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9780', flexShrink: 0, marginTop: 5 }} />}
