@@ -108,21 +108,11 @@ function SubScoreRow({ label, data, onActivate }) {
       {open && (
         <div className="mt-2 ml-6">
           <p className="text-xs leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}><Linkify text={notes} /></p>
-          {(conf || ev.length > 0) && (
+          {conf && (
             <div className="flex items-center gap-3 mt-2 flex-wrap">
-              {conf && (
-                <span className="text-[11px] inline-flex items-center gap-1" style={{ color: 'rgba(26,30,35,.5)' }}>
-                  AI confidence <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
-                </span>
-              )}
-              {ev.length > 0 && (
-                <button onClick={() => onActivate?.(ev)}
-                  className="text-[11px] inline-flex items-center gap-1 transition-colors" style={{ color: '#B84A2E' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#FF9780'} onMouseLeave={e => e.currentTarget.style.color = '#B84A2E'}>
-                  <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF9780' }} />
-                  Show {ev.length} cited message{ev.length > 1 ? 's' : ''} in transcript
-                </button>
-              )}
+              <span className="text-[11px] inline-flex items-center gap-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+                AI confidence <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
+              </span>
             </div>
           )}
         </div>
