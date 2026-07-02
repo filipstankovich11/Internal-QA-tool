@@ -176,7 +176,7 @@ export default function TicketTranscript({
                   {time && <span style={{ color: 'rgba(26,30,35,.35)' }}>· {time}</span>}
                   {internal && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-wide" style={{ fontSize: 10, background: '#FBE8B9', color: '#8A6116' }}>
-                      <LockIcon /> internal
+                      <LockIcon /> internal note
                     </span>
                   )}
                   {lit && <span style={{ color: '#B84A2E', fontWeight: 600 }}>✓ evidence</span>}

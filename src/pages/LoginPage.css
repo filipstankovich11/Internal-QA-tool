@@ -18,50 +18,42 @@
 
 /* ── Page ── */
 .login-page {
-  background: #EFE7E1;
+  background: var(--bg);
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
   font-family: var(--font-body, 'Roboto'), sans-serif;
-  padding: 24px;
 }
 
-/* ── Card shell — the floating split panel ── */
+/* ── Card shell — the two-panel group, capped and centered so the testimonial
+   and login stay close together with balanced margins. The glow/white
+   backgrounds are painted on .login-page (full-bleed) so there's no floating
+   card edge; the card itself is transparent. ── */
 .login-card {
   width: 100%;
   max-width: 1120px;
-  min-height: 720px;
-  background: var(--bg);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  min-height: 100vh;
   display: flex;
   align-items: stretch;
 }
 
-/* ── Left panel (testimonials) ── */
+/* ── Left panel (testimonials) — transparent; the glow comes from the page
+   behind it so it can bleed past the card edge to the viewport corner ── */
 .login-left {
   display: none;
   position: relative;
   overflow: hidden;
   opacity: 0;
+  flex-direction: column;
   justify-content: center;
   padding: 56px 60px;
+  background: transparent;
 }
 .login-left.visible {
   animation: lp-pageIn 0.55s ease 0.1s forwards;
 }
-.login-left-glow {
-  position: absolute;
-  top: -80px;
-  left: -60px;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,151,128,.30), transparent 70%);
-  pointer-events: none;
-}
+/* Superseded by the page-level glow at desktop widths */
+.login-left-glow { display: none; }
 .login-left-inner {
   position: relative;
   width: 100%;
@@ -84,27 +76,41 @@
 .login-left-header { display: flex; flex-direction: column; gap: 2px; }
 
 @media (min-width: 860px) {
+  /* Full-bleed background split, painted behind the centered card:
+     glow-tinted cream on the left half, white on the right half. The card's
+     divider sits at the card centre; because the card is centered and its two
+     halves are equal, that divider lands exactly on the 50% line — so the
+     background split lines up with it with no seam. */
+  .login-page {
+    background:
+      radial-gradient(1000px 780px at 16% 10%, rgba(255,151,128,.20), transparent 58%),
+      linear-gradient(to right, var(--bg) 0 50%, #fff 50% 100%);
+  }
+
+  /* Equal halves; content centered within each. Since each half is only
+     ~560px, centered content naturally sits close to the divider without
+     stranding empty space between the panels. */
   .login-left {
     display: flex;
     flex: 1;
+    align-items: center;
   }
-  /* Right panel: fixed width, own column, divider on the left edge */
   .login-container {
+    flex: 1;
     max-width: none;
-    width: 520px;
-    flex: none;
     display: flex;
     flex-direction: column;
     justify-content: center;
     padding: 56px 60px;
     margin: 0;
-    border-left: 1px solid #F0ECE9;
+    background: transparent;
   }
-  .form-card {
+  /* Comfortable reading width for the form content. */
+  .form-header,
+  .form-card,
+  .page-footer {
     width: 100%;
-  }
-  .page-logo, .page-tagline {
-    display: none;
+    max-width: 400px;
   }
 }
 
@@ -513,4 +519,12 @@
   0%   { filter: drop-shadow(0 0 0px rgba(255, 151, 128, 0)); }
   45%  { filter: drop-shadow(0 0 20px rgba(255, 151, 128, 0.55)); }
   100% { filter: drop-shadow(0 0 0px rgba(255, 151, 128, 0)); }
+}
+
+/* Kept last on purpose — must win the cascade over the base .page-logo/.page-tagline
+   rules above once the left panel takes over at desktop widths. */
+@media (min-width: 860px) {
+  .page-logo, .page-tagline {
+    display: none;
+  }
 }
