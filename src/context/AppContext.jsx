@@ -79,7 +79,7 @@ export const DEFAULT_RUBRIC = {
 }
 
 export function AppProvider({ children }) {
-  const { role, user } = useAuth()
+  const { role, user, profile } = useAuth()
 
   const [teams,        setTeams]        = useState([])
   const [agents,       setAgents]       = useState([])
@@ -363,11 +363,20 @@ export function AppProvider({ children }) {
     return !error
   }
 
-  const acknowledgeScore = async (id) => {
+  // silent: used by bulk "mark all as seen" so admins get one aggregate
+  // notification (sent by the caller) instead of one per ticket.
+  const acknowledgeScore = async (id, { silent = false } = {}) => {
     const { error } = await supabase.from('scores').update({
       acknowledged: true, acknowledged_at: new Date().toISOString(),
     }).eq('id', id)
-    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, acknowledged: true, acknowledgedAt: Date.now() } : s))
+    if (!error) {
+      setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, acknowledged: true, acknowledgedAt: Date.now() } : s))
+      if (!silent) {
+        const score = scoreHistory.find(s => s.id === id)
+        notifyAdmins('score_acknowledged',
+          `${profile?.name || 'An agent'} marked graded ticket #${score?.ticketId || id} as seen`, id)
+      }
+    }
     return !error
   }
 
@@ -442,7 +451,7 @@ export function AppProvider({ children }) {
       scoreToEdit, openScoreEditor, closeScoreEditor,
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
-      addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore,
+      addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore, notifyAdmins,
       claimScore, unclaimScore, assignScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,

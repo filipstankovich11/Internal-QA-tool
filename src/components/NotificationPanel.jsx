@@ -4,11 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 
 const TYPE_META = {
-  dispute_submitted: { icon: '⚑', color: '#f59e0b', label: 'Dispute' },
-  score_overridden:  { icon: '✎', color: '#818cf8', label: 'Override' },
-  reviewer_note:     { icon: '💬', color: '#38bdf8', label: 'Note' },
-  dispute_cleared:   { icon: '✓', color: '#10b981', label: 'Cleared' },
-  calibration_open:  { icon: '🎯', color: '#FF9780', label: 'Calibration' },
+  dispute_submitted:  { icon: '⚑', color: '#f59e0b', label: 'Dispute' },
+  score_overridden:   { icon: '✎', color: '#818cf8', label: 'Override' },
+  reviewer_note:      { icon: '💬', color: '#38bdf8', label: 'Note' },
+  dispute_cleared:    { icon: '✓', color: '#10b981', label: 'Cleared' },
+  calibration_open:   { icon: '🎯', color: '#FF9780', label: 'Calibration' },
+  score_acknowledged: { icon: '👁', color: '#2F8F5B', label: 'Seen' },
 }
 
 function timeAgo(ts) {
