@@ -261,7 +261,13 @@ export default function CoachingHubPage() {
           if (cells.length < 2) continue
           const avg = cells.reduce((sum, x) => sum + x.v, 0) / cells.length
           const latest = Math.max(...cells.map(x => x.s.scoredAt))
-          const sorted = [...cells].sort((x, y) => x.v - y.v || y.s.scoredAt - x.s.scoredAt)
+          // A re-scored ticket has multiple score rows — link each ticket once
+          const uniqByTicket = (arr) => {
+            const seen = new Set()
+            return arr.filter(x => !seen.has(x.s.ticketId) && seen.add(x.s.ticketId))
+          }
+          const sorted = uniqByTicket([...cells].sort((x, y) => x.v - y.v || y.s.scoredAt - x.s.scoredAt))
+          const sortedBest = uniqByTicket([...cells].sort((x, y) => y.v - x.v || y.s.scoredAt - x.s.scoredAt))
           const base = {
             agentId: a.id, agentName: a.name, agentInitial: initial, agentBg: bg,
             dimension: d.name, foundAt: relFound(latest),
@@ -274,9 +280,9 @@ export default function CoachingHubPage() {
               tag: avg <= 1.9
                 ? { label: 'High impact', color: '#B84A2E', bg: '#FFEAE6' }
                 : { label: 'Recurring', color: '#C8841E', bg: '#FBEBD3' },
-              summary: `${firstName} averages ${avg.toFixed(1)}/5 on ${c.name} across ${cells.length} scored tickets (${d.name}, ${d.weight}% of the grade). The lowest-scoring tickets are linked below.`,
+              summary: `${firstName} averages ${avg.toFixed(1)}/5 on ${c.name} across ${sorted.length} scored ticket${sorted.length !== 1 ? 's' : ''} (${d.name}, ${d.weight}% of the grade). The lowest-scoring tickets are linked below.`,
               tickets: sorted.slice(0, 3).map(x => ({ scoreId: x.s.id, ticketId: x.s.ticketId })),
-              moreTickets: Math.max(0, cells.length - 3),
+              moreTickets: Math.max(0, sorted.length - 3),
               severity: avg, latest,
             })
           } else if (avg >= 4.6) {
@@ -285,9 +291,9 @@ export default function CoachingHubPage() {
               ...base, id, kind: 'strength',
               title: `Strong ${c.name.toLowerCase()} from ${firstName}`,
               tag: { label: 'Strength', color: '#2F8F5B', bg: '#E6F4EC' },
-              summary: `${firstName} averages ${avg.toFixed(1)}/5 on ${c.name} across ${cells.length} tickets — good material to share at the next team huddle.`,
-              tickets: [...cells].sort((x, y) => y.v - x.v).slice(0, 2).map(x => ({ scoreId: x.s.id, ticketId: x.s.ticketId })),
-              moreTickets: Math.max(0, cells.length - 2),
+              summary: `${firstName} averages ${avg.toFixed(1)}/5 on ${c.name} across ${sortedBest.length} ticket${sortedBest.length !== 1 ? 's' : ''} — good material to share at the next team huddle.`,
+              tickets: sortedBest.slice(0, 2).map(x => ({ scoreId: x.s.id, ticketId: x.s.ticketId })),
+              moreTickets: Math.max(0, sortedBest.length - 2),
               severity: 10 - avg, latest,
             })
           }

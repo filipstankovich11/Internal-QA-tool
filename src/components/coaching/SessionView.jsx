@@ -170,21 +170,23 @@ export default function SessionView({
                   <span style={{ width: 26, height: 26, borderRadius: 9999, background: item.kind === 'strength' ? '#E6F4EC' : '#FFEAE6', color: item.kind === 'strength' ? '#2F8F5B' : '#B84A2E', display: 'flex', alignItems: 'center', justifyContent: 'center', font: "600 12px/1 'Inter Tight'", flex: 'none' }}>
                     {i + 1}
                   </span>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ font: "500 13.5px/1.35 'Roboto'", color: ink }}>{item.title}</div>
                     {item.detail && (
                       <div style={{ font: "400 12px/1.5 'Roboto'", color: 'rgba(26,30,35,.6)', marginTop: 4 }}>{item.detail}</div>
                     )}
+                    {/* Ticket pills below the text — real ticket ids are long, and
+                        beside the text they crush it into a one-word column */}
+                    {(item.tickets || []).length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
+                        {item.tickets.map((t) => (
+                          <span key={t.scoreId || t.ticketId} style={S.ticketPill} onClick={() => onOpenTicket(t)}>
+                            #{t.ticketId}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {(item.tickets || []).length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flex: 'none', alignSelf: 'center' }}>
-                      {item.tickets.map((t) => (
-                        <span key={t.scoreId || t.ticketId} style={S.ticketPill} onClick={() => onOpenTicket(t)}>
-                          #{t.ticketId}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   {!readOnly && (
                     <button title="Remove talking point" onClick={() => setAgenda(a => a.filter(x => x.id !== item.id))}
                       style={{ border: 'none', background: 'transparent', color: 'rgba(26,30,35,.35)', cursor: 'pointer', alignSelf: 'flex-start', padding: 0, font: '400 13px/1 sans-serif' }}>✕</button>
