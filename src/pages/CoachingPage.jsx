@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
+import SessionView from '../components/coaching/SessionView'
 
 const CRITERIA = [
   { key: 'core_inquiry_resolved',     name: 'Core Resolution',        dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
@@ -86,13 +88,41 @@ function ImprovementCard({ text, index }) {
 }
 
 export default function CoachingPage() {
-  const { scoreHistory, agents } = useApp()
+  const { scoreHistory, agents, openScore } = useApp()
   const { user, role } = useAuth()
 
   const myAgentId = useMemo(
     () => role === 'agent' ? agents.find(a => a.user_id === user?.id)?.id ?? null : null,
     [role, agents, user]
   )
+
+  // ── Coaching sessions shared by the lead ────────────────────────────────────
+  // RLS only returns rows that are completed, visible_to_agent, and linked to
+  // this user's agent record — no client-side filtering needed.
+  const [sessions, setSessions] = useState([])
+  const [activeSession, setActiveSession] = useState(null)
+  useEffect(() => {
+    if (role !== 'agent') return
+    supabase.from('coaching_sessions').select('*')
+      .order('completed_at', { ascending: false, nullsFirst: false }).limit(50)
+      .then(({ data, error }) => {
+        if (error) { console.error('coaching sessions fetch failed:', error); return }
+        setSessions(data || [])
+      })
+  }, [role])
+
+  const openTicketById = (scoreId) => {
+    const s = scoreHistory.find(x => x.id === scoreId)
+    if (!s) return
+    openScore({
+      ...s.fullScore,
+      scoreId: s.id, reviewerNote: s.notes,
+      overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore,
+      overrideNote: s.overrideNote, overrideAt: s.overrideAt,
+      disputed: s.disputed, disputeNote: s.disputeNote, disputeAt: s.disputeAt,
+      acknowledged: s.acknowledged, acknowledgedAt: s.acknowledgedAt,
+    })
+  }
   const scores = useMemo(
     () => myAgentId ? scoreHistory.filter(s => s.agentIds?.includes(myAgentId)) : scoreHistory,
     [scoreHistory, myAgentId]
@@ -140,7 +170,26 @@ export default function CoachingPage() {
     recentScores.filter(s => s.notes?.trim()).slice(0, 4)
   , [recentScores])
 
-  if (scores.length === 0) {
+  // Full-page read-only view of a shared session
+  if (activeSession) {
+    const me = agents.find(a => a.id === activeSession.agent_id)
+    return (
+      <div className="max-w-6xl mx-auto px-8 pt-8 pb-14">
+        <SessionView
+          session={activeSession}
+          agentName={me?.name || 'you'}
+          agentInitial={(me?.name || '?')[0].toUpperCase()}
+          agentBg="#FFD2C9"
+          agentStats={null}
+          readOnly
+          onBack={() => setActiveSession(null)}
+          onOpenTicket={(t) => t.scoreId && openTicketById(t.scoreId)}
+        />
+      </div>
+    )
+  }
+
+  if (scores.length === 0 && sessions.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: 'rgba(26,30,35,.5)' }}>
         <p className="text-4xl mb-4">📋</p>
@@ -159,6 +208,38 @@ export default function CoachingPage() {
           Insights based on <span style={{ color: '#B84A2E' }}>{scores.length}</span> scored ticket{scores.length !== 1 ? 's' : ''}
         </p>
       </div>
+
+      {/* Sessions shared by the lead */}
+      {sessions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-semibold mb-3" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Coaching Sessions</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
+            Sessions your lead has shared with you — agenda, notes, and action items.
+          </p>
+          <div className="flex flex-col gap-3">
+            {sessions.map(s => {
+              const openActions = (s.action_items || []).filter(a => !a.done).length
+              return (
+                <button key={s.id} onClick={() => setActiveSession(s)}
+                  className="w-full flex items-center gap-4 rounded-2xl px-5 py-4 text-left"
+                  style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', cursor: 'pointer' }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium" style={{ color: '#1A1E23' }}>
+                      Session with {s.created_by_name || 'your lead'}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.55)' }}>
+                      {new Date(s.completed_at || s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {(s.agenda || []).length > 0 && ` · ${s.agenda.length} talking point${s.agenda.length !== 1 ? 's' : ''}`}
+                      {openActions > 0 && ` · ${openActions} open action item${openActions !== 1 ? 's' : ''}`}
+                    </div>
+                  </div>
+                  <span className="text-xs shrink-0" style={{ color: '#B84A2E', fontWeight: 500 }}>View →</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Focus areas */}
       {focusAreas.length > 0 && (

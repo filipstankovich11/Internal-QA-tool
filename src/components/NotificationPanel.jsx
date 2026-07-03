@@ -16,6 +16,7 @@ const TYPE_META = {
   auto_fail_triggered:{ icon: '⚠️', color: '#D14B3D', label: 'Auto-fail' },
   batch_complete:     { icon: '📦', color: '#818cf8', label: 'Batch' },
   rubric_updated:     { icon: '📐', color: '#2F8F5B', label: 'Guidance' },
+  coaching_session:   { icon: '🎓', color: '#9747FF', label: 'Coaching' },
 }
 
 function timeAgo(ts) {
@@ -35,7 +36,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     setClosing(true)
     setTimeout(onClose, 180)
   }
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, role } = useAuth()
   const { agents, scoreHistory, openScore } = useApp()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -138,15 +139,18 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     const score = linkedScore(n)
     // Guidance changes link to the QA Guidance page (admin-gated tab)
     const guidanceLink = n.type === 'rubric_updated' && isAdmin && !!onNavigate
-    const clickable = !!score || guidanceLink
+    // Shared coaching sessions link to the agent's Coaching page (agent-gated tab)
+    const coachingLink = n.type === 'coaching_session' && role === 'agent' && !!onNavigate
+    const clickable = !!score || guidanceLink || coachingLink
     return (
       <div key={n.id} role="button" tabIndex={0}
         onClick={() => {
           markRead(n.id)
           if (score) openLinkedScore(score)
           else if (guidanceLink) { onNavigate('rubric'); requestClose() }
+          else if (coachingLink) { onNavigate('coaching'); requestClose() }
         }}
-        title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : undefined}
+        title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : coachingLink ? 'Open your coaching page' : undefined}
         style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
         onMouseEnter={e => { e.currentTarget.style.background = '#FBF7F3'; e.currentTarget.querySelector('.notif-actions').style.opacity = 1 }}
         onMouseLeave={e => { e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'; e.currentTarget.querySelector('.notif-actions').style.opacity = 0 }}>
@@ -167,6 +171,12 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
               <>
                 <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
                 <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View changes →</span>
+              </>
+            )}
+            {coachingLink && (
+              <>
+                <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
+                <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View session →</span>
               </>
             )}
           </div>
