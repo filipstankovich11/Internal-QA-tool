@@ -502,7 +502,7 @@ export function AppProvider({ children }) {
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore,
-      notifyAdmins, notifyUsers, notifyScoreAgents,
+      notifyAdmins, notifyUsers, notifyScoreAgents, notifyAgents,
       claimScore, unclaimScore, assignScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,

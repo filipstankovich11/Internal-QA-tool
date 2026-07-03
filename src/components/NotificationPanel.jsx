@@ -16,6 +16,7 @@ const TYPE_META = {
   auto_fail_triggered:{ icon: '⚠️', color: '#D14B3D', label: 'Auto-fail' },
   batch_complete:     { icon: '📦', color: '#818cf8', label: 'Batch' },
   rubric_updated:     { icon: '📐', color: '#2F8F5B', label: 'Guidance' },
+  coaching_session:   { icon: '🎓', color: '#9747FF', label: 'Coaching' },
 }
 
 function timeAgo(ts) {
