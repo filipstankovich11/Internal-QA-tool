@@ -4,6 +4,13 @@ import { startPrefetch, resetPrefetch } from '../lib/prefetch'
 
 const AuthContext = createContext(null)
 
+// Only @gorgias.com addresses may use this tool. Enforced server-side by the
+// handle_new_user() trigger and the Google "Internal" consent screen; this is
+// the client-side guard that also catches session restore on reload.
+const ALLOWED_EMAIL_DOMAIN = '@gorgias.com'
+const isAllowedEmail = (email) =>
+  typeof email === 'string' && email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)
+
 export function AuthProvider({ children }) {
   const [user,            setUser]            = useState(null)
   const [profile,         setProfile]         = useState(null)
@@ -23,6 +30,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null
+
+      // Enforce @gorgias.com on session restore (e.g. page reload)
+      if (u && !isAllowedEmail(u.email)) {
+        supabase.auth.signOut()
+        setUser(null); setProfile(null); setLoading(false)
+        return
+      }
+
       setUser(u)
       if (u) {
         startPrefetch()        // fire app-data queries in parallel with profile fetch
@@ -32,6 +47,15 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const u = session?.user ?? null
+
+      // Enforce @gorgias.com domain for every authenticated session
+      // (OAuth sign-in, email/password, and token refresh)
+      if (u && !isAllowedEmail(u.email)) {
+        supabase.auth.signOut()
+        setUser(null); setProfile(null); setLoading(false)
+        return
+      }
+
       setUser(u)
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordReset(true)
@@ -53,6 +77,15 @@ export function AuthProvider({ children }) {
 
   const signIn = (email, password) =>
     supabase.auth.signInWithPassword({ email, password })
+
+  const signInWithGoogle = () =>
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: { hd: 'gorgias.com' }, // hint: show only gorgias.com accounts
+      },
+    })
 
   const signOut = () => supabase.auth.signOut()
 
@@ -77,7 +110,7 @@ export function AuthProvider({ children }) {
   const canScore = isAdmin || isLead
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, role, isAdmin, isLead, canEdit, canScore, signIn, signOut, updatePassword, updateProfile, sendPasswordReset, isPasswordReset, setIsPasswordReset }}>
+    <AuthContext.Provider value={{ user, profile, loading, role, isAdmin, isLead, canEdit, canScore, signIn, signInWithGoogle, signOut, updatePassword, updateProfile, sendPasswordReset, isPasswordReset, setIsPasswordReset }}>
       {children}
     </AuthContext.Provider>
   )
