@@ -244,7 +244,7 @@ export function AssignTeamsModal({ agents, teams, onSave, onClose }) {
   )
 }
 
-export function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
+export function ImportGorgiasModal({ agents, teams, onSave, onClose, onManualAdd }) {
   const [gorgiasUsers, setGorgiasUsers] = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(null)
@@ -278,7 +278,7 @@ export function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
       await onSave(u.name, u.email, teamId || null, u.gorgias_user_id)
     }
     setImporting(false)
-    onClose()
+    onClose(selected.size)  // count lets the caller toast only on real imports
   }
 
   return (
@@ -366,6 +366,17 @@ export function ImportGorgiasModal({ agents, teams, onSave, onClose }) {
               className="g-btn-primary text-sm px-4 py-2 rounded-xl shrink-0"
               style={{ opacity: selected.size === 0 ? 0.4 : 1 }}>
               {importing ? 'Importing…' : `Import ${selected.size > 0 ? selected.size : ''}`}
+            </button>
+          </div>
+        )}
+
+        {/* Manual fallback — for people not in Gorgias, or when the fetch fails */}
+        {onManualAdd && (
+          <div className="px-5 py-2.5 border-t text-center" style={{ borderColor: '#EEEEEE' }}>
+            <button onClick={onManualAdd} className="text-xs transition-colors" style={{ color: '#B84A2E' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#FF9780'}
+              onMouseLeave={e => e.currentTarget.style.color = '#B84A2E'}>
+              Can't find someone? Add an agent manually →
             </button>
           </div>
         )}
