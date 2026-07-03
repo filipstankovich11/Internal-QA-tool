@@ -79,6 +79,23 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
+  const dismiss = async (id) => {
+    const { error } = await supabase.from('notifications').delete().eq('id', id)
+    if (error) { console.error('notification delete failed:', error); return }
+    setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  const [clearConfirm, setClearConfirm] = useState(false)
+  const clearAll = async () => {
+    if (!clearConfirm) { setClearConfirm(true); setTimeout(() => setClearConfirm(false), 3000); return }
+    const ids = notifications.map(n => n.id)
+    if (!ids.length) return
+    const { error } = await supabase.from('notifications').delete().in('id', ids)
+    if (error) { console.error('clear notifications failed:', error); return }
+    setNotifications([])
+    setClearConfirm(false)
+  }
+
   const unreadCount = notifications.filter(n => !n.read).length
   const newOnes = notifications.filter(n => !n.read)
   const earlier = notifications.filter(n => n.read)
@@ -115,7 +132,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     const guidanceLink = n.type === 'rubric_updated' && isAdmin && !!onNavigate
     const clickable = !!score || guidanceLink
     return (
-      <button key={n.id}
+      <div key={n.id} role="button" tabIndex={0}
         onClick={() => {
           markRead(n.id)
           if (score) openLinkedScore(score)
@@ -123,8 +140,8 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
         }}
         title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : undefined}
         style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
-        onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
-        onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'}>
+        onMouseEnter={e => { e.currentTarget.style.background = '#FBF7F3'; e.currentTarget.querySelector('.notif-actions').style.opacity = 1 }}
+        onMouseLeave={e => { e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'; e.currentTarget.querySelector('.notif-actions').style.opacity = 0 }}>
         <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 1 }}>{meta.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ color: n.read ? 'rgba(26,30,35,.6)' : '#1A1E23', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>{n.message}</p>
@@ -146,8 +163,21 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
             )}
           </div>
         </div>
+        {/* Hover actions: mark one as read without navigating, or dismiss it */}
+        <div className="notif-actions" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, opacity: 0, transition: 'opacity 120ms' }}>
+          {!n.read && (
+            <button onClick={e => { e.stopPropagation(); markRead(n.id) }} title="Mark as read"
+              style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'rgba(26,30,35,.5)', fontSize: 12, lineHeight: 1 }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#FFEAE6'; e.currentTarget.style.color = '#B84A2E' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,30,35,.5)' }}>✓</button>
+          )}
+          <button onClick={e => { e.stopPropagation(); dismiss(n.id) }} title="Dismiss notification"
+            style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'rgba(26,30,35,.5)', fontSize: 12, lineHeight: 1 }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#FEF6F4'; e.currentTarget.style.color = '#D14B3D' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,30,35,.5)' }}>✕</button>
+        </div>
         {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9780', flexShrink: 0, marginTop: 5 }} />}
-      </button>
+      </div>
     )
   }
 
@@ -201,6 +231,18 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
                 onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.6)'}
               >
                 Mark all read
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                onClick={clearAll}
+                className="text-xs transition-colors"
+                title="Delete all notifications"
+                style={{ color: clearConfirm ? '#D14B3D' : 'rgba(26,30,35,.6)', fontWeight: clearConfirm ? 600 : 400 }}
+                onMouseEnter={e => e.target.style.color = '#D14B3D'}
+                onMouseLeave={e => e.target.style.color = clearConfirm ? '#D14B3D' : 'rgba(26,30,35,.6)'}
+              >
+                {clearConfirm ? 'Sure? Click again' : 'Clear all'}
               </button>
             )}
             <button
