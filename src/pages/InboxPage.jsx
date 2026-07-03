@@ -285,8 +285,8 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function InboxPage() {
-  const { scoreHistory, acknowledgeScore, flagScore, openScore: showScore } = useApp()
-  const { role } = useAuth()
+  const { scoreHistory, acknowledgeScore, flagScore, notifyAdmins, openScore: showScore } = useApp()
+  const { role, profile } = useAuth()
   const toast  = useToast()
 
   // scoreHistory is already scoped to the agent's own scores via AppContext
@@ -324,7 +324,11 @@ export default function InboxPage() {
   })
 
   const handleAckAll = async () => {
-    await Promise.all(unread.map(s => acknowledgeScore(s.id)))
+    // Silent per-ticket acks + one aggregate notification, so admins aren't
+    // pinged once per ticket.
+    await Promise.all(unread.map(s => acknowledgeScore(s.id, { silent: true })))
+    notifyAdmins('score_acknowledged',
+      `${profile?.name || 'An agent'} marked ${unread.length} graded ticket${unread.length !== 1 ? 's' : ''} as seen`)
     toast.success(`Marked ${unread.length} score${unread.length !== 1 ? 's' : ''} as seen`)
   }
 

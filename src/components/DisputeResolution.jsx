@@ -17,7 +17,7 @@ function relTime(ts) {
 
 // Resolve a disputed score: review the thread, reply, then uphold or revise.
 export default function DisputeResolution({ score, onClose, onResolved }) {
-  const { clearDispute, overrideScore } = useApp()
+  const { clearDispute, overrideScore, notifyScoreAgents } = useApp()
   const { user, profile, role } = useAuth()
   const toast = useToast()
   const sid = score.scoreId || score.id
@@ -45,6 +45,11 @@ export default function DisputeResolution({ score, onClose, onResolved }) {
     const { error } = await postMessage(reply.trim())
     setPosting(false)
     if (error) { toast.error('Failed to post reply'); return }
+    // Plain replies don't resolve the dispute (uphold/revise notify via
+    // dispute_cleared/score_overridden), so ping the agent directly.
+    const tid = score.ticket_id || score.ticketId
+    notifyScoreAgents(sid, 'dispute_reply',
+      `${profile?.name || 'A reviewer'} replied to your dispute${tid ? ` on ticket #${tid}` : ''}`)
     setReply(''); load()
   }
 

@@ -133,11 +133,14 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
           {isAdmin && (
             claimedBy
               ? <span className="text-xs px-2 py-1 rounded-lg truncate"
-                  style={{ background: '#FFEAE6', color: '#B84A2E', border: '1px solid #FFEAE6' }}
-                  title={`Claimed by ${claimedBy}`}>
+                  style={claimedBy === 'You'
+                    ? { background: '#FFEAE6', color: '#B84A2E', border: '1px solid #FFEAE6' }
+                    : { background: '#F1ECE8', color: 'rgba(26,30,35,.72)', border: '1px solid #E7E3DF' }}
+                  title={claimedBy === 'You' ? 'Claimed by you' : `Assigned to ${claimedBy}`}>
                   ● {claimedBy.split(' ')[0]}
                   <button onClick={() => onUnclaim(item.id)}
-                    className="ml-1.5 opacity-60 hover:opacity-100" style={{ color: '#B84A2E' }}>✕</button>
+                    className="ml-1.5 opacity-60 hover:opacity-100"
+                    style={{ color: claimedBy === 'You' ? '#B84A2E' : 'rgba(26,30,35,.6)' }}>✕</button>
                 </span>
               : <button onClick={() => onClaim(item.id)}
                   className="text-xs px-2 py-1 rounded-lg transition-colors"
@@ -196,11 +199,14 @@ export default function ReviewQueuePage() {
   const [profiles,     setProfiles]     = useState({})   // id → name, for "claimed by" display
   const [reviewers,    setReviewers]    = useState([])   // assignable reviewers (non-agents)
 
-  // Resolve claimer names + the list of reviewers a ticket can be assigned to
+  // Resolve claimer names + the list of reviewers a ticket can be assigned to.
+  // Via RPC (security definer): direct profiles reads are RLS-scoped to the
+  // caller's own row for leads, which blanked out other reviewers' names.
   useEffect(() => {
-    supabase.from('profiles').select('id, name, role').then(({ data }) => {
+    supabase.rpc('list_reviewer_profiles').then(({ data, error }) => {
+      if (error) { console.error('reviewer profiles fetch failed:', error); return }
       const map = {}; (data || []).forEach(p => { map[p.id] = p.name }); setProfiles(map)
-      setReviewers((data || []).filter(p => p.role && p.role !== 'agent' && p.name))
+      setReviewers((data || []).filter(p => p.name))
     })
   }, [])
 
@@ -212,7 +218,7 @@ export default function ReviewQueuePage() {
     return () => { clearTimeout(t); document.removeEventListener('click', close) }
   }, [assignOpen])
   const claimedName = (s) =>
-    !isClaimActive(s) ? null : (s.claimedBy === user?.id ? 'You' : (profiles[s.claimedBy] || 'Another reviewer'))
+    !isClaimActive(s) ? null : (s.claimedBy === user?.id ? 'You' : (profiles[s.claimedBy] || 'Reviewer'))
 
   // Queue buckets
   const needsReview = useMemo(() => scoreHistory.filter(s => !s.reviewedAt && s.effectiveVerdict === 'NEEDS_REVIEW' && !s.overrideVerdict), [scoreHistory])

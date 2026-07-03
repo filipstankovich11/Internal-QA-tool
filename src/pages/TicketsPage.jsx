@@ -213,7 +213,7 @@ export default function TicketsPage() {
               {/* Score */}
               <span className="text-sm font-bold tabular-nums text-right"
                 style={{ color: s.weightedScore >= 80 ? '#10b981' : s.weightedScore >= 60 ? '#f59e0b' : '#ef4444' }}>
-                {s.weightedScore?.toFixed(0)}/100
+                {Number(s.weightedScore ?? 0).toFixed(0)}/100
               </span>
 
               {/* Verdict */}

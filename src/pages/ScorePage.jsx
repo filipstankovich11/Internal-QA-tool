@@ -194,8 +194,7 @@ function ViewCombobox({ views, value, onChange, loading, disabled }) {
               </svg>
               <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown}
                 placeholder="Search views…"
-                className="w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none"
-                style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23' }} />
+                className="g-input w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none" />
             </div>
           </div>
           {/* List */}
@@ -347,7 +346,7 @@ function ResultRow({ result, onView }) {
       </a>
       <span className="text-xs flex-1 truncate" style={{ color: '#1A1E23' }}>{result.fullScore?.ticket_subject || '—'}</span>
       {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'rgba(26,30,35,.6)' }}>{result.agentName}</span>}
-      <span className="text-xs shrink-0 tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{result.weightedScore?.toFixed(0)}/100</span>
+      <span className="text-xs shrink-0 tabular-nums" style={{ color: 'rgba(26,30,35,.6)' }}>{Number(result.weightedScore ?? 0).toFixed(0)}/100</span>
       {color && <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>{VERDICT_LABEL[result.verdict]}</span>}
     </button>
   )
@@ -356,8 +355,8 @@ function ResultRow({ result, onView }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ScorePage() {
-  const { scoreHistory, addScore, agents, rubric, openScore } = useApp()
-  const { canScore } = useAuth()
+  const { scoreHistory, addScore, agents, rubric, openScore, notifyUsers } = useApp()
+  const { canScore, user } = useAuth()
 
   const [mode,        setMode]        = useState('single')
 
@@ -430,19 +429,25 @@ export default function ScorePage() {
   const runBatch = async () => {
     if (!ticketIds.length || running) return
     setRunning(true); setResults([]); abortRef.current = false
+    let okCount = 0, failCount = 0
     for (const raw of ticketIds) {
       if (abortRef.current) break
       const ticketId = String(raw).replace(/.*\/ticket\//, '').trim()
       try {
         const { ok, data } = await authFetchJson('/api/score', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: ticketId, rubric, few_shot_examples: fewShotExamples }) })
-        if (!ok) { setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
+        if (!ok) { failCount++; setResults(p => [...p, { ticketId, error: data.error || 'Failed' }]); continue }
         const saved = await addScore(data)
-        if (saved?.error) { setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
+        if (saved?.error) { failCount++; setResults(p => [...p, { ticketId, error: `Scored but not saved: ${saved.error.message || 'database error'}` }]); continue }
         const agentName = (data.agent_senders || []).map(s => s.name).filter(Boolean).join(', ') || null
-        setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: data.weighted_score, agentName, fullScore: data }])
-      } catch (e) { setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
+        okCount++
+        setResults(p => [...p, { ticketId: data.ticket_id, verdict: data.verdict, weightedScore: Number(data.weighted_score) || 0, agentName, fullScore: data }])
+      } catch (e) { failCount++; setResults(p => [...p, { ticketId, error: e.message || 'Network error' }]) }
     }
     setRunning(false)
+    if (user?.id && (okCount || failCount)) {
+      notifyUsers([user.id], 'batch_complete',
+        `Batch finished — ${okCount} scored${failCount ? `, ${failCount} failed` : ''} of ${ticketIds.length} ticket${ticketIds.length !== 1 ? 's' : ''}`)
+    }
   }
 
   const switchMode = m => { setMode(m); setTicketIds([]); setResults([]) }

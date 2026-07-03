@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 import { startPrefetch } from '../lib/prefetch'
+import { diffRubric } from '../lib/rubricDiff'
 
 const AppContext = createContext(null)
 
@@ -79,7 +80,7 @@ export const DEFAULT_RUBRIC = {
 }
 
 export function AppProvider({ children }) {
-  const { role, user } = useAuth()
+  const { role, user, profile } = useAuth()
 
   const [teams,        setTeams]        = useState([])
   const [agents,       setAgents]       = useState([])
@@ -225,6 +226,9 @@ export function AppProvider({ children }) {
 
   // ── Scores ─────────────────────────────────────────────────────────────────
   const addScore = async (scoreResult) => {
+    // The model occasionally returns weighted_score as a JSON string; coerce
+    // before it reaches the DB column and the persisted full_score JSON.
+    scoreResult = { ...scoreResult, weighted_score: Number(scoreResult.weighted_score) || 0 }
     const agentIds = []
     for (const sender of scoreResult.agent_senders || []) {
       const match = agents.find(a =>
@@ -261,6 +265,16 @@ export function AppProvider({ children }) {
       const filtered = prev.filter(s => s.ticketId !== scoreResult.ticket_id)
       return [entry, ...filtered].slice(0, 500)
     })
+    if (entry.agentIds.length) {
+      const verdict = { PASS: 'Pass', NEEDS_REVIEW: 'Needs review', FAIL: 'Fail' }[entry.effectiveVerdict] || entry.effectiveVerdict
+      notifyAgents(entry.agentIds, 'score_published',
+        `Your ticket #${entry.ticketId} was graded — ${Math.round(entry.effectiveScore)}/100 · ${verdict}`, entry.id)
+    }
+    if (scoreResult.auto_fail?.triggered) {
+      const conds = (scoreResult.auto_fail.conditions || []).join(', ')
+      notifyAdmins('auto_fail_triggered',
+        `Auto-fail triggered on ticket #${entry.ticketId}${conds ? ` — ${conds}` : ''}`, entry.id)
+    }
     return entry
   }
 
@@ -273,18 +287,35 @@ export function AppProvider({ children }) {
   // ── Notifications ──────────────────────────────────────────────────────────
   const notifyAgents = async (agentIds, type, message, scoreId = null) => {
     if (!agentIds?.length) return
-    await supabase.from('notifications').insert(
+    const { error } = await supabase.from('notifications').insert(
       agentIds.map(agent_id => ({ agent_id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
     )
+    if (error) console.error('notifyAgents failed:', error)
   }
 
+  // RPC (security definer) rather than select-profiles-then-insert: profiles
+  // RLS is read-own-only for non-admins, so the client-side lookup silently
+  // returned zero admins whenever an agent triggered the notification.
   const notifyAdmins = async (type, message, scoreId = null) => {
-    const { data: admins } = await supabase
-      .from('profiles').select('id').in('role', ['admin', 'lead'])
-    if (!admins?.length) return
-    await supabase.from('notifications').insert(
-      admins.map(a => ({ user_id: a.id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
+    const { error } = await supabase.rpc('notify_admins', {
+      p_type: type, p_message: message, p_score_id: scoreId,
+    })
+    if (error) console.error('notifyAdmins failed:', error)
+  }
+
+  // Direct user_id-targeted notifications (assignments, batch completion, …)
+  const notifyUsers = async (userIds, type, message, scoreId = null) => {
+    if (!userIds?.length) return
+    const { error } = await supabase.from('notifications').insert(
+      userIds.map(user_id => ({ user_id, type, message, ...(scoreId ? { score_id: scoreId } : {}) }))
     )
+    if (error) console.error('notifyUsers failed:', error)
+  }
+
+  // Notify the agents attached to a score, for callers that only hold its id
+  const notifyScoreAgents = (scoreId, type, message) => {
+    const s = scoreHistory.find(x => x.id === scoreId)
+    if (s?.agentIds?.length) notifyAgents(s.agentIds, type, message, scoreId)
   }
 
   // Reviewer-tagged evidence — overwrites the whole { [criterionId]: [msgId,...] } map
@@ -315,7 +346,7 @@ export function AppProvider({ children }) {
       setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, disputed: true, disputeNote: note, disputeAt: Date.now() } : s))
       const score = scoreHistory.find(s => s.id === id)
       notifyAdmins('dispute_submitted',
-        `An agent disputed a score for ticket #${score?.ticketId || id}`, id)
+        `${profile?.name || 'An agent'} disputed a score for ticket #${score?.ticketId || id}`, id)
     }
     return !error
   }
@@ -340,6 +371,11 @@ export function AppProvider({ children }) {
     const { error } = await supabase.from('scores').update({ claimed_by: userId, claimed_at: new Date().toISOString() }).eq('id', id)
     if (error) { console.error('assignScore failed:', error); return error }
     setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, claimedBy: userId, claimedAt: Date.now() } : s))
+    if (userId && userId !== user?.id) {
+      const s = scoreHistory.find(x => x.id === id)
+      notifyUsers([userId], 'score_assigned',
+        `${profile?.name || 'A lead'} assigned you ticket #${s?.ticketId || id} to review`, id)
+    }
     return null
   }
 
@@ -363,11 +399,20 @@ export function AppProvider({ children }) {
     return !error
   }
 
-  const acknowledgeScore = async (id) => {
+  // silent: used by bulk "mark all as seen" so admins get one aggregate
+  // notification (sent by the caller) instead of one per ticket.
+  const acknowledgeScore = async (id, { silent = false } = {}) => {
     const { error } = await supabase.from('scores').update({
       acknowledged: true, acknowledged_at: new Date().toISOString(),
     }).eq('id', id)
-    if (!error) setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, acknowledged: true, acknowledgedAt: Date.now() } : s))
+    if (!error) {
+      setScoreHistory(prev => prev.map(s => s.id === id ? { ...s, acknowledged: true, acknowledgedAt: Date.now() } : s))
+      if (!silent) {
+        const score = scoreHistory.find(s => s.id === id)
+        notifyAdmins('score_acknowledged',
+          `${profile?.name || 'An agent'} marked graded ticket #${score?.ticketId || id} as seen`, id)
+      }
+    }
     return !error
   }
 
@@ -415,10 +460,24 @@ export function AppProvider({ children }) {
   // ── Rubric ─────────────────────────────────────────────────────────────────
   const updateRubric = async (config) => {
     const { data: { user } } = await supabase.auth.getUser()
+    const changes = diffRubric(rubric, config)
     const { error } = await supabase.from('rubric').upsert({
       id: 1, config, updated_by: user?.id, updated_at: new Date().toISOString(),
     })
-    if (!error) setRubric(config)
+    if (!error) {
+      setRubric(config)
+      if (changes.length) {
+        // Snapshot for the change-history view on the QA Guidance page
+        const { error: revErr } = await supabase.from('rubric_revisions').insert({
+          config, summary: changes, changed_by: user?.id, changed_by_name: profile?.name || null,
+        })
+        if (revErr) console.error('rubric revision insert failed:', revErr)
+        const head = changes.slice(0, 2).join('; ')
+        const more = changes.length > 2 ? ` (+${changes.length - 2} more)` : ''
+        notifyAdmins('rubric_updated',
+          `${profile?.name || 'Someone'} updated the QA guidance — ${head}${more}`)
+      }
+    }
     return !error
   }
 
@@ -443,6 +502,7 @@ export function AppProvider({ children }) {
       addTeam, updateTeam, deleteTeam,
       addAgent, updateAgent, deleteAgent,
       addScore, deleteScore, updateScoreNote, updateReviewerEvidence, overrideScore, flagScore, clearDispute, acknowledgeScore,
+      notifyAdmins, notifyUsers, notifyScoreAgents,
       claimScore, unclaimScore, assignScore, markReviewed, reopenReview,
       updateRubric,
       getAgentScores, getTeamScores, avgScore,

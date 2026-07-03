@@ -369,15 +369,10 @@ export default function AgentsPage() {
         </div>
         {canEdit && (
           <div className="flex items-center gap-2">
-            {/* Balanced toolbar — Import/Assign are visible outlined peers; Add Agent
-                stays the filled primary but at the same compact size. */}
-            <button onClick={() => setShowImportModal(true)}
-              className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
-              Import from Gorgias
-            </button>
+            {/* One add path: the primary button opens the Gorgias import (the
+                source of truth); manual entry lives inside it as a fallback
+                link, so hand-added agents that don't match Gorgias sender ids
+                stay the exception. */}
             <button onClick={() => setShowAssignModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
               style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
@@ -385,8 +380,8 @@ export default function AgentsPage() {
               onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
               Assign Teams
             </button>
-            <button onClick={() => setShowAddModal(true)} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg whitespace-nowrap">
-              + Add Agent
+            <button onClick={() => setShowImportModal(true)} className="g-btn-primary text-xs px-3 py-1.5 rounded-lg whitespace-nowrap">
+              + Add Agents
             </button>
           </div>
         )}
@@ -530,7 +525,9 @@ export default function AgentsPage() {
       )}
 
       {showAddModal    && <AddAgentModal teams={teams} onSave={handleAddAgent} onClose={() => setShowAddModal(false)} />}
-      {showImportModal && <ImportGorgiasModal agents={agents} teams={teams} onSave={handleImport} onClose={() => { setShowImportModal(false); toast.success('Agents imported') }} />}
+      {showImportModal && <ImportGorgiasModal agents={agents} teams={teams} onSave={handleImport}
+        onClose={(count) => { setShowImportModal(false); if (count > 0) toast.success('Agents imported') }}
+        onManualAdd={() => { setShowImportModal(false); setShowAddModal(true) }} />}
       {showAssignModal && <AssignTeamsModal agents={agents} teams={teams} onSave={handleAssign} onClose={() => { setShowAssignModal(false); toast.success('Teams updated') }} />}
       {editAgent && <EditAgentModal agent={editAgent} profiles={profiles} onSave={updateAgent} onClose={() => setEditAgent(null)} />}
       {historyAgent && (() => {

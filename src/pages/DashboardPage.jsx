@@ -147,7 +147,7 @@ function ScoreTrend({ scores, onDayClick, selectedDay }) {
     : null
 
   return (
-    <div className="p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+    <div className="p-5 h-full" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
 
       {/* Header — shows back pill when a day is selected */}
       <div className="flex items-center justify-between mb-4">
@@ -404,7 +404,7 @@ export default function DashboardPage() {
 
   return (
     <div className="panel-push">
-    <div className="max-w-5xl mx-auto px-8 pt-8 pb-14">
+    <div className="max-w-7xl mx-auto px-8 pt-8 pb-14">
 
       {/* Header */}
       <div className="mb-8">
@@ -433,9 +433,10 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Distribution + Trend */}
-      <div className="grid sm:grid-cols-2 gap-4 mb-6">
-        <div className="p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+      {/* Distribution + Trend — 2:3 split on wide screens; the trend chart
+          benefits from the extra width more than the fixed-size donut */}
+      <div className="grid sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
+        <div className="p-5 xl:col-span-2" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
           <div className="flex items-center justify-between mb-4">
             <p className="g-label" style={{ margin: 0 }}>Score distribution<ScoreInfoPopover rubric={rubric} /></p>
             <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
@@ -503,7 +504,9 @@ export default function DashboardPage() {
             )
           })()}
         </div>
-        <ScoreTrend scores={filteredScores} onDayClick={handleDayClick} selectedDay={selectedDay} />
+        <div className="xl:col-span-3">
+          <ScoreTrend scores={filteredScores} onDayClick={handleDayClick} selectedDay={selectedDay} />
+        </div>
       </div>
 
       {/* Full-width average-score trend */}

@@ -79,6 +79,12 @@
   from { opacity: 0; transform: translateX(-12px); }
   to   { opacity: 1; transform: translateX(0);     }
 }
+@keyframes slideOutPanel {
+  to { transform: translateX(-100%); opacity: 0.6; }
+}
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
 
 .modal-enter   { animation: modalIn   0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 .overlay-enter { animation: fadeIn   0.15s ease-out; }
@@ -101,6 +107,65 @@
   width: 45%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.30), transparent);
   animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Flying-files scoring loader — ported from Uiverse.io by nawinasokan
+   (terrible-cheetah-45), recolored from purple to Gorgias coral. Small
+   "ticket" cards fly across, scaling up mid-flight, staggered via --i. */
+.loader-con {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  overflow: hidden;
+}
+.pfile {
+  position: absolute;
+  bottom: 25px;
+  width: 40px;
+  height: 50px;
+  background: linear-gradient(90deg, #ff6b4a, #FF9780);
+  border-radius: 4px;
+  transform-origin: center;
+  animation: flyRight 3s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.6s);
+  opacity: 0;
+}
+.pfile::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 4px;
+  background-color: #ffffff;
+  border-radius: 2px;
+}
+.pfile::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 6px;
+  width: 18px;
+  height: 4px;
+  background-color: #ffffff;
+  border-radius: 2px;
+}
+@keyframes flyRight {
+  0% {
+    left: -10%;
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    left: 45%;
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    transform: scale(0);
+    opacity: 0;
+  }
 }
 
 .stagger-item {
@@ -173,6 +238,53 @@
 }
 .g-btn-ghost:hover { color: var(--ink); background: #F6F2EF; }
 
+/* ── Transcript message blocks — hover lift + coral top-bar sweep ──────────── */
+.tt-block { position: relative; overflow: hidden; }
+.tt-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  opacity: 0;
+  border-radius: 99px;
+  background: var(--g-coral, #FF9780);
+  transition: width 0.45s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+.tt-block:hover { transform: translateY(-2px); }
+.tt-block:hover::before { width: 100%; opacity: 1; }
+
+/* Glass-glare sweep over cited messages when a criterion is focused — a
+   skewed light band glides across the block like a reflection, instead of a
+   color flood. Remounted (keyed) per focus change so it restarts each time. */
+.tt-flash-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.tt-flash-overlay::before {
+  content: "";
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 55%;
+  transform: translateX(-130%) skewX(-18deg);
+  background: linear-gradient(105deg,
+    transparent,
+    rgba(255, 255, 255, 0.55) 45%,
+    rgba(255, 255, 255, 0.22) 60%,
+    transparent);
+  animation: ttGlassSweep 0.8s ease-in-out 0.15s 2;
+}
+@keyframes ttGlassSweep {
+  to { transform: translateX(320%) skewX(-18deg); }
+}
+
 /* ── Accessibility ──────────────────────────────────────────────────────────── */
 /* Visible keyboard-focus ring — shows only for keyboard nav (:focus-visible),
    never on mouse clicks. Buttons/links/nav items had no focus indicator before. */
@@ -181,11 +293,10 @@
   outline-offset: 2px;
   border-radius: 5px;
 }
-/* Form controls often set inline `outline: none`, which beats the rule above —
-   give them a box-shadow ring instead (the .g-input :focus ring still wins for inputs). */
-input:focus-visible, select:focus-visible, textarea:focus-visible {
-  box-shadow: 0 0 0 3px rgba(255, 151, 128, 0.30);
-}
+/* Form controls: text inputs match :focus-visible even on mouse click, so a
+   loud global ring here doubles up with each input's own focus style on every
+   click. Inputs get their focus indication from .g-input:focus (subtle coral
+   border + soft ring) instead. */
 
 /* Respect users who prefer reduced motion — neutralize transitions and the
    page/modal/stagger/shimmer/skeleton animations rather than flashing them. */

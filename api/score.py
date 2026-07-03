@@ -158,6 +158,12 @@ def score():
         result = score_ticket(claude, ticket, messages, rubric=rubric, few_shot_examples=few_shot_examples)
         result['agent_senders'] = extract_agent_senders(ticket, messages)
         result['ticket_subject'] = ticket.get('subject', '')
+        # The model sometimes returns weighted_score as a JSON string (the
+        # prompt template shows it quoted) — coerce so clients get a number.
+        try:
+            result['weighted_score'] = float(result.get('weighted_score', 0))
+        except (TypeError, ValueError):
+            result['weighted_score'] = 0.0
     except Exception as e:
         return jsonify({'error': f'Scoring failed: {e}'}), 500
 
