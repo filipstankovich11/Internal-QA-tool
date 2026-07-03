@@ -35,6 +35,7 @@ const AgentsPage       = lazy(() => import('./pages/AgentsPage'))
 const AgentProfilePage = lazy(() => import('./pages/AgentProfilePage'))
 const InboxPage        = lazy(() => import('./pages/InboxPage'))
 const CoachingPage     = lazy(() => import('./pages/CoachingPage'))
+const CoachingHubPage  = lazy(() => import('./pages/CoachingHubPage'))
 const TeamsPage        = lazy(() => import('./pages/TeamsPage'))
 const RubricPage       = lazy(() => import('./pages/RubricPage'))
 const ReviewQueuePage  = lazy(() => import('./pages/ReviewQueuePage'))
@@ -59,6 +60,7 @@ function Router({ page, role }) {
     case 'agents':    return role === 'agent' ? <AgentProfilePage /> : <AgentsPage />
     case 'inbox':     return <InboxPage />
     case 'coaching':  return <CoachingPage />
+    case 'coachinghub': return <CoachingHubPage />
     case 'teams':     return <TeamsPage />
     case 'rubric':       return <RubricPage />
     default:             return <ScorePage />
@@ -104,7 +106,7 @@ function AppShell() {
     // pre-profile state (or a token refresh) would bounce a permitted user off their page.
     if (loading || !role) return
     const blocked =
-      (['score', 'review', 'teams'].includes(page) && !canScore) ||
+      (['score', 'review', 'teams', 'coachinghub'].includes(page) && !canScore) ||
       (['myqueue', 'rubric'].includes(page) && !isAdmin) ||
       (['inbox', 'coaching'].includes(page) && !isAgent)
     if (blocked) setPage('dashboard')
