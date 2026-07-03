@@ -255,19 +255,22 @@ export default function CoachingHubPage() {
 
       for (const d of dims) {
         for (const c of d.criteria || []) {
-          const cells = theirScores
+          const rows = theirScores
             .map(s => ({ s, v: Number(s.fullScore?.scores?.[d.id]?.[c.id]?.score) }))
             .filter(x => Number.isFinite(x.v))
+          // A re-scored ticket has multiple score rows — count each ticket once,
+          // using its latest score, so superseded grades don't skew the average
+          const byTicket = new Map()
+          for (const x of rows) {
+            const prev = byTicket.get(x.s.ticketId)
+            if (!prev || x.s.scoredAt > prev.s.scoredAt) byTicket.set(x.s.ticketId, x)
+          }
+          const cells = [...byTicket.values()]
           if (cells.length < 2) continue
           const avg = cells.reduce((sum, x) => sum + x.v, 0) / cells.length
           const latest = Math.max(...cells.map(x => x.s.scoredAt))
-          // A re-scored ticket has multiple score rows — link each ticket once
-          const uniqByTicket = (arr) => {
-            const seen = new Set()
-            return arr.filter(x => !seen.has(x.s.ticketId) && seen.add(x.s.ticketId))
-          }
-          const sorted = uniqByTicket([...cells].sort((x, y) => x.v - y.v || y.s.scoredAt - x.s.scoredAt))
-          const sortedBest = uniqByTicket([...cells].sort((x, y) => y.v - x.v || y.s.scoredAt - x.s.scoredAt))
+          const sorted = [...cells].sort((x, y) => x.v - y.v || y.s.scoredAt - x.s.scoredAt)
+          const sortedBest = [...cells].sort((x, y) => y.v - x.v || y.s.scoredAt - x.s.scoredAt)
           const base = {
             agentId: a.id, agentName: a.name, agentInitial: initial, agentBg: bg,
             dimension: d.name, foundAt: relFound(latest),
@@ -422,7 +425,9 @@ export default function CoachingHubPage() {
     })
   }
 
-  const persistSession = async (patch, complete) => {
+  // silent: persist without toasts/state churn — used to save edits right
+  // before navigation unmounts the session view. Returns the saved row or null.
+  const persistSession = async (patch, complete, silent = false) => {
     const merged = { ...activeSession, ...patch }
     setSaving(true)
     const row = {
@@ -431,8 +436,9 @@ export default function CoachingHubPage() {
       ai_summary: merged.ai_summary, agenda: merged.agenda, notes: merged.notes,
       action_items: merged.action_items, evidence: merged.evidence,
       visible_to_agent: merged.visible_to_agent,
-      created_by: user?.id, created_by_name: profile?.name || null,
       updated_at: new Date().toISOString(),
+      // Creator is stamped once — later editors shouldn't take over the row
+      ...(merged.id ? {} : { created_by: user?.id, created_by_name: profile?.name || null }),
       ...(complete ? { completed_at: new Date().toISOString() } : {}),
     }
     const q = merged.id
@@ -443,7 +449,7 @@ export default function CoachingHubPage() {
     if (error) {
       console.error('coaching session save failed:', error)
       toast.error('Failed to save session — has the coaching_sessions migration been run?')
-      return
+      return null
     }
     fetchSessions()
     if (complete) {
@@ -454,11 +460,44 @@ export default function CoachingHubPage() {
       if (merged.opportunity_key) dismiss(merged.opportunity_key)
       toast.success('Session completed')
       setActiveSession(null)
-    } else {
+    } else if (!silent) {
       toast.success('Draft saved')
       setActiveSession({ ...merged, id: data.id, status: data.status })
     }
+    return data
   }
+
+  // Opening a score swaps the whole routed page for the score view (see
+  // MainContent in App.jsx), unmounting this page and the session editor. So
+  // before navigating: save the draft, stash its id, and restore it on remount.
+  const RESUME_KEY = 'gorgias_qa_coaching_resume'
+  const openTicketFromSession = async (t, patch) => {
+    if (!t.scoreId || !scoreHistory.some(x => x.id === t.scoreId)) return
+    let id = activeSession.id
+    if (activeSession.status !== 'completed') {
+      const saved = await persistSession(patch, false, true)
+      if (!saved) return  // save failed — keep the editor on screen
+      id = saved.id
+    }
+    try { sessionStorage.setItem(RESUME_KEY, id) } catch { /* ignore */ }
+    openTicket(t.scoreId)
+  }
+  const openScorecardFromSession = async (patch) => {
+    if (activeSession.status !== 'completed') {
+      const saved = await persistSession(patch, false)
+      if (!saved) return
+    }
+    navigate('agents')
+  }
+  useEffect(() => {
+    if (activeSession || !sessions.length) return
+    let id = null
+    try { id = sessionStorage.getItem(RESUME_KEY) } catch { /* ignore */ }
+    if (!id) return
+    try { sessionStorage.removeItem(RESUME_KEY) } catch { /* ignore */ }
+    const row = sessions.find(s => s.id === id)
+    if (row) setActiveSession(row)
+  }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openSessionRow = (row) => { setLogOpen(false); setActiveSession(row) }
 
@@ -502,8 +541,8 @@ export default function CoachingHubPage() {
           onSaveDraft={(patch) => persistSession(patch, false)}
           onComplete={(patch) => persistSession(patch, true)}
           onRedraft={originOpp ? (() => draftFromOpportunity(originOpp)) : null}
-          onOpenTicket={(t) => t.scoreId && openTicket(t.scoreId)}
-          onOpenScorecard={() => navigate('agents')}
+          onOpenTicket={openTicketFromSession}
+          onOpenScorecard={openScorecardFromSession}
         />
       </div>
     )

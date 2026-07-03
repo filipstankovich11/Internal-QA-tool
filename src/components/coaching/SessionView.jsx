@@ -7,7 +7,9 @@ import { useState } from 'react'
  *
  * `session` shape mirrors the coaching_sessions row (agenda/action_items/
  * evidence as plain arrays). All edits are collected locally and handed back
- * via onSaveDraft(patch) / onComplete(patch).
+ * via onSaveDraft(patch) / onComplete(patch). Navigation callbacks
+ * (onOpenTicket/onOpenScorecard) also receive the current patch — opening a
+ * score unmounts this view, so the parent needs it to save edits first.
  */
 
 const ink = '#1A1E23'
@@ -180,7 +182,7 @@ export default function SessionView({
                     {(item.tickets || []).length > 0 && (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                         {item.tickets.map((t) => (
-                          <span key={t.scoreId || t.ticketId} style={S.ticketPill} onClick={() => onOpenTicket(t)}>
+                          <span key={t.scoreId || t.ticketId} style={S.ticketPill} onClick={() => onOpenTicket(t, patch())}>
                             #{t.ticketId}
                           </span>
                         ))}
@@ -280,7 +282,7 @@ export default function SessionView({
                   return (
                     <div key={t.scoreId || t.ticketId}
                       style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 10px', border: '1px solid #F0ECE9', borderRadius: 10, cursor: 'pointer' }}
-                      onClick={() => onOpenTicket(t)}>
+                      onClick={() => onOpenTicket(t, patch())}>
                       <span style={{ font: "500 11px/1 'Roboto'", color: pill.color, background: pill.bg, padding: '5px 8px', borderRadius: 9999, flex: 'none' }}>
                         {pill.glyph} {t.score}
                       </span>
@@ -321,7 +323,7 @@ export default function SessionView({
               </div>
               <div style={{ font: "400 11px/1.4 'Roboto'", marginTop: 16, paddingTop: 13, borderTop: '1px solid #F4F0ED', color: 'rgba(26,30,35,.5)' }}>
                 Full scorecard on the{' '}
-                <span style={{ color: '#FF9780', fontWeight: 500, cursor: 'pointer' }} onClick={onOpenScorecard}>
+                <span style={{ color: '#FF9780', fontWeight: 500, cursor: 'pointer' }} onClick={() => onOpenScorecard(patch())}>
                   Agents page →
                 </span>
               </div>
