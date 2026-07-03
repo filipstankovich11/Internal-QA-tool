@@ -194,8 +194,7 @@ function ViewCombobox({ views, value, onChange, loading, disabled }) {
               </svg>
               <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown}
                 placeholder="Search views…"
-                className="w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none"
-                style={{ background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23' }} />
+                className="g-input w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none" />
             </div>
           </div>
           {/* List */}

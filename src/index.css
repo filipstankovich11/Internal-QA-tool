@@ -287,11 +287,10 @@
   outline-offset: 2px;
   border-radius: 5px;
 }
-/* Form controls often set inline `outline: none`, which beats the rule above —
-   give them a box-shadow ring instead (the .g-input :focus ring still wins for inputs). */
-input:focus-visible, select:focus-visible, textarea:focus-visible {
-  box-shadow: 0 0 0 3px rgba(255, 151, 128, 0.30);
-}
+/* Form controls: text inputs match :focus-visible even on mouse click, so a
+   loud global ring here doubles up with each input's own focus style on every
+   click. Inputs get their focus indication from .g-input:focus (subtle coral
+   border + soft ring) instead. */
 
 /* Respect users who prefer reduced motion — neutralize transitions and the
    page/modal/stagger/shimmer/skeleton animations rather than flashing them. */
