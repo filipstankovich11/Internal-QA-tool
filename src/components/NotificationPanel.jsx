@@ -27,6 +27,14 @@ function timeAgo(ts) {
 }
 
 export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
+  // Animated close: slide the panel out (and fade the backdrop) before
+  // unmounting. All close paths route through requestClose.
+  const [closing, setClosing] = useState(false)
+  const requestClose = () => {
+    if (closing) return
+    setClosing(true)
+    setTimeout(onClose, 180)
+  }
   const { user, isAdmin } = useAuth()
   const { agents, scoreHistory, openScore } = useApp()
   const [notifications, setNotifications] = useState([])
@@ -122,7 +130,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
       acknowledged:    s.acknowledged,
       acknowledgedAt:  s.acknowledgedAt,
     })
-    onClose()
+    requestClose()
   }
 
   const renderRow = (n) => {
@@ -136,7 +144,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
         onClick={() => {
           markRead(n.id)
           if (score) openLinkedScore(score)
-          else if (guidanceLink) { onNavigate('rubric'); onClose() }
+          else if (guidanceLink) { onNavigate('rubric'); requestClose() }
         }}
         title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : undefined}
         style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
@@ -185,8 +193,11 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     <>
       {/* Backdrop — closes panel when clicking content area */}
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 45, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)' }}
-        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 45, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)',
+          animation: closing ? 'fadeOut 180ms ease forwards' : undefined,
+        }}
+        onClick={requestClose}
       />
 
       {/* Panel */}
@@ -203,7 +214,9 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 20px 48px rgba(0,0,0,.12)',
-          animation: 'slideInLeft 180ms cubic-bezier(0.16,1,0.3,1)',
+          animation: closing
+            ? 'slideOutPanel 180ms cubic-bezier(0.4,0,0.7,0.2) forwards'
+            : 'slideInLeft 180ms cubic-bezier(0.16,1,0.3,1)',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -246,7 +259,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
               </button>
             )}
             <button
-              onClick={onClose}
+              onClick={requestClose}
               className="text-xl leading-none transition-colors"
               style={{ color: 'rgba(26,30,35,.45)' }}
               onMouseEnter={e => e.target.style.color = '#1A1E23'}
