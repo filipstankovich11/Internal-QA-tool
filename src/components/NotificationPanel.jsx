@@ -16,7 +16,9 @@ const TYPE_META = {
   auto_fail_triggered:{ icon: '⚠️', color: '#D14B3D', label: 'Auto-fail' },
   batch_complete:     { icon: '📦', color: '#818cf8', label: 'Batch' },
   rubric_updated:     { icon: '📐', color: '#2F8F5B', label: 'Guidance' },
-  coaching_session:   { icon: '🎓', color: '#9747FF', label: 'Coaching' },
+  coaching_session:   { icon: '🎓', color: '#B84A2E', label: 'Coaching' },
+  coaching_goal:      { icon: '🧭', color: '#C8841E', label: 'Plan' },
+  team_post:          { icon: '📣', color: '#3B7DD8', label: 'Team' },
 }
 
 function timeAgo(ts) {
@@ -140,7 +142,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     // Guidance changes link to the QA Guidance page (admin-gated tab)
     const guidanceLink = n.type === 'rubric_updated' && isAdmin && !!onNavigate
     // Shared coaching sessions link to the agent's Coaching page (agent-gated tab)
-    const coachingLink = n.type === 'coaching_session' && role === 'agent' && !!onNavigate
+    const coachingLink = ['coaching_session', 'coaching_goal'].includes(n.type) && role === 'agent' && !!onNavigate
     const clickable = !!score || guidanceLink || coachingLink
     return (
       <div key={n.id} role="button" tabIndex={0}

@@ -111,6 +111,18 @@ export default function CoachingPage() {
       })
   }, [role])
 
+  // ── Coaching goals set by the lead (RLS returns only this agent's rows) ─────
+  const [goals, setGoals] = useState([])
+  useEffect(() => {
+    if (role !== 'agent') return
+    supabase.from('coaching_goals').select('*')
+      .eq('status', 'open').order('created_at', { ascending: false }).limit(20)
+      .then(({ data, error }) => {
+        if (error) { console.error('coaching goals fetch failed:', error); return }
+        setGoals(data || [])
+      })
+  }, [role])
+
   const openTicketById = (scoreId) => {
     const s = scoreHistory.find(x => x.id === scoreId)
     if (!s) return
@@ -189,7 +201,7 @@ export default function CoachingPage() {
     )
   }
 
-  if (scores.length === 0 && sessions.length === 0) {
+  if (scores.length === 0 && sessions.length === 0 && goals.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: 'rgba(26,30,35,.5)' }}>
         <p className="text-4xl mb-4">📋</p>
@@ -237,6 +249,42 @@ export default function CoachingPage() {
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Goals set by the lead */}
+      {goals.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-semibold mb-3" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Your Goals</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
+            Development goals from your lead — the linked tickets show where each one comes from.
+          </p>
+          <div className="flex flex-col gap-3">
+            {goals.map(g => (
+              <div key={g.id} className="rounded-2xl px-5 py-4"
+                style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium flex-1" style={{ color: '#1A1E23' }}>{g.title}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ color: '#C8841E', background: '#FBEBD3' }}>Open</span>
+                </div>
+                {g.detail && (
+                  <p className="text-sm leading-relaxed mt-2" style={{ color: 'rgba(26,30,35,.72)' }}>{g.detail}</p>
+                )}
+                <div className="flex items-center gap-2 flex-wrap mt-3">
+                  {(g.evidence || []).slice(0, 4).map(t => (
+                    <button key={t.scoreId || t.ticketId} onClick={() => t.scoreId && openTicketById(t.scoreId)}
+                      className="text-xs px-2.5 py-1.5 rounded-full"
+                      style={{ color: '#B84A2E', background: '#fff', border: '1px solid #F4DDD7', cursor: 'pointer' }}>
+                      #{t.ticketId}
+                    </button>
+                  ))}
+                  <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+                    {(g.evidence || []).length > 4 ? `+${g.evidence.length - 4} more · ` : ''}from {g.created_by_name || 'your lead'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
