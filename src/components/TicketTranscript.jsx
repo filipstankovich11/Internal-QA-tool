@@ -136,24 +136,32 @@ export default function TicketTranscript({
           </button>
         )}
       </div>
-      {ticketInfo && (ticketInfo.status || ticketInfo.priority || ticketInfo.channel || ticketInfo.tags?.length > 0) && (
+      {ticketInfo && (ticketInfo.status || ticketInfo.priority || ticketInfo.channel || ticketInfo.custom_fields?.length > 0) && (
         <div className="flex items-center gap-1.5 flex-wrap mb-3">
-          {(ticketInfo.tags || []).length > 0 && (
-            <span className="text-xs inline-flex items-center gap-1 font-medium" style={{ color: 'rgba(26,30,35,.4)' }} title="Tags applied to this ticket in Gorgias">
-              <TagIcon /> Tags:
+          {(ticketInfo.custom_fields || []).length > 0 && (
+            <span className="text-xs inline-flex items-center gap-1 font-medium" style={{ color: 'rgba(26,30,35,.4)' }} title="Field values set on this ticket in Gorgias">
+              <TagIcon /> Ticket fields:
             </span>
           )}
-          {(ticketInfo.tags || []).map((t, i) => (
-            <span key={i} className="text-xs px-2 py-0.5 rounded-full font-medium" title="Ticket tag" style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>{t}</span>
+          {(ticketInfo.custom_fields || []).map((f, i) => (
+            <span key={i} className="text-xs px-2 py-0.5 rounded-full font-medium" title={`${f.label} (Gorgias ticket field)`} style={{ background: '#FFF4F1', border: '1px solid #FFE0D6', color: '#B84A2E' }}>
+              <span style={{ opacity: 0.6 }}>{f.label}:</span> {f.value}
+            </span>
           ))}
           {ticketInfo.status && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket status" style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.65)' }}>{ticketInfo.status}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" title="Ticket status" style={{ background: '#F1ECE8', color: 'rgba(26,30,35,.65)' }}>
+              <span style={{ opacity: 0.6 }}>Status:</span> <span className="capitalize">{ticketInfo.status}</span>
+            </span>
           )}
           {ticketInfo.priority && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket priority" style={{ background: '#FBEBD3', color: '#8A6116' }}>{ticketInfo.priority}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" title="Ticket priority" style={{ background: '#FBEBD3', color: '#8A6116' }}>
+              <span style={{ opacity: 0.6 }}>Priority:</span> <span className="capitalize">{ticketInfo.priority}</span>
+            </span>
           )}
           {ticketInfo.channel && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize" title="Ticket channel" style={{ background: '#E6F0FA', color: '#2563AF' }}>{ticketInfo.channel}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium" title="Ticket channel" style={{ background: '#E6F0FA', color: '#2563AF' }}>
+              <span style={{ opacity: 0.6 }}>Channel:</span> <span className="capitalize">{ticketInfo.channel}</span>
+            </span>
           )}
         </div>
       )}

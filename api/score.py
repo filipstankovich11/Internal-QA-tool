@@ -45,6 +45,65 @@ def extract_ticket_id(value: str):
     return None
 
 
+def _render_cf_value(value, definition=None):
+    """Render a custom-field value as a display string, resolving option ids to
+    their labels via the field definition when possible. Handles scalars, lists
+    (multi-select), and {label|value|name} option objects."""
+    choices = {}
+    if definition:
+        for c in (definition.get('choices') or definition.get('options') or []):
+            if isinstance(c, dict) and c.get('id') is not None:
+                choices[c['id']] = c.get('label') or c.get('name') or c.get('value')
+
+    def one(v):
+        if isinstance(v, dict):
+            return v.get('label') or v.get('name') or v.get('value') or ''
+        if v in choices:
+            return choices[v]
+        return v
+    if isinstance(value, list):
+        return ', '.join(str(one(v)) for v in value if one(v) not in (None, ''))
+    rendered = one(value)
+    return '' if rendered is None else str(rendered)
+
+
+def fetch_custom_fields(gorgias, ticket_id: int) -> list:
+    """Custom-field values set on a ticket, normalized to [{label, value}].
+
+    The value DTO may embed the field definition (`field`/`custom_field`) or
+    only reference it by id — in the latter case we fetch account-wide
+    definitions once to resolve labels and option choices. Non-empty only, so
+    the transcript shows just the fields actually filled in. Best-effort: a
+    failure here must not sink the transcript, which is the primary payload."""
+    try:
+        rows = gorgias.get_ticket_custom_fields(ticket_id)
+    except Exception as e:
+        print(f"  custom-field fetch failed for ticket {ticket_id}: {e}")
+        return []
+
+    defs = None
+    if any(not (r.get('field') or r.get('custom_field')) for r in rows):
+        try:
+            defs = gorgias.list_custom_field_definitions()
+        except Exception:
+            defs = {}
+
+    out = []
+    for r in rows:
+        definition = r.get('field') or r.get('custom_field')
+        if definition is None and defs is not None:
+            fid = r.get('field_id') or r.get('custom_field_id')
+            definition = defs.get(fid)
+        label = (definition or {}).get('label') or (definition or {}).get('name') or 'Field'
+        raw = r.get('value')
+        if raw is None:
+            raw = r.get('text_value', r.get('formatted_value'))
+        value = _render_cf_value(raw, definition)
+        if value:
+            out.append({'label': label, 'value': value})
+    return out
+
+
 def extract_agent_senders(ticket: dict, messages: list) -> list:
     """Extract unique agent participants — assignee + message senders — deduped by Gorgias user ID."""
     seen, senders = set(), []
@@ -458,11 +517,11 @@ def ticket_messages():
 
         ticket = gorgias.get_ticket(ticket_id)
         ticket_info = {
-            'subject':  ticket.get('subject', ''),
-            'status':   ticket.get('status', ''),
-            'priority': ticket.get('priority', ''),
-            'channel':  ticket.get('channel', ''),
-            'tags':     [t.get('name') for t in (ticket.get('tags') or []) if t.get('name')],
+            'subject':       ticket.get('subject', ''),
+            'status':        ticket.get('status', ''),
+            'priority':      ticket.get('priority', ''),
+            'channel':       ticket.get('channel', ''),
+            'custom_fields': fetch_custom_fields(gorgias, ticket_id),
         }
         return jsonify({'messages': out, 'ticket': ticket_info})
     except Exception as e:
