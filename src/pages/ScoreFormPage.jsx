@@ -25,7 +25,7 @@ function Pills({ value, onChange }) {
         return (
           <button key={n} type="button" onClick={() => onChange(n)}
             className="flex items-center justify-center text-sm font-semibold rounded-lg transition-colors"
-            style={{ width: 34, height: 34, border: `1px solid ${sel ? '#FF9780' : '#E1DCD7'}`, background: sel ? '#FF9780' : '#fff', color: sel ? '#1A1E23' : 'rgba(26,30,35,.6)' }}
+            style={{ width: 34, height: 34, border: `1px solid ${sel ? 'var(--coral)' : 'var(--input-border)'}`, background: sel ? 'var(--coral)' : '#fff', color: sel ? 'var(--ink)' : 'var(--ink-60)' }}
             onMouseEnter={e => { if (!sel) e.currentTarget.style.background = '#FBF7F3' }}
             onMouseLeave={e => { if (!sel) e.currentTarget.style.background = '#fff' }}>
             {n}
@@ -176,15 +176,15 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   const content = (
     <div className="grid lg:grid-cols-2 overflow-hidden" style={{ ...CARD, height: '100%' }}>
         {/* Left — ticket + conversation */}
-        <div className="p-6 flex flex-col gap-5 overflow-y-auto" style={{ borderRight: '1px solid #EEEEEE' }}>
+        <div className="p-6 flex flex-col gap-5 overflow-y-auto" style={{ borderRight: '1px solid var(--hairline)' }}>
           {/* Ticket meta + title */}
           <div>
-            <div className="flex items-center gap-2 text-xs mb-1" style={{ color: 'rgba(26,30,35,.5)' }}>
-              <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" className="font-medium" style={{ color: '#B84A2E' }}>#{ticketId}</a>
+            <div className="flex items-center gap-2 text-xs mb-1" style={{ color: 'var(--ink-50)' }}>
+              <a href={gorgiasTicketUrl(ticketId)} target="_blank" rel="noreferrer" className="font-medium" style={{ color: 'var(--coral-text)' }}>#{ticketId}</a>
               <span>·</span><span>Gorgias</span>
             </div>
             {initialScore.ticket_subject && (
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif", lineHeight: 1.3 }}>{initialScore.ticket_subject}</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', fontFamily: "'Inter Tight', sans-serif", lineHeight: 1.3 }}>{initialScore.ticket_subject}</h2>
             )}
           </div>
 
@@ -192,18 +192,18 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
           {agentChips.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {agentChips.map((n, i) => (
-                <span key={i} className="text-xs px-2.5 py-1 rounded-lg font-medium" style={{ color: '#B84A2E', background: '#FFF4F1', border: '1px solid #FFE0D6' }}>{n}</span>
+                <span key={i} className="text-xs px-2.5 py-1 rounded-lg font-medium" style={{ color: 'var(--coral-text)', background: '#FFF4F1', border: '1px solid #FFE0D6' }}>{n}</span>
               ))}
             </div>
           )}
 
           {/* Conversation highlights (AI) */}
           {(wentWell.length > 0 || toFix.length > 0) && (
-            <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.45)' }}>Conversation highlights</p>
+            <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--ink-45)' }}>Conversation highlights</p>
               {wentWell.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: '#2F8F5B' }}>
+                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: 'var(--success)' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     What went well
                   </p>
@@ -214,7 +214,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
               )}
               {toFix.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: '#D14B3D' }}>
+                  <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     What to fix
                   </p>
@@ -236,13 +236,13 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
         {/* Right — scoring (flat: dividers + boxed live-score/auto-fail/coaching) */}
         <div className="p-6 flex flex-col gap-5 overflow-y-auto">
           {/* Live score */}
-          <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
+          <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--hairline)' }}>
             <div className="flex items-start justify-between mb-2.5 gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'rgba(26,30,35,.45)' }}>Live score</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--ink-45)' }}>Live score</p>
                 <div className="flex items-baseline gap-1.5">
                   <span className="tabular-nums" style={{ fontSize: 40, fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, color: gradeColor(total, thresholds), lineHeight: 1 }}>{total}</span>
-                  <span className="text-sm" style={{ color: 'rgba(26,30,35,.45)' }}>/100</span>
+                  <span className="text-sm" style={{ color: 'var(--ink-45)' }}>/100</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -250,22 +250,22 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                 <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.4)' }}>Pass ≥ {thresholds.pass} · Review ≥ {thresholds.needs_review}</p>
               </div>
             </div>
-            <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: '#F0ECE9' }}>
-              <div style={{ width: `${total}%`, height: '100%', background: gradeColor(total, thresholds), transition: 'width .35s cubic-bezier(.16,1,.3,1)' }} />
+            <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: 'var(--hairline-2)' }}>
+              <div className="g-progress-fill" style={{ '--progress': Math.max(0, Math.min(1, total / 100)), '--progress-duration': '.35s', background: gradeColor(total, thresholds) }} />
             </div>
-            {autoFails.length > 0 && <p className="text-xs mt-2" style={{ color: '#D14B3D' }}>Auto-fail triggered — verdict forced to FAIL.</p>}
+            {autoFails.length > 0 && <p className="text-xs mt-2" style={{ color: 'var(--danger)' }}>Auto-fail triggered — verdict forced to FAIL.</p>}
           </div>
 
           {/* Dimensions — boxed cards, consistent with live-score/auto-fail/coaching */}
           <div className="flex flex-col gap-5">
             {dims.map((d) => (
-              <div key={d.id} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
+              <div key={d.id} className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--hairline)' }}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="font-semibold flex items-center gap-2" style={{ fontSize: 15, color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
+                  <p className="font-semibold flex items-center gap-2" style={{ fontSize: 15, color: 'var(--ink)', fontFamily: "'Inter Tight', sans-serif" }}>
                     {d.name}
-                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>{d.weight}%</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--coral-tint)', color: 'var(--coral-text)', fontWeight: 600 }}>{d.weight}%</span>
                   </p>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor((dimAvg(d) / 5) * 100, thresholds) }}>{dimAvg(d).toFixed(1)}<span className="text-xs font-normal" style={{ color: 'rgba(26,30,35,.45)' }}>/5</span></span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor((dimAvg(d) / 5) * 100, thresholds) }}>{dimAvg(d).toFixed(1)}<span className="text-xs font-normal" style={{ color: 'var(--ink-45)' }}>/5</span></span>
                 </div>
                 <div className="flex flex-col gap-1">
                   {d.criteria.map(c => {
@@ -279,15 +279,15 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                     return (
                       <div key={c.id} onClick={() => setFocusIdx(idx)}
                         className="rounded-lg px-2.5 py-2 -mx-2.5 transition-colors cursor-pointer"
-                        style={{ background: focused ? '#FBF7F3' : 'transparent' }}>
+                        style={{ background: focused ? 'var(--warm-surface)' : 'transparent' }}>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: '#1A1E23' }}>
+                          <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: 'var(--ink)' }}>
                             {c.name}
                             {conf && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
                             )}
                             {ai != null && (
-                              <span className="text-xs font-medium" style={{ color: diff ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
+                              <span className="text-xs font-medium" style={{ color: diff ? 'var(--coral-text)' : 'rgba(26,30,35,.4)' }}>
                                 {diff ? `overrode ${ai}→${scores[c.id]}` : `matches AI (${ai})`}
                               </span>
                             )}
@@ -295,12 +295,12 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                           <Pills value={scores[c.id]} onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
                         </div>
                         {focused && aiNotes[c.id] && (
-                          <p className="text-xs mt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
-                            <span className="font-semibold" style={{ color: '#B84A2E' }}>AI rationale · </span><Linkify text={aiNotes[c.id]} />
+                          <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--ink-60)' }}>
+                            <span className="font-semibold" style={{ color: 'var(--coral-text)' }}>AI rationale · </span><Linkify text={aiNotes[c.id]} />
                           </p>
                         )}
                         {(ev.length > 0 || tagged.length > 0) && (
-                          <p className="text-xs mt-1" style={{ color: focused ? '#B84A2E' : 'rgba(26,30,35,.4)' }}>
+                          <p className="text-xs mt-1" style={{ color: focused ? 'var(--coral-text)' : 'rgba(26,30,35,.4)' }}>
                             {focused
                               ? [ev.length && `${ev.length} AI cited`, tagged.length && `${tagged.length} you tagged`].filter(Boolean).join(' · ') + ' — click a message to tag/untag'
                               : [ev.length && `${ev.length} cited`, tagged.length && `${tagged.length} tagged`].filter(Boolean).join(' · ') + ' — click to focus'}
@@ -316,8 +316,8 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
 
           {/* Auto-fail conditions */}
           {autoFailConds.length > 0 && (
-            <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: '#D14B3D' }}>
+            <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--hairline)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Auto-fail conditions
               </p>
@@ -327,12 +327,12 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                   return (
                     <button key={c.id} type="button" onClick={() => toggleAutoFail(c.id)}
                       className="flex items-start gap-2.5 text-left rounded-lg px-3 py-2 transition-colors"
-                      style={{ background: on ? '#FEF6F4' : 'transparent', border: `1px solid ${on ? '#F4DDD7' : 'transparent'}` }}>
+                      style={{ background: on ? 'var(--danger-tint)' : 'transparent', border: `1px solid ${on ? 'var(--danger-border)' : 'transparent'}` }}>
                       <span className="w-4 h-4 rounded flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ border: `1.5px solid ${on ? '#D14B3D' : '#E1DCD7'}`, background: on ? '#D14B3D' : '#fff' }}>
+                        style={{ border: `1.5px solid ${on ? 'var(--danger)' : 'var(--input-border)'}`, background: on ? 'var(--danger)' : '#fff' }}>
                         {on && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                       </span>
-                      <span className="text-sm" style={{ color: '#1A1E23' }}>{c.name}</span>
+                      <span className="text-sm" style={{ color: 'var(--ink)' }}>{c.name}</span>
                     </button>
                   )
                 })}
@@ -341,16 +341,16 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
           )}
 
           {/* Coaching note */}
-          <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid #EEEEEE' }}>
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-2" style={{ color: 'rgba(26,30,35,.45)' }}>Coaching note</label>
+          <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--hairline)' }}>
+            <label className="text-xs font-semibold uppercase tracking-wider block mb-2" style={{ color: 'var(--ink-45)' }}>Coaching note</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
               placeholder="What should this agent do differently next time?"
-              className="w-full text-sm resize-none" style={{ color: '#1A1E23', border: 'none', outline: 'none', background: 'transparent', padding: 0 }} />
+              className="w-full text-sm resize-none" style={{ color: 'var(--ink)', border: 'none', outline: 'none', background: 'transparent', padding: 0 }} />
           </div>
 
           {/* Actions */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'rgba(26,30,35,.6)' }}>1–5</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>↑↓</b> · <b style={{ color: 'rgba(26,30,35,.6)' }}>⌘↵</b></p>
+            <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'var(--ink-60)' }}>1–5</b> · <b style={{ color: 'var(--ink-60)' }}>↑↓</b> · <b style={{ color: 'var(--ink-60)' }}>⌘↵</b></p>
             <button onClick={submit} disabled={!canScore}
               className="g-btn-primary text-sm px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2 ml-auto"
               style={{ opacity: canScore ? 1 : 0.5 }}>
@@ -365,14 +365,14 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   // Full-page editor shell (opened from "Edit score")
   return (
     <div className="h-screen flex flex-col" style={{ background: '#FFF9F4' }}>
-      <div className="flex items-center gap-3 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid #EEEEEE', background: '#fff' }}>
+      <div className="flex items-center gap-3 px-6 py-3 shrink-0" style={{ borderBottom: '1px solid var(--hairline)', background: '#fff' }}>
         <button onClick={onClose}
-          className="inline-flex items-center gap-1.5 text-sm transition-colors" style={{ color: 'rgba(26,30,35,.6)' }}
+          className="inline-flex items-center gap-1.5 text-sm transition-colors" style={{ color: 'var(--ink-60)' }}
           onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           Back
         </button>
-        <span className="text-sm font-semibold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight', sans-serif" }}>
+        <span className="text-sm font-semibold" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight', sans-serif" }}>
           Score ticket{ticketId ? ` · #${ticketId}` : ''}
         </span>
       </div>

@@ -22,7 +22,7 @@
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  font-family: var(--font-body, 'Roboto'), sans-serif;
+  font-family: var(--font-body, 'DM Sans'), sans-serif;
 }
 
 /* ── Card shell — the two-panel group, capped and centered so the testimonial
@@ -65,7 +65,7 @@
   gap: 36px;
 }
 .login-left-tagline {
-  font-family: var(--font-body, 'Roboto'), sans-serif;
+  font-family: var(--font-body, 'DM Sans'), sans-serif;
   color: rgba(26,30,35,.45);
   font-size: 13px;
   font-weight: 500;
@@ -139,11 +139,11 @@
   flex-shrink: 0;
 }
 .review-name {
-  font: 600 14px/1 var(--font-body, 'Roboto'), sans-serif;
+  font: 600 14px/1 var(--font-body, 'DM Sans'), sans-serif;
   color: var(--ink);
 }
 .review-role {
-  font: 400 13px/1 var(--font-body, 'Roboto'), sans-serif;
+  font: 400 13px/1 var(--font-body, 'DM Sans'), sans-serif;
   color: rgba(26,30,35,.55);
   margin-top: 5px;
 }
@@ -155,17 +155,27 @@
   margin-top: 22px;
 }
 .dot {
-  height: 6px;
-  width: 6px;
-  border-radius: 9999px;
+  height: 44px;
+  width: 44px;
   border: none;
   padding: 0;
-  background: #E4D8CF;
+  background: transparent;
   cursor: pointer;
-  transition: width .4s ease, background .4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.dot.is-active {
+.dot::before {
+  content: '';
   width: 24px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #E4D8CF;
+  transform: scaleX(.25);
+  transition: transform .4s ease, background .4s ease;
+}
+.dot.is-active::before {
+  transform: scaleX(1);
   background: #FF9780;
 }
 
@@ -209,7 +219,7 @@
   height: 68px;
   opacity: 0;
   transform: scale(0.3) rotate(-12deg);
-  animation: iconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s forwards;
+  animation: iconPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
 }
 /* back chat bubble */
 .s-back {
@@ -260,7 +270,7 @@
   top: -4px;
   opacity: 0;
   transform: scale(0.6);
-  animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 1.18s forwards;
+  animation: badgePop 0.4s cubic-bezier(0.16, 1, 0.3, 1) 1.18s forwards;
 }
 .intro-subtitle {
   color: var(--muted);
@@ -375,7 +385,7 @@
   border: none;
   outline: none;
   color: var(--ink);
-  font-family: var(--font-body, 'Roboto'), sans-serif;
+  font-family: var(--font-body, 'DM Sans'), sans-serif;
   font-size: 14px;
 }
 .lp-field-box input::placeholder { color: var(--ink45); }
@@ -386,6 +396,9 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  width: 44px;
+  height: 44px;
+  justify-content: center;
   color: var(--ink45);
   transition: color 0.2s;
   display: flex;
@@ -397,7 +410,7 @@
 
 /* Rows */
 .forgot-row { display: flex; justify-content: flex-end; margin-top: -8px; }
-.forgot-row a { color: var(--coral); font-size: 12px; text-decoration: none; transition: color 0.2s; }
+.forgot-row a { color: var(--coral-text); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; transition: color 0.2s; }
 .forgot-row a:hover { color: var(--coral-text); }
 .lp-error { color: #D14B3D; font-size: 12px; text-align: center; min-height: 16px; letter-spacing: 0.04em; }
 .secure-row { display: flex; align-items: center; justify-content: center; gap: 5px; }
@@ -412,7 +425,7 @@
   border-radius: 8px;
   height: 50px;
   width: 100%;
-  font-family: var(--font-body, 'Roboto'), sans-serif;
+  font-family: var(--font-body, 'DM Sans'), sans-serif;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -448,7 +461,7 @@
   transition: color 0.2s;
   background: none;
   border: none;
-  font-family: var(--font-body, 'Roboto'), sans-serif;
+  font-family: var(--font-body, 'DM Sans'), sans-serif;
   padding: 0;
 }
 .back-link:hover { color: var(--coral-text); }

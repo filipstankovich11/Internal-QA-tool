@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -31,7 +31,7 @@
     --danger-tint:  #FEF6F4;
     --danger-border:#F4DDD7;
     --font-display: 'Inter Tight', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-body:    'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-body:    'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     /* legacy coral aliases kept so not-yet-migrated components keep working */
     --g-coral:  #FF9780;
     --g-coral-h:#ff8066;
@@ -176,7 +176,7 @@
 /* Side-panel "push": slide page content left to make room for the 560px panel.
    Only on wide screens — on narrow ones the panel overlays and the dimmed
    backdrop is the graceful fallback. */
-.panel-push { transition: padding-right 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+.panel-push { transition: none; }
 @media (min-width: 1280px) {
   .panel-push.is-open { padding-right: 560px; }
 }
@@ -238,23 +238,17 @@
 }
 .g-btn-ghost:hover { color: var(--ink); background: #F6F2EF; }
 
-/* ── Transcript message blocks — hover lift + coral top-bar sweep ──────────── */
+/* ── Transcript message blocks — hover lift ────────────────────────────────── */
 .tt-block { position: relative; overflow: hidden; }
-.tt-block::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 3px;
-  width: 0;
-  opacity: 0;
-  border-radius: 99px;
-  background: var(--g-coral, #FF9780);
-  transition: width 0.45s ease, opacity 0.3s ease;
-  pointer-events: none;
-}
 .tt-block:hover { transform: translateY(-2px); }
-.tt-block:hover::before { width: 100%; opacity: 1; }
+
+.g-progress-fill {
+  width: 100%;
+  height: 100%;
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left center;
+  transition: transform var(--progress-duration, .55s) cubic-bezier(.16, 1, .3, 1);
+}
 
 /* Glass-glare sweep over cited messages when a criterion is focused — a
    skewed light band glides across the block like a reflection, instead of a
@@ -289,7 +283,7 @@
 /* Visible keyboard-focus ring — shows only for keyboard nav (:focus-visible),
    never on mouse clicks. Buttons/links/nav items had no focus indicator before. */
 :focus-visible {
-  outline: 2px solid var(--g-coral);
+  outline: 2px solid var(--coral-text);
   outline-offset: 2px;
   border-radius: 5px;
 }
@@ -306,5 +300,67 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+.mobile-app-header,
+.mobile-nav-close { display: none; }
+
+@media (max-width: 767px) {
+  .app-main { padding-top: 60px; }
+  .mobile-app-header {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px;
+    background: var(--white);
+    border-bottom: 1px solid var(--hairline);
+    z-index: 50;
+  }
+  .mobile-app-header button,
+  .mobile-nav-close {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+  }
+  .mobile-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 30, 35, .45);
+    z-index: 60;
+  }
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: min(280px, 85vw) !important;
+    height: 100dvh !important;
+    max-width: 85vw;
+    z-index: 70 !important;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform 220ms cubic-bezier(.16, 1, .3, 1), visibility 220ms;
+  }
+  .app-sidebar.mobile-open {
+    visibility: visible;
+    transform: translateX(0);
+  }
+  .app-sidebar nav button { min-height: 44px; }
+  .desktop-sidebar-collapse { display: none !important; }
+  .notification-backdrop { z-index: 79 !important; }
+  .notification-panel {
+    left: 0 !important;
+    width: min(320px, 100vw) !important;
+    z-index: 80 !important;
   }
 }

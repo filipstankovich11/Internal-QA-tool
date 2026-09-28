@@ -151,32 +151,32 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
           else if (coachingLink) { onNavigate('coaching'); requestClose() }
         }}
         title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : coachingLink ? 'Open your coaching page' : undefined}
-        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid #F0ECE9', background: n.read ? 'transparent' : '#FFEAE6', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
+        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--hairline-2)', background: n.read ? 'transparent' : 'var(--coral-tint)', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
         onMouseEnter={e => { e.currentTarget.style.background = '#FBF7F3'; e.currentTarget.querySelector('.notif-actions').style.opacity = 1 }}
         onMouseLeave={e => { e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'; e.currentTarget.querySelector('.notif-actions').style.opacity = 0 }}>
         <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 1 }}>{meta.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ color: n.read ? 'rgba(26,30,35,.6)' : '#1A1E23', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>{n.message}</p>
+          <p style={{ color: n.read ? 'var(--ink-60)' : 'var(--ink)', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>{n.message}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 10, color: meta.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{meta.label}</span>
-            <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
-            <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>{timeAgo(n.created_at)}</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>{timeAgo(n.created_at)}</span>
             {score && (
               <>
-                <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
-                <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View ticket →</span>
+                <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
+                <span style={{ fontSize: 10, color: 'var(--coral-text)', fontWeight: 600 }}>View ticket →</span>
               </>
             )}
             {guidanceLink && (
               <>
-                <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
-                <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View changes →</span>
+                <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
+                <span style={{ fontSize: 10, color: 'var(--coral-text)', fontWeight: 600 }}>View changes →</span>
               </>
             )}
             {coachingLink && (
               <>
-                <span style={{ fontSize: 10, color: 'rgba(26,30,35,.45)' }}>·</span>
-                <span style={{ fontSize: 10, color: '#B84A2E', fontWeight: 600 }}>View session →</span>
+                <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
+                <span style={{ fontSize: 10, color: 'var(--coral-text)', fontWeight: 600 }}>View session →</span>
               </>
             )}
           </div>
@@ -185,16 +185,16 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
         <div className="notif-actions" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, opacity: 0, transition: 'opacity 120ms' }}>
           {!n.read && (
             <button onClick={e => { e.stopPropagation(); markRead(n.id) }} title="Mark as read"
-              style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'rgba(26,30,35,.5)', fontSize: 12, lineHeight: 1 }}
+              style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-50)', fontSize: 12, lineHeight: 1 }}
               onMouseEnter={e => { e.currentTarget.style.background = '#FFEAE6'; e.currentTarget.style.color = '#B84A2E' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,30,35,.5)' }}>✓</button>
           )}
           <button onClick={e => { e.stopPropagation(); dismiss(n.id) }} title="Dismiss notification"
-            style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'rgba(26,30,35,.5)', fontSize: 12, lineHeight: 1 }}
+            style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-50)', fontSize: 12, lineHeight: 1 }}
             onMouseEnter={e => { e.currentTarget.style.background = '#FEF6F4'; e.currentTarget.style.color = '#D14B3D' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,30,35,.5)' }}>✕</button>
         </div>
-        {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9780', flexShrink: 0, marginTop: 5 }} />}
+        {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--coral)', flexShrink: 0, marginTop: 5 }} />}
       </div>
     )
   }
@@ -203,6 +203,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     <>
       {/* Backdrop — closes panel when clicking content area */}
       <div
+        className="notification-backdrop"
         style={{
           position: 'fixed', inset: 0, zIndex: 45, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)',
           animation: closing ? 'fadeOut 180ms ease forwards' : undefined,
@@ -212,6 +213,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
 
       {/* Panel */}
       <div
+        className="notification-panel"
         style={{
           position: 'fixed',
           top: 0,
@@ -219,8 +221,8 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
           width: 320,
           height: '100vh',
           zIndex: 46,
-          background: '#FFFFFF',
-          borderRight: '1px solid #EEEEEE',
+          background: 'var(--white)',
+          borderRight: '1px solid var(--hairline)',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 20px 48px rgba(0,0,0,.12)',
@@ -234,12 +236,12 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 16px', height: 56, flexShrink: 0,
-          borderBottom: '1px solid #F0ECE9',
+          borderBottom: '1px solid var(--hairline-2)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="font-semibold text-sm" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>Notifications</span>
+            <span className="font-semibold text-sm" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}>Notifications</span>
             {unreadCount > 0 && (
-              <span style={{ background: '#FF9780', color: '#FFFFFF', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999 }}>
+              <span style={{ background: 'var(--coral)', color: 'var(--white)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999 }}>
                 {unreadCount}
               </span>
             )}
@@ -249,7 +251,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
               <button
                 onClick={markAllRead}
                 className="text-xs transition-colors"
-                style={{ color: 'rgba(26,30,35,.6)' }}
+                style={{ color: 'var(--ink-60)' }}
                 onMouseEnter={e => e.target.style.color = '#B84A2E'}
                 onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.6)'}
               >
@@ -261,7 +263,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
                 onClick={clearAll}
                 className="text-xs transition-colors"
                 title="Delete all notifications"
-                style={{ color: clearConfirm ? '#D14B3D' : 'rgba(26,30,35,.6)', fontWeight: clearConfirm ? 600 : 400 }}
+                style={{ color: clearConfirm ? 'var(--danger)' : 'var(--ink-60)', fontWeight: clearConfirm ? 600 : 400 }}
                 onMouseEnter={e => e.target.style.color = '#D14B3D'}
                 onMouseLeave={e => e.target.style.color = clearConfirm ? '#D14B3D' : 'rgba(26,30,35,.6)'}
               >
@@ -271,7 +273,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
             <button
               onClick={requestClose}
               className="text-xl leading-none transition-colors"
-              style={{ color: 'rgba(26,30,35,.45)' }}
+              style={{ color: 'var(--ink-45)' }}
               onMouseEnter={e => e.target.style.color = '#1A1E23'}
               onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.45)'}
             >×</button>
@@ -281,7 +283,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
         {/* List */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(26,30,35,.5)', fontSize: 13 }}>Loading…</div>
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-50)', fontSize: 13 }}>Loading…</div>
           ) : notifications.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
               <div style={{
@@ -294,8 +296,8 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
                   <path d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
               </div>
-              <p style={{ color: '#1A1E23', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No notifications yet</p>
-              <p style={{ color: 'rgba(26,30,35,.5)', fontSize: 12 }}>You'll see disputes, overrides, and notes here</p>
+              <p style={{ color: 'var(--ink)', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No notifications yet</p>
+              <p style={{ color: 'var(--ink-50)', fontSize: 12 }}>You'll see disputes, overrides, and notes here</p>
             </div>
           ) : (
             <>

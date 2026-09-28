@@ -18,14 +18,14 @@ function DimBar({ label, weight, avg }) {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm" style={{ color: 'rgba(26,30,35,.72)' }}>{label}</span>
-          <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'rgba(26,30,35,.6)', background: '#F1ECE8' }}>{weight}</span>
+          <span className="text-sm" style={{ color: 'var(--ink-72)' }}>{label}</span>
+          <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'var(--ink-60)', background: 'var(--segmented)' }}>{weight}</span>
         </div>
-        <span className="text-sm font-bold tabular-nums" style={{ color }}>{n.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.45)' }}>/5</span></span>
+        <span className="text-sm font-bold tabular-nums" style={{ color }}>{n.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'var(--ink-45)' }}>/5</span></span>
       </div>
-      <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: '#F1ECE8' }}>
-        <div className="h-full rounded-full"
-          style={{ width: `${pct}%`, background: color, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
+      <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: 'var(--segmented)' }}>
+        <div className="g-progress-fill rounded-full"
+          style={{ '--progress': Math.max(0, Math.min(1, pct / 100)), '--progress-duration': '.8s', background: color }} />
       </div>
     </div>
   )
@@ -45,19 +45,19 @@ function ScoreRow({ s, onView, onAcknowledge }) {
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer"
-      style={{ borderBottom: '1px solid #F0ECE9' }}
+      style={{ borderBottom: '1px solid var(--hairline-2)' }}
       onClick={() => onView(s)}
       onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       {/* Unread dot */}
       <div className="w-1.5 h-1.5 rounded-full shrink-0"
-        style={{ background: s.acknowledged ? 'transparent' : '#FF9780' }} />
+        style={{ background: s.acknowledged ? 'transparent' : 'var(--coral)' }} />
 
       {/* Ticket ID */}
       <a href={gorgiasTicketUrl(s.ticketId)} target="_blank" rel="noopener noreferrer"
         className="font-mono text-xs shrink-0 w-20"
-        style={{ color: '#B84A2E' }}
+        style={{ color: 'var(--coral-text)' }}
         onClick={e => e.stopPropagation()}
         onMouseEnter={e => e.target.style.textDecoration = 'underline'}
         onMouseLeave={e => e.target.style.textDecoration = 'none'}>
@@ -65,7 +65,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       </a>
 
       {/* Subject */}
-      <span className="text-sm flex-1 truncate" style={{ color: 'rgba(26,30,35,.72)' }}>
+      <span className="text-sm flex-1 truncate" style={{ color: 'var(--ink-72)' }}>
         {s.fullScore?.ticket_subject || '—'}
       </span>
 
@@ -73,7 +73,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       <div className="flex items-center gap-2 shrink-0">
         {s.disputed && (
           <span className="text-xs px-2 py-0.5 rounded-full"
-            style={{ color: '#C8841E', background: '#FFF4E0' }}>
+            style={{ color: 'var(--amber)', background: '#FFF4E0' }}>
             Disputed
           </span>
         )}
@@ -82,14 +82,14 @@ function ScoreRow({ s, onView, onAcknowledge }) {
             onClick={handleAck}
             disabled={acking}
             className="text-xs px-2.5 py-1 rounded-lg transition-colors shrink-0"
-            style={{ color: 'rgba(26,30,35,.6)', background: '#FFFFFF', border: '1px solid #E7E3DF', opacity: acking ? 0.5 : 1 }}
+            style={{ color: 'var(--ink-60)', background: 'var(--white)', border: '1px solid var(--btn-border)', opacity: acking ? 0.5 : 1 }}
             onMouseEnter={e => { if (!acking) e.currentTarget.style.color = '#2F8F5B' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)' }}>
             {acking ? '…' : 'Mark seen'}
           </button>
         )}
         {s.acknowledged && (
-          <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>✓</span>
+          <span className="text-xs" style={{ color: 'var(--ink-45)' }}>✓</span>
         )}
       </div>
 
@@ -98,7 +98,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
         <span className="text-sm font-bold tabular-nums w-16 text-right shrink-0 cursor-default"
           style={{ color: gradeColor(s.effectiveScore) }}>
           {s.effectiveScore?.toFixed(0)}/100
-          {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: '#B84A2E' }}>*</span>}
+          {s.overrideVerdict && <span className="text-xs font-normal ml-0.5" style={{ color: 'var(--coral-text)' }}>*</span>}
         </span>
       </ScoreBreakdownHover>
 
@@ -109,7 +109,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       </span>
 
       {/* Date */}
-      <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'rgba(26,30,35,.5)' }}>
+      <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'var(--ink-50)' }}>
         {new Date(s.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
       </span>
     </div>
@@ -187,22 +187,22 @@ export default function AgentProfilePage() {
       {/* ── Profile header ── */}
       <div className="flex items-start gap-4 mb-8">
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0"
-          style={{ background: '#FFD2C9', color: '#B84A2E' }}>
+          style={{ background: '#FFD2C9', color: 'var(--coral-text)' }}>
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold truncate" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>{displayName}</h1>
+          <h1 className="text-2xl font-bold truncate" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}>{displayName}</h1>
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            {agent?.email && <span className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>{agent.email}</span>}
+            {agent?.email && <span className="text-sm" style={{ color: 'var(--ink-60)' }}>{agent.email}</span>}
             {team && (
               <span className="text-xs px-2 py-0.5 rounded-full"
-                style={{ color: '#B84A2E', background: '#FFEAE6' }}>
+                style={{ color: 'var(--coral-text)', background: 'var(--coral-tint)' }}>
                 {team.name}
               </span>
             )}
             {unread > 0 && (
               <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                style={{ color: '#C8841E', background: '#FFF4E0' }}>
+                style={{ color: 'var(--amber)', background: '#FFF4E0' }}>
                 {unread} new score{unread !== 1 ? 's' : ''}
               </span>
             )}
@@ -213,24 +213,24 @@ export default function AgentProfilePage() {
       {/* ── Key metrics ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {/* Avg Score */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-          <p className="text-xs mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Avg Score</p>
-          <p className="text-3xl font-bold" style={{ color: avg != null ? gradeColor(avg) : 'rgba(26,30,35,.45)', fontFamily: "'Inter Tight'" }}>{avg != null ? avg.toFixed(1) : '—'}</p>
-          <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>out of 100</p>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 0, background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <p className="text-xs mb-2" style={{ color: 'var(--ink-50)' }}>Avg Score</p>
+          <p className="text-3xl font-bold" style={{ color: avg != null ? gradeColor(avg) : 'var(--ink-45)', fontFamily: "'Inter Tight'" }}>{avg != null ? avg.toFixed(1) : '—'}</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--ink-50)' }}>out of 100</p>
         </div>
 
         {/* Pass Rate */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 1, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-          <p className="text-xs mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Pass Rate</p>
-          <p className="text-3xl font-bold" style={{ color: '#2F8F5B', fontFamily: "'Inter Tight'" }}>{passRate != null ? `${passRate}%` : '—'}</p>
-          <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>{pass} of {total}</p>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 1, background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <p className="text-xs mb-2" style={{ color: 'var(--ink-50)' }}>Pass Rate</p>
+          <p className="text-3xl font-bold" style={{ color: 'var(--success)', fontFamily: "'Inter Tight'" }}>{passRate != null ? `${passRate}%` : '—'}</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--ink-50)' }}>{pass} of {total}</p>
         </div>
 
         {/* This Month — with MoM delta */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 2, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-          <p className="text-xs mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>This Month</p>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 2, background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <p className="text-xs mb-2" style={{ color: 'var(--ink-50)' }}>This Month</p>
           <div className="flex items-end gap-2">
-            <p className="text-3xl font-bold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>{thisMonth}</p>
+            <p className="text-3xl font-bold" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}>{thisMonth}</p>
             {momDelta != null && (() => {
               const up    = momDelta >= 0
               const color = Math.abs(momDelta) < 2 ? 'rgba(26,30,35,.45)' : up ? '#2F8F5B' : '#D14B3D'
@@ -241,16 +241,16 @@ export default function AgentProfilePage() {
               )
             })()}
           </div>
-          <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>
+          <p className="text-xs mt-1" style={{ color: 'var(--ink-50)' }}>
             {thisMonthAvg != null ? `${thisMonthAvg.toFixed(1)} avg` : 'tickets'}{prevMonthAvg != null ? ` · prev ${prevMonthAvg.toFixed(1)}` : ''}
           </p>
         </div>
 
         {/* Unread */}
-        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 3, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-          <p className="text-xs mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>New Scores</p>
-          <p className="text-3xl font-bold" style={{ color: unread > 0 ? '#C8841E' : 'rgba(26,30,35,.45)', fontFamily: "'Inter Tight'" }}>{unread}</p>
-          <p className="text-xs mt-1" style={{ color: 'rgba(26,30,35,.5)' }}>to acknowledge</p>
+        <div className="rounded-2xl p-5 stagger-item" style={{ '--i': 3, background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <p className="text-xs mb-2" style={{ color: 'var(--ink-50)' }}>New Scores</p>
+          <p className="text-3xl font-bold" style={{ color: unread > 0 ? 'var(--amber)' : 'var(--ink-45)', fontFamily: "'Inter Tight'" }}>{unread}</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--ink-50)' }}>to acknowledge</p>
         </div>
       </div>
 
@@ -261,20 +261,20 @@ export default function AgentProfilePage() {
         const close   = !reached && avg >= agent.goal_score - 8
         const color   = reached ? '#2F8F5B' : close ? '#C8841E' : '#D14B3D'
         return (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <div className="rounded-2xl p-5 mb-6" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>Score goal</p>
+              <p className="text-xs" style={{ color: 'var(--ink-50)' }}>Score goal</p>
               <span className="text-sm font-bold tabular-nums" style={{ color }}>
-                {avg.toFixed(1)} <span style={{ color: 'rgba(26,30,35,.45)' }}>/ {agent.goal_score}</span>
+                {avg.toFixed(1)} <span style={{ color: 'var(--ink-45)' }}>/ {agent.goal_score}</span>
                 {reached && <span className="ml-2 text-xs">✓ Reached</span>}
               </span>
             </div>
-            <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: '#F1ECE8' }}>
-              <div className="h-full rounded-full"
-                style={{ width: `${pct}%`, background: color, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
+            <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: 'var(--segmented)' }}>
+              <div className="g-progress-fill rounded-full"
+                style={{ '--progress': Math.max(0, Math.min(1, pct / 100)), '--progress-duration': '.8s', background: color }} />
             </div>
             {!reached && (
-              <p className="text-xs mt-2" style={{ color: 'rgba(26,30,35,.5)' }}>
+              <p className="text-xs mt-2" style={{ color: 'var(--ink-50)' }}>
                 {(agent.goal_score - avg).toFixed(1)} points away from your goal
               </p>
             )}
@@ -286,10 +286,10 @@ export default function AgentProfilePage() {
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
 
         {/* Dimension breakdown */}
-        <div className="rounded-2xl p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-          <p className="text-xs mb-5" style={{ color: 'rgba(26,30,35,.5)' }}>Performance by area</p>
+        <div className="rounded-2xl p-5" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <p className="text-xs mb-5" style={{ color: 'var(--ink-50)' }}>Performance by area</p>
           {total === 0 ? (
-            <p className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>No scores yet</p>
+            <p className="text-xs" style={{ color: 'var(--ink-45)' }}>No scores yet</p>
           ) : (
             <div className="flex flex-col gap-4">
               <DimBar label="Inquiry Resolution"  weight="50%" avg={irAvg} />
@@ -300,8 +300,8 @@ export default function AgentProfilePage() {
         </div>
 
         {/* 30-day trend */}
-        <div className="rounded-2xl p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.5)' }}>Score trend — last 30 days</p>
+        <div className="rounded-2xl p-5" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <p className="text-xs mb-4" style={{ color: 'var(--ink-50)' }}>Score trend — last 30 days</p>
           <TrendChart scores={scores} />
         </div>
       </div>
@@ -309,19 +309,19 @@ export default function AgentProfilePage() {
       {/* ── Score history ── */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>Score History</h2>
-          <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
+          <h2 className="font-semibold" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}>Score History</h2>
+          <span className="text-xs" style={{ color: 'var(--ink-50)' }}>{total} ticket{total !== 1 ? 's' : ''}</span>
         </div>
 
         {total === 0 ? (
-          <div className="text-center py-16" style={{ color: 'rgba(26,30,35,.45)' }}>
+          <div className="text-center py-16" style={{ color: 'var(--ink-45)' }}>
             <p className="text-sm">No tickets scored yet.</p>
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
             {/* Header row */}
             <div className="grid text-xs px-4 py-2.5"
-              style={{ background: '#FBF7F3', color: 'rgba(26,30,35,.5)', borderBottom: '1px solid #F0ECE9',
+              style={{ background: 'var(--warm-surface)', color: 'var(--ink-50)', borderBottom: '1px solid var(--hairline-2)',
                 gridTemplateColumns: '10px 80px 1fr auto 80px 70px 70px' }}>
               <span />
               <span>Ticket</span>
