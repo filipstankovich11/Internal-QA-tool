@@ -72,7 +72,7 @@ export default function GuidancePreview({ team, record, draftDirty, mappingDirty
       if (!belongs || !Number.isSafeInteger(ticketId) || ticketId <= 0 || seen.has(ticketId)) return false
       seen.add(ticketId)
       return true
-    }).slice(0, 12)
+    }).slice(0, 6)
   }, [team, agents, scoreHistory])
 
   useEffect(() => {
@@ -167,7 +167,7 @@ export default function GuidancePreview({ team, record, draftDirty, mappingDirty
     return count
   }, {})
 
-  return <div className="mt-5 pt-5" style={{ borderTop: '1px solid #F0ECE9' }}>
+  return <div>
     <h3 className="text-sm font-semibold" style={{ color: ink }}>Test saved draft</h3>
     <p className="text-xs leading-relaxed mt-1 mb-4" style={{ color: muted }}>
       Compare published guidance with the saved draft on up to {MAX_TICKETS} tickets. Each ticket uses two new AI runs. Grades do not change saved scores or notify agents; your judgments are saved for the QA team.
@@ -200,8 +200,9 @@ export default function GuidancePreview({ team, record, draftDirty, mappingDirty
       className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-40" style={{ color: '#B84A2E', border: '1px solid #F4DDD7', background: '#FEF6F4' }}>
       {working ? progress : `Compare guidance on ${selected.length} ticket${selected.length === 1 ? '' : 's'}`}
     </button>
+    <p role="status" className="text-xs mt-2" style={{ color: muted }}>{working ? progress : completed > 0 ? `${completed} comparison${completed === 1 ? '' : 's'} ready to review` : ''}</p>
 
-    {Object.keys(results).length > 0 && <div className="mt-5 space-y-4" aria-live="polite">
+    {Object.keys(results).length > 0 && <div className="mt-5 space-y-4">
       <p className="text-xs font-medium" style={{ color: ink }}>
         {judged} of {completed} completed comparisons judged
         {judged > 0 && ` · Draft preferred ${votes.draft || 0} · Published preferred ${votes.published || 0} · About the same ${votes.same || 0}`}
