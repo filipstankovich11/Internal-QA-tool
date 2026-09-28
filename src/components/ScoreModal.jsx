@@ -8,6 +8,7 @@ import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
 import TicketTranscript from './TicketTranscript'
 import Linkify from './Linkify'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 
 function useCountUp(target, duration = 700) {
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -93,99 +94,82 @@ function DimensionStrip({ dimensions }) {
 
 // ── Criteria row with dots ────────────────────────────────────────────────────
 function SubScoreRow({ label, data, onActivate }) {
-  const [open, setOpen] = useState(false)
   const { score, notes, confidence, evidence } = data
   const color = scoreColor(score)
   const conf = CONF[confidence]
   const ev = (evidence || []).map(String)
   // Expanding a criterion highlights its cited messages in the transcript
-  const toggle = () => setOpen(v => { const nv = !v; if (nv && ev.length) onActivate?.(ev); return nv })
+  const onOpen = (v) => { if (v && ev.length) onActivate?.(ev) }
 
   return (
-    <div className="py-2.5" style={{ borderBottom: '1px solid var(--hairline-2)' }}>
-      <button onClick={toggle} className="w-full flex items-center gap-3 text-left">
-        <span className="shrink-0 transition-transform" style={{ color: 'var(--ink-45)', display:'inline-block', fontSize: '1rem', width: '1rem', transform: open ? 'rotate(90deg)':'rotate(0deg)' }}>▶</span>
-        <span className="text-sm flex-1" style={{ color: 'var(--ink-72)' }}>{label}</span>
-        {ev.length > 0 && <span title={`${ev.length} cited message${ev.length>1?'s':''}`} style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--coral)', flexShrink: 0 }} />}
-        <ScoreDots score={score} />
-        <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
-      </button>
-      {open && (
-        <div className="mt-2 ml-6">
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--ink-60)' }}><Linkify text={notes} /></p>
-          {conf && (
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <span className="text-[11px] inline-flex items-center gap-1" style={{ color: 'var(--ink-50)' }}>
-                AI confidence <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DimensionCard({ name, weight, average, rows, isOpen, onToggle, onActivate }) {
-  const avg = typeof average === 'number' ? average : Number(average) || 0
-  const color = scoreColor(avg)
-
-  return (
-    <div className="rounded-xl mb-2 overflow-hidden"
-      style={{ background: 'var(--warm-surface)', border: `1px solid ${isOpen ? 'var(--input-border)' : 'var(--hairline-2)'}`, transition: 'border-color 250ms' }}>
-
-      {/* Header — always visible, click to toggle */}
-      <button onClick={onToggle} aria-expanded={isOpen} className="w-full flex items-center justify-between px-4 py-3.5"
-        style={{ cursor: 'pointer', background: 'transparent', border: 'none', textAlign: 'left' }}>
-        <div className="flex items-center gap-2.5">
-          {/* Rotating chevron */}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-            strokeLinecap="round" strokeLinejoin="round"
-            style={{ color: isOpen ? 'var(--coral)' : 'var(--ink-45)', transition: 'transform 300ms cubic-bezier(0.4,0,0.2,1), color 200ms', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }}>
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-          <span className="text-sm font-semibold" style={{ color: isOpen ? 'var(--ink)' : 'var(--ink-72)', transition: 'color 200ms' }}>{name}</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: 'var(--ink-45)', fontWeight: 400 }}>/5</span></span>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: 'var(--coral-text)', background: '#FFF4F1' }}>{weight}</span>
-        </div>
-      </button>
-
-      {/* Hidden details leave the keyboard tab order when collapsed. */}
-      <div hidden={!isOpen}>
-        <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--hairline-2)' }}>
-          <div style={{ paddingTop: 4 }}>
-            {rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} onActivate={onActivate} />)}
+    <Accordion type="single" collapsible onValueChange={onOpen}>
+      <AccordionItem value="row" className="border-b-0" style={{ borderBottom: '1px solid var(--hairline-2)' }}>
+        <AccordionTrigger className="gap-3 py-2.5 hover:no-underline">
+          <span className="text-sm flex-1 text-left" style={{ color: 'var(--ink-72)' }}>{label}</span>
+          {ev.length > 0 && <span title={`${ev.length} cited message${ev.length>1?'s':''}`} style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--coral)', flexShrink: 0 }} />}
+          <ScoreDots score={score} />
+          <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
+        </AccordionTrigger>
+        <AccordionContent className="pb-0">
+          <div className="pb-2.5">
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--ink-60)' }}><Linkify text={notes} /></p>
+            {conf && (
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <span className="text-[11px] inline-flex items-center gap-1" style={{ color: 'var(--ink-50)' }}>
+                  AI confidence <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
+                </span>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-    </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 
 function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception, onActivate }) {
-  const [openDim, setOpenDim] = useState(-1) // start collapsed — no dimension auto-opens
-  const toggle = i => setOpenDim(prev => prev === i ? -1 : i)
+  // Start collapsed — no dimension auto-opens; one open at a time (type="single").
+  const dims = [
+    { name: 'Inquiry Resolution', weight: '50%', average: inquiry_resolution.dimension_average, rows: [
+      { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
+      { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
+      { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
+    ] },
+    { name: 'Internal Processes', weight: '25%', average: internal_processes.dimension_average, rows: [
+      { label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure },
+    ] },
+    { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average, rows: [
+      { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
+      { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
+    ] },
+  ]
   return (
-    <div>
-      <DimensionCard name="Inquiry Resolution" weight="50%" average={inquiry_resolution.dimension_average}
-        isOpen={openDim === 0} onToggle={() => toggle(0)} onActivate={onActivate}
-        rows={[
-          { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
-          { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
-          { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
-        ]} />
-      <DimensionCard name="Internal Processes" weight="25%" average={internal_processes.dimension_average}
-        isOpen={openDim === 1} onToggle={() => toggle(1)} onActivate={onActivate}
-        rows={[{ label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure }]} />
-      <DimensionCard name="Customer Perception" weight="25%" average={customer_perception.dimension_average}
-        isOpen={openDim === 2} onToggle={() => toggle(2)} onActivate={onActivate}
-        rows={[
-          { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
-          { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
-        ]} />
-    </div>
+    <Accordion type="single" collapsible className="flex flex-col gap-2">
+      {dims.map((d, i) => {
+        const avg = typeof d.average === 'number' ? d.average : Number(d.average) || 0
+        const color = scoreColor(avg)
+        return (
+          <AccordionItem key={i} value={`dim-${i}`}
+            className="border-b-0 rounded-xl overflow-hidden"
+            style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+            <AccordionTrigger className="px-4 py-3.5 hover:no-underline">
+              <span className="flex flex-1 items-center justify-between gap-2 min-w-0">
+                <span className="text-sm font-semibold truncate" style={{ color: 'rgba(26,30,35,.72)' }}>{d.name}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: 'rgba(26,30,35,.45)', fontWeight: 400 }}>/5</span></span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#B84A2E', background: '#FFF4F1' }}>{d.weight}</span>
+                </span>
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="pb-0">
+              <div style={{ padding: '4px 16px 16px', borderTop: '1px solid #F0ECE9' }}>
+                {d.rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} onActivate={onActivate} />)}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )
+      })}
+    </Accordion>
   )
 }
 
