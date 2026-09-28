@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import SessionView from '../components/coaching/SessionView'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import { cn } from '@/lib/utils'
 
 const CRITERIA = [
   { key: 'core_inquiry_resolved',     name: 'Core Resolution',        dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
@@ -30,46 +32,44 @@ function ScorePips({ score }) {
 }
 
 function CriterionCard({ criterion, avg, notes, isWeak }) {
-  const [expanded, setExpanded] = useState(false)
   const color = scoreColor(avg)
+  const hasNotes = notes.length > 0
 
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{ background: isWeak ? scoreBg(avg) : '#FFFFFF', border: `1px solid ${isWeak ? scoreBorder(avg) : '#EEEEEE'}`, boxShadow: isWeak ? 'none' : '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
-      <button
-        className="w-full flex items-center gap-4 px-5 py-4 text-left"
-        onClick={() => notes.length > 0 && setExpanded(v => !v)}>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium" style={{ color: '#1A1E23' }}>{criterion.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'rgba(26,30,35,.6)', background: '#FBF7F3' }}>
-              {criterion.dimension}
-            </span>
-          </div>
-          <ScorePips score={avg} />
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-lg font-bold tabular-nums" style={{ color }}>
-            {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>/5</span>
-          </span>
-          {notes.length > 0 && (
-            <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)', transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
-          )}
-        </div>
-      </button>
-
-      {expanded && notes.length > 0 && (
-        <div className="px-5 pb-4 flex flex-col gap-2.5"
-          style={{ borderTop: '1px solid #F0ECE9' }}>
-          <p className="text-xs pt-3" style={{ color: 'rgba(26,30,35,.5)' }}>Recent AI feedback on this area:</p>
-          {notes.slice(0, 4).map((note, i) => (
-            <div key={i} className="flex gap-2.5">
-              <span className="text-xs mt-0.5 shrink-0" style={{ color: 'rgba(26,30,35,.45)' }}>•</span>
-              <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{note}</p>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="notes" className="border-b-0">
+          <AccordionTrigger disabled={!hasNotes}
+            className={cn('gap-4 px-5 py-4 hover:no-underline', !hasNotes && 'cursor-default [&>svg]:hidden')}>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium" style={{ color: '#1A1E23' }}>{criterion.name}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'rgba(26,30,35,.6)', background: '#FBF7F3' }}>
+                  {criterion.dimension}
+                </span>
+              </div>
+              <ScorePips score={avg} />
             </div>
-          ))}
-        </div>
-      )}
+            <span className="text-lg font-bold tabular-nums shrink-0" style={{ color }}>
+              {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>/5</span>
+            </span>
+          </AccordionTrigger>
+          {hasNotes && (
+            <AccordionContent>
+              <div className="px-5 pt-3 flex flex-col gap-2.5" style={{ borderTop: '1px solid #F0ECE9' }}>
+                <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>Recent AI feedback on this area:</p>
+                {notes.slice(0, 4).map((note, i) => (
+                  <div key={i} className="flex gap-2.5">
+                    <span className="text-xs mt-0.5 shrink-0" style={{ color: 'rgba(26,30,35,.45)' }}>•</span>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{note}</p>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          )}
+        </AccordionItem>
+      </Accordion>
     </div>
   )
 }
