@@ -64,6 +64,27 @@ class GorgiasClient:
     def get_ticket(self, ticket_id: int) -> dict:
         return self._get(f"/tickets/{ticket_id}")
 
+    def get_ticket_custom_fields(self, ticket_id: int) -> list[dict]:
+        """Custom-field *values* set on a ticket (list-ticket-custom-fields).
+        Gorgias wraps list responses in {"data": [...]}, but older shapes
+        return a bare list — handle both."""
+        data = self._get(f"/tickets/{ticket_id}/custom-fields")
+        if isinstance(data, dict):
+            return data.get("data", [])
+        return data or []
+
+    def list_custom_field_definitions(self) -> dict:
+        """Account-wide custom-field definitions (id → label / choices), keyed
+        by id. Used to resolve values whose DTO only carries a field id."""
+        data = self._get("/custom-fields")
+        rows = data.get("data", []) if isinstance(data, dict) else (data or [])
+        out = {}
+        for d in rows:
+            fid = d.get("id")
+            if fid is not None:
+                out[fid] = d
+        return out
+
     def get_ticket_messages(self, ticket_id: int) -> list[dict]:
         """Fetch all messages for a ticket, handling pagination."""
         messages = []

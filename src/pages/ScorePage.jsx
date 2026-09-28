@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { authFetchJson, buildFewShotExamples } from '../lib/api'
+import { useToast } from '../components/Toast'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, gradeColor } from '../lib/verdict'
 import { ScoreInfoPopover } from '../components/ScoreInfo'
 import ScoringProgress from '../components/ScoringProgress'
@@ -357,6 +358,7 @@ function ResultRow({ result, onView }) {
 export default function ScorePage() {
   const { scoreHistory, addScore, agents, rubric, openScore, notifyUsers } = useApp()
   const { canScore, user } = useAuth()
+  const toast = useToast()
 
   const [mode,        setMode]        = useState('single')
 
@@ -420,8 +422,14 @@ export default function ScorePage() {
       if (!ok) { setError(data.error || 'Something went wrong.'); return }
       const saved = await addScore(data)
       if (saved?.error) { setError(`Scored ${data.verdict}, but it couldn't be saved to the queue: ${saved.error.message || 'database error'}. Please retry.`); return }
-      openPanel(data)
       setTicketUrl('')
+      // Announce completion with a clickable toast rather than yanking the reviewer
+      // into the scorecard — they may have moved on while Claude was grading.
+      const verdictWord = { PASS: 'Pass', NEEDS_REVIEW: 'Needs review', FAIL: 'Fail' }[data.verdict] || 'Done'
+      toast.action(`AI review complete · #${data.ticket_id} — ${verdictWord}`, {
+        label: 'View scorecard',
+        onClick: () => openPanel(data),
+      })
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }

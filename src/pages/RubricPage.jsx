@@ -3,46 +3,48 @@ import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { diffRubricDetailed } from '../lib/rubricDiff'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 
 const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
 function CriterionEditor({ crit, onChange, onRemove }) {
-  const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid #F0ECE9', background: '#FBF7F3' }}>
-      <div className="w-full flex items-center justify-between gap-2" style={{ padding: '12px 14px' }}>
-        <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 text-left flex-1 min-w-0">
-          <span className="text-xs transition-transform shrink-0" style={{ color: 'rgba(26,30,35,.5)', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+    <Accordion type="single" collapsible>
+      <AccordionItem value="crit"
+        className="relative border-b-0 rounded-[10px] overflow-hidden"
+        style={{ border: '1px solid #F0ECE9', background: '#FBF7F3' }}>
+        <AccordionTrigger className={`py-3 pl-3.5 hover:no-underline ${onRemove ? 'pr-16' : 'pr-3.5'}`}>
           <span className="text-sm font-medium truncate" style={{ color: crit.name ? '#1A1E23' : 'rgba(26,30,35,.5)' }}>{crit.name || 'Unnamed criterion'}</span>
-        </button>
+        </AccordionTrigger>
         {onRemove && (
           <button onClick={onRemove}
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-xs transition-colors" style={{ color: 'rgba(26,30,35,.45)' }}
+            className="absolute z-10 w-6 h-6 flex items-center justify-center rounded-md text-xs transition-colors"
+            style={{ top: 11, right: 36, color: 'rgba(26,30,35,.45)', background: 'transparent', border: 'none' }}
             onMouseEnter={e => e.currentTarget.style.color = '#D14B3D'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.45)'}
             title="Remove criterion">
             ✕
           </button>
         )}
-      </div>
-      {open && (
-        <div className="px-3.5 pb-3.5 flex flex-col gap-2.5 border-t" style={{ borderColor: '#F0ECE9' }}>
-          <div className="pt-3">
-            <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Criterion name</label>
-            <input value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
-              className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="e.g. Core Inquiry Resolution" />
+        <AccordionContent className="pb-0">
+          <div className="px-3.5 pb-3.5 pt-3 flex flex-col gap-2.5 border-t" style={{ borderColor: '#F0ECE9' }}>
+            <div>
+              <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Criterion name</label>
+              <input value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
+                className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="e.g. Core Inquiry Resolution" />
+            </div>
+            <div>
+              <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Description & scoring guide (1–5)</label>
+              <textarea value={crit.description} onChange={e => onChange({ ...crit, description: e.target.value })}
+                rows={6}
+                className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-y g-input"
+                style={{ minHeight: 120 }}
+                placeholder="Describe what this criterion evaluates and what each score level (1–5) means." />
+            </div>
           </div>
-          <div>
-            <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Description & scoring guide (1–5)</label>
-            <textarea value={crit.description} onChange={e => onChange({ ...crit, description: e.target.value })}
-              rows={6}
-              className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-y g-input"
-              style={{ minHeight: 120 }}
-              placeholder="Describe what this criterion evaluates and what each score level (1–5) means." />
-          </div>
-        </div>
-      )}
-    </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 
@@ -373,7 +375,8 @@ function RevisionHistory({ refreshKey }) {
       <p className="text-xs mb-3 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
         What changed in each save, and by whom. Click a revision to see the full before → after detail.
       </p>
-      <div className="flex flex-col">
+      <Accordion type="single" collapsible className="flex flex-col"
+        value={expanded ?? ''} onValueChange={(v) => setExpanded(v || null)}>
         {revisions.slice(0, 20).map((r, i) => {
           const lines = r.summary || []
           const open = expanded === r.id
@@ -381,22 +384,23 @@ function RevisionHistory({ refreshKey }) {
           const prevConfig = revisions[i + 1]?.config || null
           const detailed = open && prevConfig ? diffRubricDetailed(prevConfig, r.config) : null
           return (
-            <div key={r.id} className="py-3" style={{ borderTop: i > 0 ? '1px solid #F0ECE9' : 'none' }}>
-              <button onClick={() => setExpanded(open ? null : r.id)}
-                className="w-full flex items-center gap-2 text-left cursor-pointer"
-                style={{ background: 'none', border: 'none', padding: 0 }}>
-                <span className="shrink-0 transition-transform text-xs" style={{ color: 'rgba(26,30,35,.45)', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
-                <span className="text-xs font-semibold" style={{ color: '#1A1E23' }}>{r.changed_by_name || 'Unknown'}</span>
-                <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>
-                  · {new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            <AccordionItem key={r.id} value={r.id} className="border-b-0"
+              style={{ borderTop: i > 0 ? '1px solid #F0ECE9' : 'none' }}>
+              <AccordionTrigger className="gap-2 py-3 hover:no-underline">
+                <span className="flex flex-1 flex-wrap items-center gap-2 text-left">
+                  <span className="text-xs font-semibold" style={{ color: '#1A1E23' }}>{r.changed_by_name || 'Unknown'}</span>
+                  <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>
+                    · {new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>
+                    {lines.length} change{lines.length !== 1 ? 's' : ''}
+                  </span>
                 </span>
-                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: '#FFEAE6', color: '#B84A2E', fontWeight: 600 }}>
-                  {lines.length} change{lines.length !== 1 ? 's' : ''}
-                </span>
-              </button>
+              </AccordionTrigger>
 
+              {/* Collapsed preview — first few changes, shown only when closed */}
               {!open && (
-                <ul className="flex flex-col gap-1 mt-1.5 ml-5">
+                <ul className="flex flex-col gap-1 mb-3 ml-5">
                   {lines.slice(0, 3).map((line, j) => (
                     <li key={j} className="text-xs leading-relaxed pl-3" style={{ color: 'rgba(26,30,35,.7)', textIndent: '-0.6rem' }}>· {line}</li>
                   ))}
@@ -406,8 +410,8 @@ function RevisionHistory({ refreshKey }) {
                 </ul>
               )}
 
-              {open && (
-                <div className="flex flex-col gap-3 mt-2 ml-5">
+              <AccordionContent className="pb-0">
+                <div className="flex flex-col gap-3 pb-3 ml-5">
                   {(detailed || lines.map(label => ({ label, before: null, after: null }))).map((c, j) => (
                     <div key={j}>
                       <p className="text-xs font-medium mb-1" style={{ color: '#1A1E23' }}>{c.label}</p>
@@ -425,11 +429,11 @@ function RevisionHistory({ refreshKey }) {
                     </p>
                   )}
                 </div>
-              )}
-            </div>
+              </AccordionContent>
+            </AccordionItem>
           )
         })}
-      </div>
+      </Accordion>
     </div>
   )
 }

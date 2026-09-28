@@ -13,14 +13,17 @@ import { useState } from 'react'
  */
 
 const ink = '#1A1E23'
-const aiGradient = 'linear-gradient(135deg,#9747FF,#CB55EF)'
+const aiGradient = 'linear-gradient(135deg,#FF6B4A,#FF9780)'
 
 const icon = (children, size = 15) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
 )
-const SparklesIcon = ({ size = 12 }) => icon(<>
-  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-  <path d="M20 3v4" /><path d="M22 5h-4" />
+const AiIcon = ({ size = 12 }) => icon(<>
+  <path d="M12 2l9 3.5-9 3.5-9-3.5z" />
+  <path d="M21 5.5v5" />
+  <circle cx="12" cy="15" r="6.5" />
+  <path d="M12 8.5a9.4 9.4 0 0 0 0 13 9.4 9.4 0 0 0 0-13" />
+  <path d="M5.5 15h13" />
 </>, size)
 const PlusIcon = () => icon(<><path d="M5 12h14" /><path d="M12 5v14" /></>)
 const ArrowLeftIcon = () => icon(<><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></>)
@@ -41,7 +44,7 @@ const S = {
   btnPrimary: { height: 40, padding: '0 18px', background: '#FF9780', border: 'none', borderRadius: 8, font: "500 14px/1 'Roboto'", color: ink, cursor: 'pointer' },
   btnGhost: { height: 40, padding: '0 16px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 14px/1 'Roboto'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' },
   ticketPill: { font: "500 11px/1 'Roboto'", color: '#B84A2E', background: '#fff', border: '1px solid #F4DDD7', padding: '6px 10px', borderRadius: 9999, cursor: 'pointer' },
-  aiAvatar: (size) => ({ width: size, height: size, flex: 'none', borderRadius: 9999, background: aiGradient, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }),
+  aiAvatar: (size) => ({ width: size, height: size, flex: 'none', borderRadius: 9999, background: aiGradient, color: ink, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }),
   inlineInput: { flex: 1, border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 11px', font: "400 13px/1.4 'Roboto'", color: ink, outline: 'none', background: '#fff' },
 }
 
@@ -143,9 +146,9 @@ export default function SessionView({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* AI trend summary */}
           {session.ai_summary && (
-            <div style={{ border: '1px solid #EBDFF8', background: 'linear-gradient(135deg,#FBF8FF,#FDF6FE)', borderRadius: 14, padding: '18px 20px' }}>
+            <div style={{ border: '1px solid #F4DDD7', background: 'linear-gradient(135deg,#FFF3EE,#FFF9F4)', borderRadius: 14, padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
-                <span style={S.aiAvatar(24)}><SparklesIcon /></span>
+                <span style={S.aiAvatar(24)}><AiIcon /></span>
                 <span style={{ font: "600 12px/1 'Inter Tight'", color: ink }}>Since last coaching</span>
               </div>
               <div style={{ font: "400 13px/1.6 'Roboto'", color: 'rgba(26,30,35,.75)' }}>
@@ -161,7 +164,7 @@ export default function SessionView({
               {!readOnly && onRedraft && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 12px/1 'Roboto'", color: '#FF9780', cursor: 'pointer' }}
                   onClick={() => setAgenda(onRedraft())}>
-                  <SparklesIcon size={14} />
+                  <AiIcon size={14} />
                   Redraft
                 </span>
               )}
