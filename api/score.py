@@ -12,9 +12,13 @@ import anthropic
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from auth import require_auth
+from auth import (
+    require_auth, require_role, get_caller_role, caller_is_agent_on_ticket,
+    require_ingest_secret, service_rest,
+)
 from gorgias_client import GorgiasClient
-from scorer import score_ticket
+from scorer import score_ticket, _recompute_weighted
+from rubric import DEFAULT_RUBRIC
 from automated_grader import GradingError, authorized, grade
 
 app = Flask(__name__)
@@ -44,6 +48,65 @@ def extract_ticket_id(value: str):
     if value.isdigit():
         return int(value)
     return None
+
+
+def _render_cf_value(value, definition=None):
+    """Render a custom-field value as a display string, resolving option ids to
+    their labels via the field definition when possible. Handles scalars, lists
+    (multi-select), and {label|value|name} option objects."""
+    choices = {}
+    if definition:
+        for c in (definition.get('choices') or definition.get('options') or []):
+            if isinstance(c, dict) and c.get('id') is not None:
+                choices[c['id']] = c.get('label') or c.get('name') or c.get('value')
+
+    def one(v):
+        if isinstance(v, dict):
+            return v.get('label') or v.get('name') or v.get('value') or ''
+        if v in choices:
+            return choices[v]
+        return v
+    if isinstance(value, list):
+        return ', '.join(str(one(v)) for v in value if one(v) not in (None, ''))
+    rendered = one(value)
+    return '' if rendered is None else str(rendered)
+
+
+def fetch_custom_fields(gorgias, ticket_id: int) -> list:
+    """Custom-field values set on a ticket, normalized to [{label, value}].
+
+    The value DTO may embed the field definition (`field`/`custom_field`) or
+    only reference it by id — in the latter case we fetch account-wide
+    definitions once to resolve labels and option choices. Non-empty only, so
+    the transcript shows just the fields actually filled in. Best-effort: a
+    failure here must not sink the transcript, which is the primary payload."""
+    try:
+        rows = gorgias.get_ticket_custom_fields(ticket_id)
+    except Exception as e:
+        print(f"  custom-field fetch failed for ticket {ticket_id}: {e}")
+        return []
+
+    defs = None
+    if any(not (r.get('field') or r.get('custom_field')) for r in rows):
+        try:
+            defs = gorgias.list_custom_field_definitions()
+        except Exception:
+            defs = {}
+
+    out = []
+    for r in rows:
+        definition = r.get('field') or r.get('custom_field')
+        if definition is None and defs is not None:
+            fid = r.get('field_id') or r.get('custom_field_id')
+            definition = defs.get(fid)
+        label = (definition or {}).get('label') or (definition or {}).get('name') or 'Field'
+        raw = r.get('value')
+        if raw is None:
+            raw = r.get('text_value', r.get('formatted_value'))
+        value = _render_cf_value(raw, definition)
+        if value:
+            out.append({'label': label, 'value': value})
+    return out
 
 
 def extract_agent_senders(ticket: dict, messages: list) -> list:
@@ -156,7 +219,7 @@ def fire_slack_notification(webhook_url: str, result: dict, gorgias_domain: str)
 # ─── Score a single ticket ───────────────────────────────────────────────────
 
 @app.route('/api/score', methods=['POST'])
-@require_auth
+@require_role('admin', 'lead')
 def score():
     data = request.get_json(silent=True)
     if not data:
@@ -209,10 +272,128 @@ def score():
     return jsonify(result)
 
 
+# ─── External ingestion (e.g. Cortex → HTTP POST) ────────────────────────────────
+# Lets a trusted external system push its own QA results into the app. Authenticated
+# by a shared secret (X-Ingest-Secret), not a user JWT, and written with the
+# service-role key. The stored row behaves like any other score (queue, history,
+# coaching, realtime).
+
+VALID_VERDICTS = ('PASS', 'NEEDS_REVIEW', 'FAIL')
+
+
+def _resolve_agent_ids(agent_senders):
+    """Map Gorgias sender identities to our internal agent UUIDs — same matching
+    rule (gorgias_user_id / email / name) the app uses when it stores a score."""
+    if not agent_senders:
+        return []
+    try:
+        agents = service_rest('agents?select=id,name,email,gorgias_user_id') or []
+    except Exception:
+        return []
+    ids = []
+    for s in agent_senders:
+        if not isinstance(s, dict):
+            continue
+        gid = s.get('gorgias_user_id')
+        email = (s.get('email') or '').lower()
+        name = (s.get('name') or '').lower()
+        for a in agents:
+            if ((gid and a.get('gorgias_user_id') and a['gorgias_user_id'] == gid) or
+                (email and (a.get('email') or '').lower() == email) or
+                (name and (a.get('name') or '').lower() == name)):
+                if a['id'] not in ids:
+                    ids.append(a['id'])
+                break
+    return ids
+
+
+@app.route('/api/ingest-score', methods=['POST'])
+@require_ingest_secret
+def ingest_score():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid JSON body'}), 400
+
+    if data.get('ticket_id') in (None, ''):
+        return jsonify({'error': 'ticket_id is required'}), 400
+    ticket_id = str(data['ticket_id'])
+
+    breakdown = data.get('scores') if isinstance(data.get('scores'), dict) else None
+
+    # Assemble full_score the same way the built-in scorer stores it, tagged with
+    # its origin so ingested scores are distinguishable.
+    full_score = {
+        'ticket_id':        ticket_id,
+        'ticket_subject':   data.get('ticket_subject') or '',
+        'scores':           breakdown or {},
+        'summary':          data.get('summary') or '',
+        'strengths':        data.get('strengths') or [],
+        'key_improvements': data.get('key_improvements') or [],
+        'annotations':      data.get('annotations') or [],
+        'auto_fail':        data.get('auto_fail') or {'triggered': False, 'reasons': []},
+        'agent_senders':    data.get('agent_senders') or [],
+        'source':           'cortex',
+    }
+
+    # With a per-criterion breakdown, derive weighted_score + verdict from it (the
+    # same deterministic rule the app uses) so ingested scores stay consistent.
+    # Otherwise trust the verdict + weighted_score the caller sends.
+    if breakdown:
+        rubric = DEFAULT_RUBRIC
+        try:
+            rows = service_rest('rubric?select=config&limit=1')
+            if rows and rows[0].get('config'):
+                rubric = rows[0]['config']
+        except Exception:
+            pass
+        _recompute_weighted(full_score, rubric)
+    else:
+        v = str(data.get('verdict') or '').upper()
+        if v in VALID_VERDICTS:
+            full_score['verdict'] = v
+        try:
+            full_score['weighted_score'] = float(data.get('weighted_score'))
+        except (TypeError, ValueError):
+            pass
+
+    verdict = full_score.get('verdict')
+    if verdict not in VALID_VERDICTS:
+        return jsonify({'error': 'Provide a valid verdict (PASS/NEEDS_REVIEW/FAIL), or a `scores` breakdown to derive one'}), 400
+    try:
+        weighted = round(float(full_score.get('weighted_score')), 1)
+    except (TypeError, ValueError):
+        weighted = 0.0
+    full_score['weighted_score'] = weighted
+
+    agent_ids = data.get('agent_ids')
+    if not (isinstance(agent_ids, list) and agent_ids):
+        agent_ids = _resolve_agent_ids(full_score['agent_senders'])
+    agent_ids = [a for a in agent_ids if a]
+
+    row = {
+        'ticket_id':      ticket_id,
+        'ticket_subject': full_score['ticket_subject'],
+        'verdict':        verdict,
+        'weighted_score': weighted,
+        'agent_ids':      agent_ids,
+        'full_score':     full_score,
+    }
+    try:
+        created = service_rest('scores', method='POST', body=row)
+    except Exception as e:
+        return jsonify({'error': f'Failed to store score: {e}'}), 502
+
+    new_id = created[0]['id'] if isinstance(created, list) and created else None
+    return jsonify({
+        'ok': True, 'id': new_id, 'ticket_id': ticket_id,
+        'verdict': verdict, 'weighted_score': weighted, 'agent_ids': agent_ids,
+    }), 201
+
+
 # ─── Test Slack webhook ───────────────────────────────────────────────────────
 
 @app.route('/api/test-webhook', methods=['POST'])
-@require_auth
+@require_role('admin', 'lead')
 def test_webhook():
     data        = request.get_json(silent=True) or {}
     webhook_url = (data.get('webhook_url') or '').strip()
@@ -230,14 +411,14 @@ def test_webhook():
 # ─── Notify agent via Slack DM ───────────────────────────────────────────────
 
 @app.route('/api/slack-status', methods=['GET'])
-@require_auth
+@require_role('admin', 'lead')
 def slack_status():
     configured = bool((os.environ.get('SLACK_BOT_TOKEN') or '').strip())
     return jsonify({'configured': configured})
 
 
 @app.route('/api/notify-agent', methods=['POST'])
-@require_auth
+@require_role('admin', 'lead')
 def notify_agent():
     data          = request.get_json(silent=True) or {}
     bot_token     = (os.environ.get('SLACK_BOT_TOKEN') or '').strip()
@@ -344,7 +525,7 @@ def notify_agent():
 # ─── List Gorgias users (for agent import) ───────────────────────────────────
 
 @app.route('/api/gorgias-users', methods=['GET'])
-@require_auth
+@require_role('admin', 'lead')
 def gorgias_users():
     gorgias_auth, gorgias_domain, _ = get_env()
     if not gorgias_auth:
@@ -378,7 +559,7 @@ def gorgias_users():
 # ─── List Gorgias views ───────────────────────────────────────────────────────
 
 @app.route('/api/views', methods=['GET'])
-@require_auth
+@require_role('admin', 'lead')
 def list_views():
     gorgias_auth, gorgias_domain, _ = get_env()
     if not gorgias_auth:
@@ -399,7 +580,7 @@ def list_views():
 # ─── Get ticket IDs from a view ───────────────────────────────────────────────
 
 @app.route('/api/view-tickets', methods=['GET'])
-@require_auth
+@require_role('admin', 'lead')
 def view_tickets():
     view_id = request.args.get('view_id')
     limit   = min(int(request.args.get('limit', 30)), 100)
@@ -426,7 +607,7 @@ def view_tickets():
 # ─── Random ticket sampler ────────────────────────────────────────────────────
 
 @app.route('/api/sample-tickets', methods=['GET'])
-@require_auth
+@require_role('admin', 'lead')
 def sample_tickets():
     gorgias_user_id = request.args.get('gorgias_user_id', type=int)
     date_from       = request.args.get('date_from')   # YYYY-MM-DD
@@ -461,6 +642,10 @@ def ticket_messages():
     if not ticket_id:
         return jsonify({'error': 'ticket_id is required'}), 400
 
+    # Reviewers see any transcript; agents only tickets they were scored on
+    if get_caller_role() not in ('admin', 'lead') and not caller_is_agent_on_ticket(ticket_id):
+        return jsonify({'error': 'You can only view transcripts of tickets you were scored on'}), 403
+
     gorgias_auth, gorgias_domain, _ = get_env()
     if not gorgias_auth:
         return jsonify({'error': 'GORGIAS_AUTH not configured'}), 500
@@ -486,11 +671,11 @@ def ticket_messages():
 
         ticket = gorgias.get_ticket(ticket_id)
         ticket_info = {
-            'subject':  ticket.get('subject', ''),
-            'status':   ticket.get('status', ''),
-            'priority': ticket.get('priority', ''),
-            'channel':  ticket.get('channel', ''),
-            'tags':     [t.get('name') for t in (ticket.get('tags') or []) if t.get('name')],
+            'subject':       ticket.get('subject', ''),
+            'status':        ticket.get('status', ''),
+            'priority':      ticket.get('priority', ''),
+            'channel':       ticket.get('channel', ''),
+            'custom_fields': fetch_custom_fields(gorgias, ticket_id),
         }
         return jsonify({'messages': out, 'ticket': ticket_info})
     except Exception as e:

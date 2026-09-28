@@ -26,19 +26,37 @@ const TESTIMONIALS = [
 
 const ROTATE_MS = 4500
 
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(prefersReducedMotion)
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReduced(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  return reduced
+}
+
 function TestimonialCarousel() {
   const [index, setIndex] = useState(0)
   const timerRef = useRef(null)
+  const reduceMotion = useReducedMotion()
 
   const resetTimer = () => {
     clearInterval(timerRef.current)
+    if (reduceMotion) return
     timerRef.current = setInterval(() => setIndex(i => (i + 1) % TESTIMONIALS.length), ROTATE_MS)
   }
 
   useEffect(() => {
     resetTimer()
     return () => clearInterval(timerRef.current)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [reduceMotion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDot = (i) => { setIndex(i); resetTimer() }
 
@@ -121,14 +139,19 @@ const INTRO_KEY = 'gorgias_qa_intro_seen'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
+  const reduceMotion = useReducedMotion()
 
   /* ── intro animation ── */
   const [introState, setIntroState] = useState(() =>
-    sessionStorage.getItem(INTRO_KEY) ? 'done' : 'showing'
+    sessionStorage.getItem(INTRO_KEY) || prefersReducedMotion() ? 'done' : 'showing'
   )
   const [introPulse, setIntroPulse] = useState(false)
 
   useEffect(() => {
+    if (reduceMotion) {
+      setIntroState('done')
+      return undefined
+    }
     if (introState !== 'showing') return
     // pulse starts just after everything animates in (~1.6s)
     const t1 = setTimeout(() => setIntroPulse(true), 1600)
@@ -139,7 +162,7 @@ export default function LoginPage() {
     }, 2200)
     const t3 = setTimeout(() => setIntroState('done'), 2700)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [introState])
+  }, [introState, reduceMotion])
 
   /* ── form state ── */
   const [email,      setEmail]      = useState('')

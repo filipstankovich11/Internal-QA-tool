@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import SessionView from '../components/coaching/SessionView'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import { cn } from '@/lib/utils'
 
 const CRITERIA = [
   { key: 'core_inquiry_resolved',     name: 'Core Resolution',        dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
@@ -30,46 +32,44 @@ function ScorePips({ score }) {
 }
 
 function CriterionCard({ criterion, avg, notes, isWeak }) {
-  const [expanded, setExpanded] = useState(false)
   const color = scoreColor(avg)
+  const hasNotes = notes.length > 0
 
   return (
     <div className="rounded-2xl overflow-hidden"
       style={{ background: isWeak ? scoreBg(avg) : '#FFFFFF', border: `1px solid ${isWeak ? scoreBorder(avg) : '#EEEEEE'}`, boxShadow: isWeak ? 'none' : '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
-      <button
-        className="w-full flex items-center gap-4 px-5 py-4 text-left"
-        onClick={() => notes.length > 0 && setExpanded(v => !v)}>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium" style={{ color: '#1A1E23' }}>{criterion.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'rgba(26,30,35,.6)', background: '#FBF7F3' }}>
-              {criterion.dimension}
-            </span>
-          </div>
-          <ScorePips score={avg} />
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-lg font-bold tabular-nums" style={{ color }}>
-            {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>/5</span>
-          </span>
-          {notes.length > 0 && (
-            <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)', transform: expanded ? 'rotate(90deg)' : 'rotate(0)', display: 'inline-block', transition: 'transform 0.2s' }}>▶</span>
-          )}
-        </div>
-      </button>
-
-      {expanded && notes.length > 0 && (
-        <div className="px-5 pb-4 flex flex-col gap-2.5"
-          style={{ borderTop: '1px solid #F0ECE9' }}>
-          <p className="text-xs pt-3" style={{ color: 'rgba(26,30,35,.5)' }}>Recent AI feedback on this area:</p>
-          {notes.slice(0, 4).map((note, i) => (
-            <div key={i} className="flex gap-2.5">
-              <span className="text-xs mt-0.5 shrink-0" style={{ color: 'rgba(26,30,35,.45)' }}>•</span>
-              <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{note}</p>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="notes" className="border-b-0">
+          <AccordionTrigger disabled={!hasNotes}
+            className={cn('gap-4 px-5 py-4 hover:no-underline', !hasNotes && 'cursor-default [&>svg]:hidden')}>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium" style={{ color: '#1A1E23' }}>{criterion.name}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'rgba(26,30,35,.6)', background: '#FBF7F3' }}>
+                  {criterion.dimension}
+                </span>
+              </div>
+              <ScorePips score={avg} />
             </div>
-          ))}
-        </div>
-      )}
+            <span className="text-lg font-bold tabular-nums shrink-0" style={{ color }}>
+              {avg.toFixed(1)}<span className="text-xs font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>/5</span>
+            </span>
+          </AccordionTrigger>
+          {hasNotes && (
+            <AccordionContent>
+              <div className="px-5 pt-3 flex flex-col gap-2.5" style={{ borderTop: '1px solid #F0ECE9' }}>
+                <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>Recent AI feedback on this area:</p>
+                {notes.slice(0, 4).map((note, i) => (
+                  <div key={i} className="flex gap-2.5">
+                    <span className="text-xs mt-0.5 shrink-0" style={{ color: 'rgba(26,30,35,.45)' }}>•</span>
+                    <p className="text-sm leading-relaxed" style={{ color: 'rgba(26,30,35,.72)' }}>{note}</p>
+                  </div>
+                ))}
+              </div>
+            </AccordionContent>
+          )}
+        </AccordionItem>
+      </Accordion>
     </div>
   )
 }
@@ -108,6 +108,18 @@ export default function CoachingPage() {
       .then(({ data, error }) => {
         if (error) { console.error('coaching sessions fetch failed:', error); return }
         setSessions(data || [])
+      })
+  }, [role])
+
+  // ── Coaching goals set by the lead (RLS returns only this agent's rows) ─────
+  const [goals, setGoals] = useState([])
+  useEffect(() => {
+    if (role !== 'agent') return
+    supabase.from('coaching_goals').select('*')
+      .eq('status', 'open').order('created_at', { ascending: false }).limit(20)
+      .then(({ data, error }) => {
+        if (error) { console.error('coaching goals fetch failed:', error); return }
+        setGoals(data || [])
       })
   }, [role])
 
@@ -189,7 +201,7 @@ export default function CoachingPage() {
     )
   }
 
-  if (scores.length === 0 && sessions.length === 0) {
+  if (scores.length === 0 && sessions.length === 0 && goals.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 text-center" style={{ color: 'rgba(26,30,35,.5)' }}>
         <p className="text-4xl mb-4">📋</p>
@@ -237,6 +249,42 @@ export default function CoachingPage() {
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Goals set by the lead */}
+      {goals.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-semibold mb-3" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, color: '#1A1E23' }}>Your Goals</h2>
+          <p className="text-xs mb-4" style={{ color: 'rgba(26,30,35,.6)' }}>
+            Development goals from your lead — the linked tickets show where each one comes from.
+          </p>
+          <div className="flex flex-col gap-3">
+            {goals.map(g => (
+              <div key={g.id} className="rounded-2xl px-5 py-4"
+                style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium flex-1" style={{ color: '#1A1E23' }}>{g.title}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ color: '#C8841E', background: '#FBEBD3' }}>Open</span>
+                </div>
+                {g.detail && (
+                  <p className="text-sm leading-relaxed mt-2" style={{ color: 'rgba(26,30,35,.72)' }}>{g.detail}</p>
+                )}
+                <div className="flex items-center gap-2 flex-wrap mt-3">
+                  {(g.evidence || []).slice(0, 4).map(t => (
+                    <button key={t.scoreId || t.ticketId} onClick={() => t.scoreId && openTicketById(t.scoreId)}
+                      className="text-xs px-2.5 py-1.5 rounded-full"
+                      style={{ color: '#B84A2E', background: '#fff', border: '1px solid #F4DDD7', cursor: 'pointer' }}>
+                      #{t.ticketId}
+                    </button>
+                  ))}
+                  <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>
+                    {(g.evidence || []).length > 4 ? `+${g.evidence.length - 4} more · ` : ''}from {g.created_by_name || 'your lead'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

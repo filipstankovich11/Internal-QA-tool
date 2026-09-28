@@ -64,8 +64,16 @@
   to   { opacity: 1; }
 }
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  from {
+    opacity: 0.55;
+    transform: translateX(-10px);
+    clip-path: inset(0 0 0 10px round 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    clip-path: inset(0);
+  }
 }
 @keyframes itemIn {
   from { opacity: 0; transform: translateY(6px); }
@@ -86,11 +94,66 @@
   to { opacity: 0; }
 }
 
+/* Score review reveal: verdict first, value second, then the weighted
+   dimensions. The sequence mirrors how a reviewer reads the result. */
+@keyframes verdictReveal {
+  from { opacity: 0; clip-path: inset(0 100% 0 0 round 999px); filter: blur(3px); }
+  to   { opacity: 1; clip-path: inset(0); filter: blur(0); }
+}
+@keyframes scoreValueReveal {
+  from { opacity: 0; transform: translateX(-6px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateX(0); filter: blur(0); }
+}
+@keyframes scoreDimensionReveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scoreProgressReveal {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(var(--progress, 0)); }
+}
+@keyframes navRailIn {
+  from { opacity: 0; transform: translateY(-50%) scaleY(.35); }
+  to   { opacity: 1; transform: translateY(-50%) scaleY(1); }
+}
+
 .modal-enter   { animation: modalIn   0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 .overlay-enter { animation: fadeIn   0.15s ease-out; }
-.page-enter    { animation: pageIn   0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+.page-enter    { animation: pageIn   0.26s cubic-bezier(0.16, 1, 0.3, 1); }
 .toast-enter   { animation: toastIn  0.2s  cubic-bezier(0.16, 1, 0.3, 1); }
 .panel-enter   { animation: panelIn  0.30s cubic-bezier(0.16, 1, 0.3, 1); }
+
+.score-verdict-reveal {
+  animation: verdictReveal 0.42s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.score-value-reveal {
+  animation: scoreValueReveal 0.36s 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.score-dimension-reveal {
+  animation: scoreDimensionReveal 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(0.24s + var(--i, 0) * 55ms);
+}
+.score-progress-reveal {
+  animation: scoreProgressReveal 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(0.32s + var(--i, 0) * 55ms);
+}
+
+.nav-active-rail {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 18px;
+  border-radius: 0 2px 2px 0;
+  background: var(--coral-text);
+  transform-origin: center;
+  animation: navRailIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.nav-item-motion:active:not(:disabled),
+.g-btn-primary:active:not(:disabled),
+.g-btn-ghost:active:not(:disabled) {
+  transform: scale(.98);
+}
 
 @keyframes panelIn {
   from { transform: translateX(100%); }
@@ -228,13 +291,13 @@
   background: var(--coral);
   color: var(--ink);
   font-weight: 600;
-  transition: filter 0.15s, opacity 0.15s;
+  transition: filter 0.15s, opacity 0.15s, transform 0.12s;
 }
 .g-btn-primary:hover:not(:disabled) { filter: brightness(0.96); }
 .g-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .g-btn-ghost {
   color: var(--ink-72);
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s, transform 0.12s;
 }
 .g-btn-ghost:hover { color: var(--ink); background: #F6F2EF; }
 
@@ -292,14 +355,105 @@
    click. Inputs get their focus indication from .g-input:focus (subtle coral
    border + soft ring) instead. */
 
-/* Respect users who prefer reduced motion — neutralize transitions and the
-   page/modal/stagger/shimmer/skeleton animations rather than flashing them. */
+/* Reduced motion keeps state/color feedback but removes travel, counting,
+   shimmer, and delayed choreography. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    transition-duration: 100ms !important;
     scroll-behavior: auto !important;
+  }
+  .modal-enter,
+  .page-enter,
+  .toast-enter,
+  .panel-enter,
+  .stagger-item,
+  .score-verdict-reveal,
+  .score-value-reveal,
+  .score-dimension-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    filter: none !important;
+  }
+  .score-progress-reveal { transform: scaleX(var(--progress, 0)) !important; }
+  .nav-active-rail { opacity: 1 !important; transform: translateY(-50%) !important; }
+  .progress-shimmer,
+  .tt-flash-overlay::before { display: none; }
+  .skeleton-bar { opacity: .65; }
+  .pfile { display: none; }
+  .pfile:first-child {
+    display: block;
+    left: calc(50% - 20px);
+    opacity: 1;
+    transform: none;
+  }
+  .app-sidebar,
+  .notification-panel { transition-duration: 0.001ms !important; }
+}
+
+.mobile-app-header,
+.mobile-nav-close { display: none; }
+
+@media (max-width: 767px) {
+  .app-main { padding-top: 60px; }
+  .mobile-app-header {
+    position: fixed;
+    inset: 0 0 auto;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 14px;
+    background: var(--white);
+    border-bottom: 1px solid var(--hairline);
+    z-index: 50;
+  }
+  .mobile-app-header button,
+  .mobile-nav-close {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+  }
+  .mobile-nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 30, 35, .45);
+    z-index: 60;
+    animation: fadeIn 150ms ease-out;
+  }
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: min(280px, 85vw) !important;
+    height: 100dvh !important;
+    max-width: 85vw;
+    z-index: 70 !important;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform 220ms cubic-bezier(.16, 1, .3, 1), visibility 220ms;
+  }
+  .app-sidebar.mobile-open {
+    visibility: visible;
+    transform: translateX(0);
+  }
+  .app-sidebar nav button { min-height: 44px; }
+  .desktop-sidebar-collapse { display: none !important; }
+  .notification-backdrop { z-index: 79 !important; }
+  .notification-panel {
+    left: 0 !important;
+    width: min(320px, 100vw) !important;
+    z-index: 80 !important;
   }
 }
 

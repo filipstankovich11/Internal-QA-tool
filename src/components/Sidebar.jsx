@@ -18,9 +18,9 @@ const MENU_TABS = [
   { id: 'myqueue',     label: 'My Queue',     adminOnly: true, myQueueBadge: true, icon: ic(<><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/></>) },
   { id: 'agents',      label: 'Agents',       icon: ic(<><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></>) },
   { id: 'inbox',       label: 'Inbox',        agentOnly: true, inboxBadge: true, icon: ic(<><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></>) },
-  { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: ic(<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>) },
+  { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: ic(<><path d="M9 3h12v13H11"/><path d="M13 7h5"/><path d="M14 10h4"/><circle cx="4.5" cy="5.5" r="2.5"/><path d="M2.5 21l.6-6.5A4 4 0 0 1 7 10.9l3.4 2.9 3.8-1"/></>) },
   { id: 'teams',       label: 'Teams',        scorerOnly: true, icon: ic(<><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></>) },
-  { id: 'coachinghub', label: 'Coaching',     scorerOnly: true, icon: ic(<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M14.8 7.5a1.84 1.84 0 0 0-2.6 0l-.2.3-.3-.3a1.84 1.84 0 1 0-2.4 2.8L12 13l2.7-2.7c.9-.9.8-2.1.1-2.8"/></>) },
+  { id: 'coachinghub', label: 'Coaching',     scorerOnly: true, icon: ic(<><path d="M9 3h12v13H11"/><path d="M13 7h5"/><path d="M14 10h4"/><circle cx="4.5" cy="5.5" r="2.5"/><path d="M2.5 21l.6-6.5A4 4 0 0 1 7 10.9l3.4 2.9 3.8-1"/></>) },
   { id: 'rubric',      label: 'QA Guidance',  adminOnly: true, icon: ic(<><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></>) },
 ]
 
@@ -39,6 +39,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
 
   return (
     <button
+      className="nav-item-motion"
       onClick={(e) => { onClick(); if (e.detail) e.currentTarget.blur() }}
       title={collapsed ? label : undefined}
       onMouseEnter={() => setHovered(true)}
@@ -48,11 +49,12 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
         height: 38, padding: collapsed ? 0 : '0 10px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderRadius: 8, color: labelColor, background: bg, border: 'none',
-        transition: 'color 140ms, background 140ms',
+        transition: 'color 140ms, background 140ms, transform 120ms',
         fontSize: 14, fontWeight: isActive ? 600 : 500,
         whiteSpace: 'nowrap', cursor: 'pointer', width: '100%', textAlign: 'left', position: 'relative',
       }}
     >
+      {isActive && <span className="nav-active-rail" aria-hidden="true" />}
       <span style={{ flexShrink: 0, display: 'flex', color: iconColor, transition: 'color 140ms' }}>{icon}</span>
 
       {!collapsed && (

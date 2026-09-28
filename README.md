@@ -1,6 +1,6 @@
 # Gorgias Internal QA Tool
 
-An AI-powered QA scoring tool for Gorgias support tickets. Score individual tickets, run batch scoring via CSV or Gorgias views, manage agents and teams, and send Slack DM feedback to agents.
+An AI-powered QA scoring tool for Gorgias support tickets. Score individual tickets, run batch scoring via CSV or Gorgias views, manage agents and teams, coach agents from their scored tickets, and send Slack DM feedback.
 
 ---
 
@@ -13,12 +13,19 @@ An AI-powered QA scoring tool for Gorgias support tickets. Score individual tick
 - **QA Guidance / Rubric editor** — customise scoring dimensions, weights, auto-fail conditions, and free-text scoring guidance
 - **Slack DM notifications** — send formatted QA feedback directly to an agent's Slack DM with a preview before sending
 - **Review queue** — manage tickets pending review
-- **Coaching page** — agent-level coaching insights
-- **Role-based access** — admin and agent roles via Supabase Auth
+- **Coaching hub (leads)** — recurring issues and strengths surfaced per agent from score data; run coaching sessions, set plan goals, share strengths and team topics
+- **Coaching page (agents)** — personal focus areas, sessions and goals shared by the lead
+- **Role-based access** — admin / lead / agent roles via Supabase Auth, enforced by Postgres RLS and the API
 
 ---
 
 ## Setup
+
+### Prerequisites
+
+- **Node 18+**
+- **Python 3.10+** (the API uses `dict | None` type syntax; the dev script prefers `python3.11`)
+- A Supabase project — either access to the team's existing one (ask a lead for the URL + anon key and skip step 4), or your own free project at [supabase.com](https://supabase.com)
 
 ### 1. Clone the repo
 ```bash
@@ -33,14 +40,19 @@ npm install
 
 ### 3. Install Python dependencies
 ```bash
-cd api
-pip3.11 install -r requirements.txt
-cd ..
+pip3.11 install -r api/requirements.txt
 ```
 
-> Requires **Python 3.10+** (the API uses `dict | None` type syntax).
+### 4. Set up the database (own Supabase project only)
 
-### 4. Configure environment variables
+Skip this if you're using the team's existing project — the schema is already there.
+
+In the Supabase dashboard → SQL editor:
+
+1. Run **`supabase/schema.sql`**
+2. Run each file in **`supabase/migrations/`**, in filename (timestamp) order
+
+### 5. Configure environment variables
 ```bash
 cp .env.example .env.local
 ```
@@ -55,11 +67,11 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 # Python API
 VITE_API_URL=http://localhost:5001
 
-# Gorgias (required for API server)
+# Gorgias (needed to fetch/score tickets)
 GORGIAS_AUTH=Basic your-base64-encoded-credentials
 GORGIAS_DOMAIN=yourcompany.gorgias.com
 
-# Anthropic (required for AI scoring)
+# Anthropic (needed for AI scoring)
 ANTHROPIC_API_KEY=sk-ant-...
 
 # Slack (optional — enables DM notifications)
@@ -67,22 +79,28 @@ SLACK_BOT_TOKEN=xoxb-...
 ```
 
 **Notes:**
-- `VITE_SUPABASE_URL` is also used by the Python server to verify JWTs via Supabase's JWKS endpoint — no separate `SUPABASE_JWT_SECRET` needed.
+- The anon key is public by design — row-level security is what protects the data. The other keys are server-side secrets: never commit `.env.local` (it's gitignored) and never add a `VITE_` prefix to them, or Vite will bundle them into the browser build.
+- Without `GORGIAS_AUTH` / `ANTHROPIC_API_KEY` the app still runs for browsing, history, and coaching — only scoring, transcripts, and Gorgias imports need them.
+- `VITE_SUPABASE_URL` is also used by the Python server to verify JWTs via Supabase's JWKS endpoint — no separate `SUPABASE_JWT_SECRET` needed. The server also uses `VITE_SUPABASE_ANON_KEY` to look up caller roles.
 - `SLACK_BOT_TOKEN` requires a Slack app with `users:read.email` and `chat:write` scopes installed in your workspace.
 
-### 5. Run locally
+### 6. Create your account
 
-In two separate terminals:
+There is no self-signup. In the Supabase dashboard → Authentication → Users → **Add user** (email + password). A profile row is created automatically with the `agent` role; to grant scoring/coaching access, promote it in the SQL editor:
+
+```sql
+update public.profiles set role = 'lead' where email = 'you@company.com';  -- or 'admin'
+```
+
+Roles: `agent` sees only their own scores and coaching; `lead` adds scoring, review, teams, and the coaching hub; `admin` adds rubric editing and user-facing admin surfaces. Roles are enforced server-side (RLS + API), not just in the UI.
+
+### 7. Run locally
 
 ```bash
-# Terminal 1 — Frontend
 npm run dev
-
-# Terminal 2 — API server
-python3.11 api/score.py
-python3 api/score.py
-
 ```
+
+This starts the Vite frontend (:5173) **and** the Flask API (:5001) together, and stops the API when Vite exits. To run them separately: `npm run dev:web` and `python3.11 api/score.py`.
 
 App available at http://localhost:5173
 
