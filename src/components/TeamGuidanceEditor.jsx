@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext'
 import { useToast } from './Toast'
 import { supabase } from '../lib/supabase'
 import { authFetchJson } from '../lib/api'
+import GuidancePreview from './GuidancePreview'
 
 const card = { background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05)', padding: '20px 24px' }
 
@@ -134,6 +135,10 @@ export default function TeamGuidanceEditor() {
         <div className="flex gap-2 mt-4 flex-wrap">
           <button type="button" onClick={save} disabled={busy || (!draftDirty && !mappingDirty)}
             className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-40" style={{ border: '1px solid #DDD6CF', color: '#1A1E23' }}>Save draft</button>
+        </div>
+        <GuidancePreview team={team} record={record} draft={draft} draftDirty={draftDirty} mappingDirty={mappingDirty} />
+        <div className="mt-5 pt-5 flex items-center justify-between gap-3 flex-wrap" style={{ borderTop: '1px solid #F0ECE9' }}>
+          <p className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>Publishing applies this saved draft to future scheduled grades.</p>
           <button type="button" onClick={publish} disabled={busy || !publishable}
             className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-40" style={{ background: '#B84A2E' }}>Publish guidance</button>
         </div>

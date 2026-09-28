@@ -5,11 +5,12 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+import uuid
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 import anthropic
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 
 from auth import (
@@ -19,7 +20,7 @@ from auth import (
 from gorgias_client import GorgiasClient
 from scorer import score_ticket, _recompute_weighted
 from rubric import DEFAULT_RUBRIC
-from automated_grader import GradingError, authorized, grade
+from automated_grader import GradingError, authorized, grade, preview
 
 app = Flask(__name__)
 
@@ -167,6 +168,30 @@ def gorgias_teams():
     except Exception:
         app.logger.exception('Could not fetch Gorgias teams')
         return jsonify({'error': 'Could not fetch Gorgias teams'}), 502
+
+
+@app.route('/api/guidance-preview', methods=['POST'])
+@require_auth
+def guidance_preview():
+    data = request.get_json(silent=True) or {}
+    ticket_id = data.get('ticket_id')
+    team_id = data.get('team_id')
+    variant = data.get('variant')
+    if not isinstance(ticket_id, int) or isinstance(ticket_id, bool) or ticket_id <= 0:
+        return jsonify({'error': 'ticket_id must be a positive integer'}), 400
+    try:
+        uuid.UUID(str(team_id))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({'error': 'team_id must be a UUID'}), 400
+    if variant not in ('published', 'draft'):
+        return jsonify({'error': 'variant must be published or draft'}), 400
+    try:
+        return jsonify(preview(ticket_id, team_id, variant, g.current_user_id))
+    except GradingError as error:
+        return jsonify({'error': str(error)}), error.status
+    except Exception:
+        app.logger.exception('Guidance preview failed')
+        return jsonify({'error': 'Guidance preview failed'}), 502
 
 
 # ─── Slack webhook ───────────────────────────────────────────────────────────

@@ -77,6 +77,47 @@ class AutomatedGraderTests(unittest.TestCase):
         self.assertEqual(seen['saved']['full_score']['scoring_context']['guidance_version'], 3)
         self.assertEqual(response['weighted_score'], 100)
 
+    def test_preview_uses_saved_variants_without_persisting(self):
+        class Gorgias:
+            def __init__(self, *_): pass
+            def get_ticket(self, _): return {'id': 123, 'subject': 'Example', 'assignee_team_id': 42}
+            def get_ticket_messages(self, _): return [{'from_agent': True}]
+
+        seen = []
+        def fake_db(table, params=None, payload=None):
+            self.assertIsNone(payload)
+            return {'profiles': [{'role': 'admin'}],
+                    'teams': [{'id': 'team-1', 'name': 'Specialists', 'gorgias_team_id': 42}],
+                    'team_guidance': [{'draft_text': 'Draft rule', 'published_text': 'Published rule',
+                                       'published_version': 3}],
+                    'rubric': [{'config': DEFAULT_RUBRIC}]}[table]
+
+        def fake_score(_client, _ticket, _messages, rubric):
+            seen.append(rubric['scoring_guidance'])
+            return {'scores': {dim['id']: {crit['id']: {'score': 4} for crit in dim['criteria']}
+                               for dim in rubric['dimensions']}, 'auto_fail': {'triggered': False}}
+
+        with patch.dict('os.environ', {'GORGIAS_AUTH': 'fake', 'ANTHROPIC_API_KEY': 'fake'}), \
+             patch.object(grader, 'GorgiasClient', Gorgias), \
+             patch.object(grader.anthropic, 'Anthropic', return_value=object(), create=True), \
+             patch.object(grader, 'score_ticket', fake_score), \
+             patch.object(grader, 'supabase_request', fake_db):
+            baseline = grader.preview(123, 'team-1', 'published', 'admin-1')
+            candidate = grader.preview(123, 'team-1', 'draft', 'admin-1')
+        self.assertIn('Published rule', seen[0])
+        self.assertNotIn('Draft rule', seen[0])
+        self.assertIn('Draft rule', seen[1])
+        self.assertEqual(baseline['guidance_version'], 3)
+        self.assertEqual(candidate['variant'], 'draft')
+        self.assertEqual(baseline['rubric_hash'], candidate['rubric_hash'])
+        self.assertEqual(candidate['guidance_text'], 'Draft rule')
+
+    def test_preview_requires_admin(self):
+        with patch.object(grader, 'supabase_request', return_value=[{'role': 'agent'}]):
+            with self.assertRaises(GradingError) as raised:
+                grader.preview(123, 'team-1', 'draft', 'agent-1')
+        self.assertEqual(raised.exception.status, 403)
+
 
 if __name__ == '__main__':
     unittest.main()

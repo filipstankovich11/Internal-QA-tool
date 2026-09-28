@@ -1,7 +1,9 @@
 """Server-side grading for the Cortex scheduler. No rubric or team is trusted from callers."""
 
 import copy
+import hashlib
 import hmac
+import json
 import os
 
 import anthropic
@@ -106,6 +108,57 @@ def match_agents(senders):
     return matches
 
 
+def effective_rubric(config, team_name, team_text):
+    rubric = copy.deepcopy(config)
+    shared = (rubric.get('scoring_guidance') or '').strip()
+    rubric['scoring_guidance'] = '\n\n'.join(part for part in (
+        'Use this guidance as context. The shared rubric criteria, weights, and verdict thresholds remain authoritative.',
+        f'Shared guidance:\n{shared}' if shared else '',
+        f'Additional guidance for {team_name}:\n{team_text}' if team_text else '',
+    ) if part)
+    return rubric
+
+
+def preview(ticket_id, team_uuid, variant, requester_id):
+    """Run one saved guidance variant without writing a score or notifying anyone."""
+    profile = one('profiles', {'select': 'role', 'id': f'eq.{requester_id}', 'limit': 1})
+    if not profile or profile.get('role') != 'admin':
+        raise GradingError('Only admins can test guidance', 403)
+    team = one('teams', {'select': 'id,name,gorgias_team_id', 'id': f'eq.{team_uuid}', 'limit': 1})
+    if not team or not team.get('gorgias_team_id'):
+        raise GradingError('Map this QA team to a Gorgias team first', 422)
+    guidance = one('team_guidance', {'select': 'draft_text,published_text,published_version',
+                                     'team_id': f'eq.{team_uuid}', 'limit': 1})
+    if not guidance or not (guidance.get('draft_text') or '').strip():
+        raise GradingError('Save a guidance draft before testing', 422)
+    team_text = (guidance.get('draft_text') if variant == 'draft' else guidance.get('published_text')) or ''
+    saved_rubric = one('rubric', {'select': 'config', 'id': 'eq.1', 'limit': 1})
+    base_rubric = saved_rubric['config'] if saved_rubric else DEFAULT_RUBRIC
+    rubric_hash = hashlib.sha256(json.dumps(base_rubric, sort_keys=True).encode()).hexdigest()
+    rubric = effective_rubric(base_rubric, team['name'], team_text)
+    gorgias_auth = os.environ.get('GORGIAS_AUTH')
+    anthropic_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not gorgias_auth or not anthropic_key:
+        raise GradingError('Gorgias or Anthropic credentials are not configured', 503)
+    gorgias = GorgiasClient(os.environ.get('GORGIAS_DOMAIN', 'gorgias.gorgias.com'), gorgias_auth)
+    ticket = gorgias.get_ticket(ticket_id)
+    if assigned_team_id(ticket) != int(team['gorgias_team_id']):
+        raise GradingError('Ticket is assigned to a different Gorgias team', 422)
+    messages = gorgias.get_ticket_messages(ticket_id)
+    if not any(msg.get('from_agent') for msg in messages):
+        raise GradingError('Ticket has no agent response to evaluate', 422)
+    result = normalize_score(score_ticket(anthropic.Anthropic(api_key=anthropic_key),
+                                          ticket, messages, rubric=rubric), rubric)
+    return {
+        'ticket_id': ticket_id, 'ticket_subject': ticket.get('subject', ''),
+        'variant': variant, 'guidance_version': guidance['published_version'] if variant == 'published' and team_text else None,
+        'guidance_text': team_text, 'rubric_hash': rubric_hash,
+        'weighted_score': result['weighted_score'], 'verdict': result['verdict'],
+        'summary': result.get('summary', ''), 'scores': result['scores'],
+        'auto_fail': result.get('auto_fail') or {},
+    }
+
+
 def grade(ticket_id, extract_agent_senders):
     previous = one('scores', {'select': 'id,verdict,weighted_score', 'ticket_id': f'eq.{ticket_id}',
                               'source': 'eq.cortex', 'limit': 1})
@@ -130,16 +183,11 @@ def grade(ticket_id, extract_agent_senders):
         raise GradingError(f'Gorgias team {team_id} is not mapped in QA guidance', 422)
 
     saved_rubric = one('rubric', {'select': 'config', 'id': 'eq.1', 'limit': 1})
-    rubric = copy.deepcopy(saved_rubric['config'] if saved_rubric else DEFAULT_RUBRIC)
     guidance = one('team_guidance', {'select': 'published_text,published_version',
                                      'team_id': f"eq.{team['id']}", 'limit': 1})
     published = (guidance or {}).get('published_text') or ''
-    shared = (rubric.get('scoring_guidance') or '').strip()
-    rubric['scoring_guidance'] = '\n\n'.join(part for part in (
-        'Use this guidance as context. The shared rubric criteria, weights, and verdict thresholds remain authoritative.',
-        f'Shared guidance:\n{shared}' if shared else '',
-        f"Additional guidance for {team['name']}:\n{published}" if published else '',
-    ) if part)
+    rubric = effective_rubric(saved_rubric['config'] if saved_rubric else DEFAULT_RUBRIC,
+                              team['name'], published)
 
     result = score_ticket(anthropic.Anthropic(api_key=anthropic_key), ticket, messages, rubric=rubric)
     result = normalize_score(result, rubric)
