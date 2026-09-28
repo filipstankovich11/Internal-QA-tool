@@ -1,3 +1,4 @@
+import hmac
 import os
 import json
 import time
@@ -159,6 +160,58 @@ def require_role(*roles):
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
+
+# ─── External ingestion (webhooks / server-to-server) ───────────────────────────
+# For trusted external systems (e.g. a Cortex automation) that push QA results in.
+# These callers are NOT Supabase users, so they authenticate with a shared secret
+# instead of a JWT, and writes run with the service-role key (bypassing RLS).
+
+def _service_key():
+    return os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+
+
+def require_ingest_secret(f):
+    """Guard for the external ingestion endpoint. Authenticates with a shared
+    secret sent as `X-Ingest-Secret` (or `Authorization: Bearer <secret>`),
+    constant-time compared to INGEST_WEBHOOK_SECRET. Fails closed (503) if the
+    secret isn't configured on the server."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        expected = os.environ.get('INGEST_WEBHOOK_SECRET', '')
+        if not expected:
+            return jsonify({'error': 'Ingestion endpoint is disabled (INGEST_WEBHOOK_SECRET not set)'}), 503
+        provided = request.headers.get('X-Ingest-Secret', '')
+        if not provided:
+            ah = request.headers.get('Authorization', '')
+            if ah.startswith('Bearer '):
+                provided = ah[len('Bearer '):]
+        if not provided or not hmac.compare_digest(provided, expected):
+            return jsonify({'error': 'Invalid or missing ingestion secret'}), 401
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def service_rest(path, method='GET', body=None):
+    """PostgREST call authenticated with the service-role key (bypasses RLS).
+    Server-side, trusted use only. Returns the parsed JSON body (or None)."""
+    base = _supabase_url()
+    key = _service_key()
+    if not base or not key:
+        raise RuntimeError('SUPABASE_SERVICE_ROLE_KEY / SUPABASE_URL not configured')
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        f"{base}/rest/v1/{path}", data=data, method=method,
+        headers={
+            'apikey': key,
+            'Authorization': f'Bearer {key}',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+        },
+    )
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        raw = resp.read()
+        return json.loads(raw) if raw else None
 
 
 def caller_is_agent_on_ticket(ticket_id):
