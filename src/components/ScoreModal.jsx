@@ -10,10 +10,15 @@ import TicketTranscript from './TicketTranscript'
 import Linkify from './Linkify'
 
 function useCountUp(target, duration = 700) {
-  const [val, setVal] = useState(0)
+  const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [val, setVal] = useState(() => reduceMotion ? (target ?? 0) : 0)
   const raf = useRef(null)
   useEffect(() => {
     const to = target ?? 0
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVal(to)
+      return undefined
+    }
     const start = performance.now()
     cancelAnimationFrame(raf.current)
     const tick = now => {
@@ -64,19 +69,19 @@ function ScoreDots({ score }) {
 function DimensionStrip({ dimensions }) {
   return (
     <div className="grid grid-cols-3 gap-2 mb-4">
-      {dimensions.map(({ name, weight, average }) => {
+      {dimensions.map(({ name, weight, average }, index) => {
         const avg   = Number(average)
         const color = scoreColor(avg)
         const pct   = (avg / 5) * 100
         return (
-          <div key={name} className="rounded-xl p-3 flex flex-col gap-2"
-            style={{ background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)' }}>
+          <div key={name} className="score-dimension-reveal rounded-xl p-3 flex flex-col gap-2"
+            style={{ '--i': index, background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)' }}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
               <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'var(--coral-text)', background: '#FFF4F1' }}>{weight}</span>
             </div>
             <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: 'var(--hairline-2)' }}>
-              <div className="g-progress-fill rounded-full" style={{ '--progress': Math.max(0, Math.min(1, pct / 100)), '--progress-duration': '.8s', background: color }} />
+              <div className="g-progress-fill score-progress-reveal rounded-full" style={{ '--i': index, '--progress': Math.max(0, Math.min(1, pct / 100)), '--progress-duration': '.8s', background: color }} />
             </div>
             <p className="text-xs leading-tight" style={{ color: 'var(--ink-60)' }}>{name}</p>
           </div>
@@ -748,11 +753,11 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
 
           {/* Row 3: Verdict badge + score */}
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
+            <span className="score-verdict-reveal inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full border"
               style={{ color: vc.text, background: vc.bg, borderColor: vc.border, letterSpacing: '0.04em' }}>
               {vc.icon && `${vc.icon} `}{vc.label}
             </span>
-            <span className="text-2xl font-bold tabular-nums" style={{ color: vc.text }}>
+            <span className="score-value-reveal text-2xl font-bold tabular-nums" style={{ color: vc.text }}>
               {animatedScore}<span className="text-sm font-normal ml-0.5" style={{ color: 'var(--ink-45)' }}>/100</span>
             </span>
             {s.overrideVerdict && (

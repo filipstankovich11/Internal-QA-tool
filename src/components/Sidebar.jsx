@@ -39,6 +39,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
 
   return (
     <button
+      className="nav-item-motion"
       onClick={(e) => { onClick(); if (e.detail) e.currentTarget.blur() }}
       title={collapsed ? label : undefined}
       onMouseEnter={() => setHovered(true)}
@@ -48,11 +49,12 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
         height: 38, padding: collapsed ? 0 : '0 10px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderRadius: 8, color: labelColor, background: bg, border: 'none',
-        transition: 'color 140ms, background 140ms',
+        transition: 'color 140ms, background 140ms, transform 120ms',
         fontSize: 14, fontWeight: isActive ? 600 : 500,
         whiteSpace: 'nowrap', cursor: 'pointer', width: '100%', textAlign: 'left', position: 'relative',
       }}
     >
+      {isActive && <span className="nav-active-rail" aria-hidden="true" />}
       <span style={{ flexShrink: 0, display: 'flex', color: iconColor, transition: 'color 140ms' }}>{icon}</span>
 
       {!collapsed && (
