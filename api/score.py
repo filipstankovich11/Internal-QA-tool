@@ -15,6 +15,7 @@ from flask_cors import CORS
 from auth import require_auth
 from gorgias_client import GorgiasClient
 from scorer import score_ticket
+from automated_grader import GradingError, authorized, grade
 
 app = Flask(__name__)
 
@@ -72,6 +73,37 @@ def extract_agent_senders(ticket: dict, messages: list) -> list:
             add(msg.get('sender') or {})
 
     return senders
+
+
+@app.route('/api/grade-ticket', methods=['POST'])
+def grade_ticket_from_cortex():
+    if not authorized(request.headers.get('X-Cortex-Secret', '')):
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json(silent=True) or {}
+    ticket_id = data.get('ticket_id')
+    if not isinstance(ticket_id, int) or isinstance(ticket_id, bool) or ticket_id <= 0:
+        return jsonify({'error': 'ticket_id must be a positive integer'}), 400
+    try:
+        return jsonify(grade(ticket_id, extract_agent_senders))
+    except GradingError as error:
+        return jsonify({'error': str(error)}), error.status
+    except Exception:
+        app.logger.exception('Automated ticket grading failed')
+        return jsonify({'error': 'Automated ticket grading failed'}), 502
+
+
+@app.route('/api/gorgias-teams', methods=['GET'])
+@require_auth
+def gorgias_teams():
+    gorgias_auth, gorgias_domain, _ = get_env()
+    if not gorgias_auth:
+        return jsonify({'error': 'GORGIAS_AUTH not configured'}), 503
+    try:
+        teams = GorgiasClient(gorgias_domain, gorgias_auth).list_teams()
+        return jsonify([{'id': team.get('id'), 'name': team.get('name', '')} for team in teams])
+    except Exception:
+        app.logger.exception('Could not fetch Gorgias teams')
+        return jsonify({'error': 'Could not fetch Gorgias teams'}), 502
 
 
 # ─── Slack webhook ───────────────────────────────────────────────────────────

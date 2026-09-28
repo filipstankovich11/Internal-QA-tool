@@ -183,7 +183,9 @@ export function AppProvider({ children }) {
   const updateTeam = async (id, patch) => {
     const { data, error } = await supabase
       .from('teams').update(patch).eq('id', id).select().single()
+    if (error) throw error
     if (!error) setTeams(prev => prev.map(t => t.id === id ? data : t))
+    return data
   }
 
   const deleteTeam = async (id) => {

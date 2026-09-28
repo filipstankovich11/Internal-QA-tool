@@ -9,6 +9,8 @@
   },
   "rewrites": [
     { "source": "/api/score",        "destination": "/api/score" },
+    { "source": "/api/grade-ticket", "destination": "/api/score" },
+    { "source": "/api/gorgias-teams", "destination": "/api/score" },
     { "source": "/api/views",        "destination": "/api/score" },
     { "source": "/api/view-tickets", "destination": "/api/score" },
     { "source": "/(.*)",             "destination": "/index.html" }

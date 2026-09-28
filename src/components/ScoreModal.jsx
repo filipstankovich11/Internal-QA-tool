@@ -764,6 +764,12 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
         </div>
 
         <div className="px-6 py-6 space-y-4">
+          {s.scoring_context?.source === 'cortex' && (
+            <div className="rounded-xl px-4 py-3 text-xs" style={{ background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)', color: 'var(--ink-60)' }}>
+              Scheduled grade · {s.scoring_context.team_name}
+              {s.scoring_context.guidance_version ? ` · Team guidance v${s.scoring_context.guidance_version}` : ' · Shared rubric only'}
+            </div>
+          )}
           {/* Auto-fail */}
           {s.auto_fail?.triggered && (
             <div className="rounded-xl p-4" style={{ background: 'var(--danger-tint)', border: '1px solid var(--danger-border)' }}>

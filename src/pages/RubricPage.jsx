@@ -3,6 +3,7 @@ import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { diffRubricDetailed } from '../lib/rubricDiff'
+import TeamGuidanceEditor from '../components/TeamGuidanceEditor'
 
 const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
@@ -321,6 +322,7 @@ export default function RubricPage() {
       </div>
 
       {/* Change history */}
+      <TeamGuidanceEditor />
       <RevisionHistory refreshKey={saved} />
     </div>
   )
