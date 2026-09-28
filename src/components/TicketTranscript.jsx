@@ -192,7 +192,7 @@ export default function TicketTranscript({
               : { bg: '#F5F3F1', avatarBg: '#E5DFD9', avatarColor: '#5B534C', ring: 'rgba(93,82,71,.2)' }
 
             // Rest/hover shadows: evidence ring states persist; hover adds the
-            // lifted drop-shadow (pairs with .tt-block's translateY + bar sweep).
+            // lifted drop-shadow (pairs with .tt-block's translateY).
             const restShadow = (lit || open) ? `0 0 0 1.5px ${palette.ring}, 0 2px 10px rgba(0,0,0,.06)`
               : taggedFor.length > 0 ? `0 0 0 1px ${palette.ring}`
               : '0 1px 2px rgba(0,0,0,.05)'

@@ -44,7 +44,7 @@ function ScoreRing({ value, color, size = 48 }) {
         strokeDasharray={`${(pct / 100) * circ} ${circ}`} transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: 'stroke-dasharray .6s cubic-bezier(.16,1,.3,1)' }} />
       <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle"
-        style={{ fontSize: 14, fontWeight: 700, fill: '#1A1E23', fontFamily: "'Inter Tight'" }}>{Math.round(value)}</text>
+        style={{ fontSize: 14, fontWeight: 700, fill: 'var(--ink)', fontFamily: "'Inter Tight'" }}>{Math.round(value)}</text>
     </svg>
   )
 }
@@ -56,9 +56,9 @@ function DimBar({ label, value, thresholds }) {
   const color = has ? gradeColor((value / 5) * 100, thresholds) : 'rgba(26,30,35,.35)'
   return (
     <div className="flex items-center gap-2.5">
-      <span className="text-xs shrink-0" style={{ color: 'rgba(26,30,35,.6)', width: 74 }}>{label}</span>
-      <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, background: '#F1ECE8' }}>
-        {has && <div style={{ width: `${Math.max(4, Math.min(100, (value / 5) * 100))}%`, height: '100%', background: color, borderRadius: 99, transition: 'width .5s cubic-bezier(.16,1,.3,1)' }} />}
+      <span className="text-xs shrink-0" style={{ color: 'var(--ink-60)', width: 74 }}>{label}</span>
+      <div className="flex-1 rounded-full overflow-hidden" style={{ height: 6, background: 'var(--segmented)' }}>
+        {has && <div className="g-progress-fill" style={{ '--progress': Math.max(.04, Math.min(1, value / 5)), '--progress-duration': '.5s', background: color, borderRadius: 99 }} />}
       </div>
       <span className="text-xs font-semibold tabular-nums text-right shrink-0" style={{ color, width: 26 }}>{has ? value.toFixed(1) : '—'}</span>
     </div>
@@ -115,23 +115,23 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
       <div className="flex items-start gap-3">
         {avg != null
           ? <ScoreRing value={avg} color={avgColor} />
-          : <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ background: '#FFD2C9', color: '#B84A2E' }}>{agent.name?.[0]?.toUpperCase() || '?'}</div>}
+          : <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ background: '#FFD2C9', color: 'var(--coral-text)' }}>{agent.name?.[0]?.toUpperCase() || '?'}</div>}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => onViewAll(agent)}
-              className="font-semibold transition-colors truncate text-left" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}
+              className="font-semibold transition-colors truncate text-left" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}
               onMouseEnter={e => e.currentTarget.style.color = '#B84A2E'} onMouseLeave={e => e.currentTarget.style.color = '#1A1E23'}>
               {agent.name}
             </button>
             {badge && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ color: badge.color, background: badge.bg }}>{badge.label}</span>}
-            {unack > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: '#FFEAE6', color: '#B84A2E', lineHeight: 1 }} title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>{unack}</span>}
+            {unack > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'var(--coral-tint)', color: 'var(--coral-text)', lineHeight: 1 }} title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>{unack}</span>}
           </div>
-          <p className="text-xs mt-0.5 truncate" style={{ color: 'rgba(26,30,35,.5)' }}>
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--ink-50)' }}>
             {n > 0 ? `${passRate}% pass · ${n} scored` : 'No tickets scored yet'}{team ? ` · ${team.name}` : ''}
           </p>
         </div>
         {trend != null && (
-          <div className="flex items-center gap-1 shrink-0 text-xs font-semibold tabular-nums" style={{ color: trend >= 0 ? '#2F8F5B' : '#D14B3D' }} title="Average vs the previous window of tickets">
+          <div className="flex items-center gap-1 shrink-0 text-xs font-semibold tabular-nums" style={{ color: trend >= 0 ? 'var(--success)' : 'var(--danger)' }} title="Average vs the previous window of tickets">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               {trend >= 0
                 ? <><polyline points="3 17 9 11 13 15 21 7"/><polyline points="21 12 21 7 16 7"/></>
@@ -150,25 +150,25 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
       </div>
 
       {/* Focus + Coach (admin edit/delete reveal on hover) — pinned to the bottom */}
-      <div className="mt-auto pt-4 flex items-center justify-between gap-2" style={{ borderTop: '1px solid #F0ECE9' }}>
+      <div className="mt-auto pt-4 flex items-center justify-between gap-2" style={{ borderTop: '1px solid var(--hairline-2)' }}>
         <span className="text-xs truncate" style={{ color: 'rgba(26,30,35,.55)' }}>
-          {focus ? <>Focus: <span style={{ color: focus === 'on track' ? '#2F8F5B' : 'rgba(26,30,35,.72)' }}>{focus}</span></> : '—'}
+          {focus ? <>Focus: <span style={{ color: focus === 'on track' ? 'var(--success)' : 'var(--ink-72)' }}>{focus}</span></> : '—'}
         </span>
         <div className="flex items-center gap-3 shrink-0">
           {canEdit && hovered && !confirmDelete && (<>
-            <button onClick={() => setEditing(true)} className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}
+            <button onClick={() => setEditing(true)} className="text-xs" style={{ color: 'var(--ink-50)' }}
               onMouseEnter={e => e.target.style.color = '#1A1E23'} onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>Edit</button>
-            <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}
+            <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: 'var(--ink-50)' }}
               onMouseEnter={e => e.target.style.color = '#D14B3D'} onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>Delete</button>
           </>)}
           {confirmDelete ? (
             <span className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#D14B3D' }}>Delete?</span>
-              <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#FEF6F4', color: '#D14B3D', border: '1px solid #F4DDD7' }}>Yes</button>
+              <span className="text-xs" style={{ color: 'var(--danger)' }}>Delete?</span>
+              <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--danger-tint)', color: 'var(--danger)', border: '1px solid var(--danger-border)' }}>Yes</button>
               <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">No</button>
             </span>
           ) : (
-            <button onClick={() => onViewAll(agent)} className="text-xs font-medium inline-flex items-center gap-1 transition-colors" style={{ color: '#B84A2E' }}
+            <button onClick={() => onViewAll(agent)} className="text-xs font-medium inline-flex items-center gap-1 transition-colors" style={{ color: 'var(--coral-text)' }}
               onMouseEnter={e => e.currentTarget.style.color = '#FF9780'} onMouseLeave={e => e.currentTarget.style.color = '#B84A2E'}>
               Coach
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -183,9 +183,9 @@ const AgentCard = memo(function AgentCard({ stat, team, profiles = [], threshold
 // ── Roster summary tile ───────────────────────────────────────────────────────
 function SummaryTile({ label, value, color }) {
   return (
-    <div className="rounded-2xl p-3 text-center" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
-      <p className="text-xl font-bold tabular-nums" style={{ color: color || '#1A1E23', fontFamily: "'Inter Tight'" }}>{value}</p>
-      <p className="mt-0.5 text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{label}</p>
+    <div className="rounded-2xl p-3 text-center" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+      <p className="text-xl font-bold tabular-nums" style={{ color: color || 'var(--ink)', fontFamily: "'Inter Tight'" }}>{value}</p>
+      <p className="mt-0.5 text-xs" style={{ color: 'var(--ink-50)' }}>{label}</p>
     </div>
   )
 }
@@ -200,48 +200,48 @@ const AgentRow = memo(function AgentRow({ stat, thresholds, onOpen, onEditAgent,
 
   return (
     <div className="grid items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
-      style={{ gridTemplateColumns: agentRowCols(canEdit), background: '#FFFFFF', border: '1px solid #EEEEEE' }}
+      style={{ gridTemplateColumns: agentRowCols(canEdit), background: 'var(--white)', border: '1px solid var(--hairline)' }}
       onClick={() => onOpen(agent)}
       onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
       onMouseLeave={e => e.currentTarget.style.background = '#FFFFFF'}>
       {/* Agent */}
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-          style={{ background: '#FFD2C9', color: '#B84A2E' }}>
+          style={{ background: '#FFD2C9', color: 'var(--coral-text)' }}>
           {agent.name?.[0]?.toUpperCase() || '?'}
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium truncate" style={{ color: '#1A1E23' }}>{agent.name}</span>
-            {unack > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: '#FFEAE6', color: '#B84A2E', lineHeight: 1 }} title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>{unack}</span>}
+            <span className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{agent.name}</span>
+            {unack > 0 && <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: 'var(--coral-tint)', color: 'var(--coral-text)', lineHeight: 1 }} title={`${unack} score${unack !== 1 ? 's' : ''} the agent hasn't acknowledged yet`}>{unack}</span>}
           </div>
-          {agent.email && <span className="text-xs truncate block" style={{ color: 'rgba(26,30,35,.5)' }}>{agent.email}</span>}
+          {agent.email && <span className="text-xs truncate block" style={{ color: 'var(--ink-50)' }}>{agent.email}</span>}
         </div>
       </div>
       {/* Team */}
       <div className="min-w-0">
         {team
-          ? <span className="text-xs px-2 py-0.5 rounded-full truncate inline-block max-w-full" style={{ color: '#B84A2E', background: '#FFEAE6' }}>{team.name}</span>
-          : <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>—</span>}
+          ? <span className="text-xs px-2 py-0.5 rounded-full truncate inline-block max-w-full" style={{ color: 'var(--coral-text)', background: 'var(--coral-tint)' }}>{team.name}</span>
+          : <span className="text-xs" style={{ color: 'var(--ink-45)' }}>—</span>}
       </div>
       {/* Avg */}
       <span className="text-sm font-bold tabular-nums text-right" style={{ color: avgColor }}>{avg != null ? avg.toFixed(1) : '—'}</span>
       {/* Pass rate */}
-      <span className="text-xs tabular-nums text-right font-semibold" style={{ color: n ? passColor : 'rgba(26,30,35,.45)' }}>{n ? `${passRate}%` : '—'}</span>
+      <span className="text-xs tabular-nums text-right font-semibold" style={{ color: n ? passColor : 'var(--ink-45)' }}>{n ? `${passRate}%` : '—'}</span>
       {/* Tickets */}
-      <span className="text-xs tabular-nums text-right" style={{ color: 'rgba(26,30,35,.72)' }}>{n}</span>
+      <span className="text-xs tabular-nums text-right" style={{ color: 'var(--ink-72)' }}>{n}</span>
       {/* Actions */}
       {canEdit && (
         <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
           {!confirmDelete ? (
             <>
               <button onClick={() => onEditAgent(agent)} className="g-btn-ghost text-xs">Edit</button>
-              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}
+              <button onClick={() => setConfirmDelete(true)} className="text-xs" style={{ color: 'var(--ink-50)' }}
                 onMouseEnter={e=>e.target.style.color='#D14B3D'} onMouseLeave={e=>e.target.style.color='rgba(26,30,35,.5)'}>Delete</button>
             </>
           ) : (
             <>
-              <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#FEF6F4', color: '#D14B3D', border: '1px solid #F4DDD7' }}>Yes</button>
+              <button onClick={() => onDelete(agent.id)} className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--danger-tint)', color: 'var(--danger)', border: '1px solid var(--danger-border)' }}>Yes</button>
               <button onClick={() => setConfirmDelete(false)} className="text-xs g-btn-ghost">No</button>
             </>
           )}
@@ -362,8 +362,8 @@ export default function AgentsPage() {
     <div className="max-w-5xl mx-auto px-4 pt-10 pb-16">
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>Agents</h1>
-          <p className="text-sm mt-0.5 flex items-center" style={{ color: 'rgba(26,30,35,.6)' }}>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}>Agents</h1>
+          <p className="text-sm mt-0.5 flex items-center" style={{ color: 'var(--ink-60)' }}>
             Track individual agent performance<ScoreInfoPopover rubric={rubric} />
           </p>
         </div>
@@ -375,7 +375,7 @@ export default function AgentsPage() {
                 stay the exception. */}
             <button onClick={() => setShowAssignModal(true)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+              style={{ color: 'var(--ink-72)', background: 'var(--white)', border: '1px solid var(--btn-border)' }}
               onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
               onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
               Assign Teams
@@ -401,21 +401,21 @@ export default function AgentsPage() {
       {agents.length > 0 && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: search ? '#FF9780' : 'rgba(26,30,35,.45)' }}>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: search ? 'var(--coral)' : 'var(--ink-45)' }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search agents by name or email…"
               className="w-full rounded-lg pl-9 pr-3 py-2 text-sm outline-none g-input"
-              style={{ border: `1px solid ${search ? '#FF9780' : '#E1DCD7'}` }} />
+              style={{ border: `1px solid ${search ? 'var(--coral)' : 'var(--input-border)'}` }} />
           </div>
           <Dropdown value={sortKey} onChange={setSortKey} width={170}
             options={SORT_OPTIONS.map(o => ({ value: o.id, label: `Sort: ${o.label}` }))} />
           <button onClick={() => setBelowGoalOnly(v => !v)}
             className="text-xs px-3 py-2 rounded-lg border transition-all font-medium whitespace-nowrap"
             style={belowGoalOnly
-              ? { color: '#D14B3D', background: '#FEF6F4', borderColor: '#F4DDD7' }
-              : { color: 'rgba(26,30,35,.72)', background: '#FFFFFF', borderColor: '#E7E3DF' }}>
+              ? { color: 'var(--danger)', background: 'var(--danger-tint)', borderColor: 'var(--danger-border)' }
+              : { color: 'var(--ink-72)', background: 'var(--white)', borderColor: 'var(--btn-border)' }}>
             Below goal
           </button>
           {/* Layout toggle — Cards vs compact List */}
@@ -433,8 +433,8 @@ export default function AgentsPage() {
               <button key={id} onClick={() => setTeamFilter(id)}
                 className="text-xs px-3 py-1.5 rounded-full border transition-all"
                 style={active
-                  ? { background: '#FFEAE6', borderColor: '#FFEAE6', color: '#B84A2E' }
-                  : { background: '#FFFFFF', borderColor: '#E7E3DF', color: 'rgba(26,30,35,.72)' }}
+                  ? { background: 'var(--coral-tint)', borderColor: 'var(--coral-tint)', color: 'var(--coral-text)' }
+                  : { background: 'var(--white)', borderColor: 'var(--btn-border)', color: 'var(--ink-72)' }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background='#F6F2EF' }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background='#FFFFFF' }}
               >
@@ -448,7 +448,7 @@ export default function AgentsPage() {
       {dataLoading && agents.length === 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl p-5" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+            <div key={i} className="rounded-2xl p-5" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
               <div className="flex items-center gap-3 mb-4">
                 <span className="skeleton-bar" style={{ width: 40, height: 40, borderRadius: '50%' }} />
                 <div className="flex-1 flex flex-col gap-2">
@@ -462,12 +462,12 @@ export default function AgentsPage() {
           ))}
         </div>
       ) : agents.length === 0 ? (
-        <div className="text-center py-20" style={{ color: 'rgba(26,30,35,.5)' }}>
+        <div className="text-center py-20" style={{ color: 'var(--ink-50)' }}>
           <p className="text-4xl mb-3">🧑‍💻</p>
           <p className="text-sm">No agents yet. Add one to start tracking performance.</p>
         </div>
       ) : view.length === 0 ? (
-        <div className="text-center py-16" style={{ color: 'rgba(26,30,35,.5)' }}>
+        <div className="text-center py-16" style={{ color: 'var(--ink-50)' }}>
           <p className="text-sm">No agents match {belowGoalOnly ? 'the “below goal” filter' : 'your search'}.</p>
         </div>
       ) : (
@@ -514,7 +514,7 @@ export default function AgentsPage() {
             <div className="flex justify-center mt-4">
               <button onClick={() => setVisibleCount(c => c + AGENT_PAGE_SIZE)}
                 className="text-xs px-4 py-1.5 rounded-lg transition-colors"
-                style={{ color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
+                style={{ color: 'var(--ink-72)', background: 'var(--white)', border: '1px solid var(--btn-border)' }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
                 onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
                 Show more · {Math.min(AGENT_PAGE_SIZE, view.length - visibleCount)} of {view.length - visibleCount} remaining

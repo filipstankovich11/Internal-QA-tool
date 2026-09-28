@@ -11,10 +11,10 @@ export default function Segmented({ options, value, onChange, segWidth = 96, fon
         position: 'absolute', top: 3, left: 3, width: segWidth, height: 'calc(100% - 6px)',
         background: '#fff', borderRadius: 9999, boxShadow: '0 1px 3px rgba(0,0,0,.12)',
         transform: `translateX(${idx * segWidth}px)`,
-        transition: 'transform .34s cubic-bezier(.34,1.18,.42,1)',
+        transition: 'transform .28s cubic-bezier(.16,1,.3,1)',
       }} />
       {opts.map((o, i) => (
-        <button key={o.id} type="button" onClick={() => onChange?.(o.id)}
+        <button key={o.id} type="button" onClick={() => onChange?.(o.id)} aria-pressed={i === idx}
           className="relative font-medium text-center"
           style={{
             zIndex: 1, width: segWidth, padding: `${padY}px 0`, fontSize: fontPx,

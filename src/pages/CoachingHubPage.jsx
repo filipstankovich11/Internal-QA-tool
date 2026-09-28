@@ -55,7 +55,7 @@ const S = {
     boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)',
   },
   chip: (active) => ({
-    font: "500 12px/1 'Roboto'",
+    font: "500 12px/1 'DM Sans'",
     color: active ? '#fff' : 'rgba(26,30,35,.65)',
     background: active ? ink : '#fff',
     border: active ? '1px solid #1A1E23' : '1px solid #EEEEEE',
@@ -67,7 +67,7 @@ const S = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    font: "500 11px/1 'Roboto'",
+    font: "500 11px/1 'DM Sans'",
     color: 'rgba(26,30,35,.7)',
     background: '#FBF7F3',
     border: '1px solid #F0ECE9',
@@ -75,7 +75,7 @@ const S = {
     borderRadius: 9999,
   },
   ticketPill: {
-    font: "500 11px/1 'Roboto'",
+    font: "500 11px/1 'DM Sans'",
     color: '#B84A2E',
     background: '#fff',
     border: '1px solid #F4DDD7',
@@ -97,12 +97,12 @@ const S = {
   btnPrimary: {
     display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 18px',
     background: '#FF9780', border: 'none', borderRadius: 8,
-    font: "500 14px/1 'Roboto'", color: ink, cursor: 'pointer',
+    font: "500 14px/1 'DM Sans'", color: ink, cursor: 'pointer',
   },
   btnSecondary: {
     display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 16px',
     background: 'transparent', border: `1px solid ${ink}`, borderRadius: 8,
-    font: "500 14px/1 'Roboto'", color: ink, cursor: 'pointer',
+    font: "500 14px/1 'DM Sans'", color: ink, cursor: 'pointer',
   },
 }
 
@@ -139,11 +139,11 @@ function OpportunityCard({ opp, onStart, onShare, onAddToPlan, onOpenTicket }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ font: "600 15px/1.3 'Inter Tight'", color: ink }}>{opp.title}</span>
-            <span style={{ font: "500 10px/1 'Roboto'", color: opp.tag.color, background: opp.tag.bg, padding: '4px 8px', borderRadius: 9999 }}>
+            <span style={{ font: "500 10px/1 'DM Sans'", color: opp.tag.color, background: opp.tag.bg, padding: '4px 8px', borderRadius: 9999 }}>
               {opp.tag.label}
             </span>
           </div>
-          <div style={{ font: "400 13px/1.55 'Roboto'", color: 'rgba(26,30,35,.65)', marginTop: 7 }}>
+          <div style={{ font: "400 13px/1.55 'DM Sans'", color: 'rgba(26,30,35,.65)', marginTop: 7 }}>
             {opp.summary}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
@@ -158,36 +158,36 @@ function OpportunityCard({ opp, onStart, onShare, onAddToPlan, onOpenTicket }) {
               </span>
             ))}
             {opp.moreTickets > 0 && (
-              <span style={{ font: "400 11px/1 'Roboto'", color: 'rgba(26,30,35,.45)' }}>+{opp.moreTickets} more</span>
+              <span style={{ font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.45)' }}>+{opp.moreTickets} more</span>
             )}
           </div>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, paddingTop: 14, borderTop: '1px solid #F4F0ED' }}>
         {isStrength ? (
-          <button style={{ ...S.btnSecondary, height: 36, padding: '0 15px', font: "500 13px/1 'Roboto'" }} onClick={onShare}>
+          <button style={{ ...S.btnSecondary, height: 36, padding: '0 15px', font: "500 13px/1 'DM Sans'" }} onClick={onShare}>
             <MegaphoneIcon />
             Share with team
           </button>
         ) : (
           <>
-            <button style={{ ...S.btnPrimary, height: 36, padding: '0 15px', font: "500 13px/1 'Roboto'" }} onClick={onStart}>
+            <button style={{ ...S.btnPrimary, height: 36, padding: '0 15px', font: "500 13px/1 'DM Sans'" }} onClick={onStart}>
               <SessionIcon />
               Start session
             </button>
             <button
-              style={{ height: 36, padding: '0 15px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 13px/1 'Roboto'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' }}
+              style={{ height: 36, padding: '0 15px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' }}
               onClick={onAddToPlan}>
               Add to plan
             </button>
           </>
         )}
         <button
-          style={{ height: 36, padding: '0 15px', background: 'transparent', border: 'none', font: "500 13px/1 'Roboto'", color: 'rgba(26,30,35,.45)', cursor: 'pointer' }}
+          style={{ height: 36, padding: '0 15px', background: 'transparent', border: 'none', font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.45)', cursor: 'pointer' }}
           onClick={opp.onDismiss}>
           Dismiss
         </button>
-        <span style={{ marginLeft: 'auto', font: "400 11px/1 'Roboto'", color: 'rgba(26,30,35,.4)' }}>
+        <span style={{ marginLeft: 'auto', font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.4)' }}>
           {opp.foundAt}
         </span>
       </div>
@@ -708,7 +708,7 @@ export default function CoachingHubPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
         <div>
           <h1 style={{ font: "600 30px/1.1 'Inter Tight', sans-serif", letterSpacing: '-0.02em', color: ink, margin: 0 }}>Coaching</h1>
-          <p style={{ font: "400 14px/1.5 'Roboto'", color: 'rgba(26,30,35,.6)', margin: '6px 0 0' }}>
+          <p style={{ font: "400 14px/1.5 'DM Sans'", color: 'rgba(26,30,35,.6)', margin: '6px 0 0' }}>
             {visible.length} open {visible.length === 1 ? 'opportunity' : 'opportunities'} · found across {scoreHistory.length} scored tickets
           </p>
         </div>
@@ -723,10 +723,10 @@ export default function CoachingHubPage() {
           </button>
           {pickerOpen && (
             <div style={{ position: 'absolute', top: 46, right: 0, zIndex: 30, minWidth: 220, maxHeight: 280, overflowY: 'auto', ...S.card, padding: 6 }}>
-              <p style={{ font: "600 10px/1 'Roboto'", letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.45)', padding: '8px 10px 6px', margin: 0 }}>Session with…</p>
+              <p style={{ font: "600 10px/1 'DM Sans'", letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.45)', padding: '8px 10px 6px', margin: 0 }}>Session with…</p>
               {agents.map(a => (
                 <button key={a.id} onClick={() => startBlankSession(a)}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent', font: "400 13px/1.2 'Roboto'", color: ink, cursor: 'pointer' }}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent', font: "400 13px/1.2 'DM Sans'", color: ink, cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   {a.name}
@@ -749,7 +749,7 @@ export default function CoachingHubPage() {
             </div>
             <div style={{ overflowY: 'auto', padding: '10px 12px' }}>
               {sessions.length === 0 && (
-                <p style={{ font: "400 13px/1.5 'Roboto'", color: 'rgba(26,30,35,.5)', textAlign: 'center', padding: '28px 0' }}>
+                <p style={{ font: "400 13px/1.5 'DM Sans'", color: 'rgba(26,30,35,.5)', textAlign: 'center', padding: '28px 0' }}>
                   No sessions yet — start one from an opportunity.
                 </p>
               )}
@@ -761,16 +761,16 @@ export default function CoachingHubPage() {
                     style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '11px 12px', borderRadius: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <span style={{ font: "500 11px/1 'Roboto'", color: done ? '#2F8F5B' : '#B84A2E', background: done ? '#E6F4EC' : '#FFEAE6', padding: '5px 8px', borderRadius: 9999, flex: 'none', textTransform: 'capitalize' }}>
+                    <span style={{ font: "500 11px/1 'DM Sans'", color: done ? '#2F8F5B' : '#B84A2E', background: done ? '#E6F4EC' : '#FFEAE6', padding: '5px 8px', borderRadius: 9999, flex: 'none', textTransform: 'capitalize' }}>
                       {s.status}
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', font: "500 13px/1.3 'Roboto'", color: ink }}>{a?.name || 'Unknown agent'}</span>
-                      <span style={{ display: 'block', font: "400 11px/1.3 'Roboto'", color: 'rgba(26,30,35,.5)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'block', font: "500 13px/1.3 'DM Sans'", color: ink }}>{a?.name || 'Unknown agent'}</span>
+                      <span style={{ display: 'block', font: "400 11px/1.3 'DM Sans'", color: 'rgba(26,30,35,.5)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {s.origin || 'Ad-hoc session'}
                       </span>
                     </span>
-                    <span style={{ font: "400 11px/1 'Roboto'", color: 'rgba(26,30,35,.45)', flex: 'none' }}>
+                    <span style={{ font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.45)', flex: 'none' }}>
                       {new Date(s.completed_at || s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   </button>
@@ -802,7 +802,7 @@ export default function CoachingHubPage() {
               onOpenTicket={openTicket} />
           ))}
           {visible.length === 0 && (
-            <div style={{ ...S.card, padding: '40px 22px', textAlign: 'center', font: "400 13px/1.5 'Roboto'", color: 'rgba(26,30,35,.5)' }}>
+            <div style={{ ...S.card, padding: '40px 22px', textAlign: 'center', font: "400 13px/1.5 'DM Sans'", color: 'rgba(26,30,35,.5)' }}>
               No open opportunities — new ones appear as tickets get scored.
             </div>
           )}
@@ -811,7 +811,7 @@ export default function CoachingHubPage() {
         {/* Right rail */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ ...S.card, padding: 20 }}>
-            <div style={{ font: "600 12px/1 'Roboto'", letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)', marginBottom: 14 }}>
+            <div style={{ font: "600 12px/1 'DM Sans'", letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)', marginBottom: 14 }}>
               Needs coaching first
             </div>
             {railAgents.map((m, i) => (
@@ -819,8 +819,8 @@ export default function CoachingHubPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: 11, padding: i === railAgents.length - 1 ? '10px 0 2px' : '10px 0', borderBottom: i === railAgents.length - 1 ? 'none' : '1px solid #F4F0ED' }}>
                 <Avatar initial={m.initial} bg={m.bg} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ font: "500 13px/1 'Roboto'", color: ink }}>{m.agent.name}</div>
-                  <div style={{ font: "400 11px/1 'Roboto'", marginTop: 4, color: m.openIssues > 0 ? '#B84A2E' : m.strengths > 0 ? '#2F8F5B' : 'rgba(26,30,35,.5)' }}>
+                  <div style={{ font: "500 13px/1 'DM Sans'", color: ink }}>{m.agent.name}</div>
+                  <div style={{ font: "400 11px/1 'DM Sans'", marginTop: 4, color: m.openIssues > 0 ? '#B84A2E' : m.strengths > 0 ? '#2F8F5B' : 'rgba(26,30,35,.5)' }}>
                     {m.openIssues > 0 ? `${m.openIssues} open · ${coachedLabel(m.agent.id)}`
                       : m.strengths > 0 ? `${m.strengths} strength${m.strengths > 1 ? 's' : ''} · ${coachedLabel(m.agent.id)}`
                       : `Nothing flagged · ${coachedLabel(m.agent.id)}`}
@@ -832,7 +832,7 @@ export default function CoachingHubPage() {
               </div>
             ))}
             {railAgents.length === 0 && (
-              <p style={{ font: "400 12px/1.5 'Roboto'", color: 'rgba(26,30,35,.5)' }}>No scored agents yet.</p>
+              <p style={{ font: "400 12px/1.5 'DM Sans'", color: 'rgba(26,30,35,.5)' }}>No scored agents yet.</p>
             )}
           </div>
 
@@ -842,11 +842,11 @@ export default function CoachingHubPage() {
               <span style={S.aiAvatar(26)}><AiIcon size={13} /></span>
               <span style={{ font: "600 13px/1 'Inter Tight'", color: '#fff' }}>This week in reviews</span>
             </div>
-            <div style={{ font: "400 12.5px/1.6 'Roboto'", color: 'rgba(255,255,255,.75)' }}>
+            <div style={{ font: "400 12.5px/1.6 'DM Sans'", color: 'rgba(255,255,255,.75)' }}>
               {weeklyInsight}
             </div>
             <button
-              style={{ marginTop: 14, height: 34, padding: '0 14px', background: 'transparent', border: '1px solid rgba(255,255,255,.3)', borderRadius: 8, font: "500 12px/1 'Roboto'", color: '#fff', cursor: 'pointer' }}
+              style={{ marginTop: 14, height: 34, padding: '0 14px', background: 'transparent', border: '1px solid rgba(255,255,255,.3)', borderRadius: 8, font: "500 12px/1 'DM Sans'", color: '#fff', cursor: 'pointer' }}
               onClick={openTeamTopic}>
               Turn into team topic
             </button>

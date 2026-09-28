@@ -123,7 +123,7 @@ function AppShell() {
         <div className="flex min-h-screen">
           <CommandPalette />
           <Sidebar page={page} setPage={setPage} />
-          <div className="flex-1 min-w-0">
+          <div className="app-main flex-1 min-w-0">
             <MainContent page={page} role={role} />
           </div>
         </div>

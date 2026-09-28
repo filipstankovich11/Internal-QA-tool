@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import GorgiasLogo from './GorgiasLogo'
 import SettingsModal from './SettingsModal'
 import NotificationPanel from './NotificationPanel'
@@ -39,6 +39,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
 
   return (
     <button
+      className="nav-item-motion"
       onClick={(e) => { onClick(); if (e.detail) e.currentTarget.blur() }}
       title={collapsed ? label : undefined}
       onMouseEnter={() => setHovered(true)}
@@ -48,11 +49,12 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
         height: 38, padding: collapsed ? 0 : '0 10px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderRadius: 8, color: labelColor, background: bg, border: 'none',
-        transition: 'color 140ms, background 140ms',
+        transition: 'color 140ms, background 140ms, transform 120ms',
         fontSize: 14, fontWeight: isActive ? 600 : 500,
         whiteSpace: 'nowrap', cursor: 'pointer', width: '100%', textAlign: 'left', position: 'relative',
       }}
     >
+      {isActive && <span className="nav-active-rail" aria-hidden="true" />}
       <span style={{ flexShrink: 0, display: 'flex', color: iconColor, transition: 'color 140ms' }}>{icon}</span>
 
       {!collapsed && (
@@ -60,7 +62,7 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
           {label}
           {badge != null && badge > 0 && (
             <span style={{
-              background: '#FFEAE6', color: '#B84A2E',
+              background: 'var(--coral-tint)', color: 'var(--coral-text)',
               fontSize: 11, fontWeight: 600,
               padding: '3px 7px', borderRadius: 9999, lineHeight: 1,
             }}>
@@ -71,14 +73,14 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
       )}
 
       {collapsed && badge != null && badge > 0 && (
-        <span style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: '#FF9780' }} />
+        <span style={{ position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: '50%', background: 'var(--coral)' }} />
       )}
     </button>
   )
 }
 
 function SectionLabel({ label, collapsed }) {
-  if (collapsed) return <div style={{ height: 1, background: '#EEEEEE', margin: '10px 8px' }} />
+  if (collapsed) return <div style={{ height: 1, background: 'var(--hairline)', margin: '10px 8px' }} />
   return (
     <p style={{
       fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
@@ -92,11 +94,48 @@ function SectionLabel({ label, collapsed }) {
 
 export default function Sidebar({ page, setPage }) {
   const [collapsed,         setCollapsed]         = useState(false)
+  const [mobileOpen,        setMobileOpen]        = useState(false)
   const [showSettings,      setShowSettings]      = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [unreadCount,       setUnreadCount]       = useState(0)
   const { user, profile, role, canScore, isAdmin, signOut } = useAuth()
   const { agents, scoreHistory, activeOverlay, setActiveOverlay } = useApp()
+  const menuButtonRef = useRef(null)
+  const closeButtonRef = useRef(null)
+  const sidebarRef = useRef(null)
+  const compact = collapsed && !mobileOpen
+  const closeMobile = () => {
+    setMobileOpen(false)
+    requestAnimationFrame(() => menuButtonRef.current?.focus())
+  }
+
+  useEffect(() => {
+    if (!mobileOpen) return
+    closeButtonRef.current?.focus()
+    const onKeyDown = e => {
+      if (e.key === 'Escape') {
+        closeMobile()
+      } else if (e.key === 'Tab') {
+        const focusable = [...sidebarRef.current.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled)')]
+          .filter(el => el.getClientRects().length > 0)
+        if (!focusable.length) return
+        const first = focusable[0]
+        const last = focusable.at(-1)
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [mobileOpen])
+
+  const navigate = nextPage => {
+    setPage(nextPage)
+    setMobileOpen(false)
+    if (window.matchMedia('(max-width: 767px)').matches) {
+      requestAnimationFrame(() => menuButtonRef.current?.focus())
+    }
+  }
 
   // Close our panels when a different overlay surface (e.g. the score panel) opens
   useEffect(() => {
@@ -138,12 +177,22 @@ export default function Sidebar({ page, setPage }) {
     .map(t => t.id === 'agents' && isAgent ? { ...t, label: 'My Profile' } : t)
 
   return (
-    <aside style={{
-      width: collapsed ? 56 : 240,
+    <>
+    <header className="mobile-app-header">
+      <button ref={menuButtonRef} type="button" onClick={() => setMobileOpen(true)}
+        aria-label="Open navigation" aria-controls="app-sidebar-nav" aria-expanded={mobileOpen}>
+        {ic(<><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></>)}
+      </button>
+      <GorgiasLogo color="#1A1E23" />
+    </header>
+    {mobileOpen && <div className="mobile-nav-backdrop" onClick={closeMobile} aria-hidden="true" />}
+    <aside ref={sidebarRef} id="app-sidebar-nav" className={`app-sidebar${mobileOpen ? ' mobile-open' : ''}`}
+      role={mobileOpen ? 'dialog' : undefined} aria-modal={mobileOpen ? 'true' : undefined}
+      aria-label={mobileOpen ? 'Navigation' : undefined} style={{
+      width: compact ? 56 : 240,
       flexShrink: 0,
-      background: '#FFFFFF',
-      borderRight: '1px solid #EEEEEE',
-      transition: 'width 220ms cubic-bezier(0.16, 1, 0.3, 1)',
+      background: 'var(--white)',
+      borderRight: '1px solid var(--hairline)',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
@@ -157,15 +206,16 @@ export default function Sidebar({ page, setPage }) {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between',
-        padding: collapsed ? '0 12px' : '0 16px 0 14px',
+        justifyContent: compact ? 'center' : 'space-between',
+        padding: compact ? '0 12px' : '0 16px 0 14px',
         height: 60,
         flexShrink: 0,
         gap: 8,
       }}>
-        {!collapsed && (
+        {!compact && (
           <button
-            onClick={() => setPage('dashboard')}
+            onClick={() => navigate('dashboard')}
+            aria-label="Go to dashboard"
             style={{ transition: 'opacity 150ms', lineHeight: 0 }}
             onMouseEnter={e => { e.currentTarget.style.opacity = '0.7' }}
             onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
@@ -174,9 +224,10 @@ export default function Sidebar({ page, setPage }) {
           </button>
         )}
         <button
+          className="desktop-sidebar-collapse"
           onClick={() => setCollapsed(v => !v)}
           style={{
-            color: 'rgba(26,30,35,.45)', padding: '5px', borderRadius: 6,
+            color: 'var(--ink-45)', padding: '5px', borderRadius: 6,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'color 140ms, background 140ms', flexShrink: 0, border: 'none', background: 'transparent', cursor: 'pointer',
           }}
@@ -185,6 +236,11 @@ export default function Sidebar({ page, setPage }) {
           title={collapsed ? 'Expand' : 'Collapse'}
         >
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        </button>
+        <button ref={closeButtonRef} type="button" className="mobile-nav-close"
+          onClick={closeMobile}
+          aria-label="Close navigation">
+          {ic(<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>)}
         </button>
       </div>
 
@@ -195,42 +251,42 @@ export default function Sidebar({ page, setPage }) {
       }}>
 
         {/* MENU section */}
-        <SectionLabel label="Menu" collapsed={collapsed} />
+        <SectionLabel label="Menu" collapsed={compact} />
         {visibleTabs.map(tab => (
           <NavItem
             key={tab.id}
             icon={tab.icon}
             label={tab.label}
             isActive={page === tab.id}
-            onClick={() => setPage(tab.id)}
+            onClick={() => navigate(tab.id)}
             badge={
               tab.badge        ? reviewCount  :
               tab.myQueueBadge ? myQueueCount :
               tab.inboxBadge   ? inboxUnread  :
               null
             }
-            collapsed={collapsed}
+            collapsed={compact}
           />
         ))}
 
         {/* GENERAL section — pinned to bottom of nav */}
         <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-          <SectionLabel label="General" collapsed={collapsed} />
+          <SectionLabel label="General" collapsed={compact} />
           <NavItem
             icon={<BellIcon />}
             label="Notifications"
             isActive={showNotifications}
-            onClick={() => { setShowNotifications(true); setShowSettings(false); setActiveOverlay('notifications') }}
+            onClick={() => { setShowNotifications(true); setShowSettings(false); setActiveOverlay('notifications'); setMobileOpen(false) }}
             badge={unreadCount}
-            collapsed={collapsed}
+            collapsed={compact}
           />
           <NavItem
             icon={<GearIcon />}
             label="Settings"
             isActive={showSettings}
-            onClick={() => { setShowSettings(true); setShowNotifications(false); setActiveOverlay('settings') }}
+            onClick={() => { setShowSettings(true); setShowNotifications(false); setActiveOverlay('settings'); setMobileOpen(false) }}
             badge={null}
-            collapsed={collapsed}
+            collapsed={compact}
           />
           <NavItem
             icon={<SignOutIcon />}
@@ -238,7 +294,7 @@ export default function Sidebar({ page, setPage }) {
             isActive={false}
             onClick={signOut}
             badge={null}
-            collapsed={collapsed}
+            collapsed={compact}
             danger
           />
         </div>
@@ -248,27 +304,27 @@ export default function Sidebar({ page, setPage }) {
       {profile && (
         <div style={{
           padding: '10px 8px 14px',
-          borderTop: '1px solid #EEEEEE',
+          borderTop: '1px solid var(--hairline)',
           flexShrink: 0,
         }}>
           <div style={{
             display: 'flex', alignItems: 'center',
             gap: 10, padding: '6px 8px', borderRadius: 8,
-            justifyContent: collapsed ? 'center' : 'flex-start',
+            justifyContent: compact ? 'center' : 'flex-start',
           }}>
             <div style={{
               width: 34, height: 34, borderRadius: '50%',
-              background: '#FF9780', color: '#1A1E23',
+              background: 'var(--coral)', color: 'var(--ink)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, fontWeight: 700, flexShrink: 0,
             }}
-              title={collapsed ? profile.name : undefined}
+              title={compact ? profile.name : undefined}
             >
               {(profile.name || '?')[0].toUpperCase()}
             </div>
-            {!collapsed && (
+            {!compact && (
               <div style={{ minWidth: 0 }}>
-                <div style={{ color: '#1A1E23', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ color: 'var(--ink)', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {profile.name}
                 </div>
               </div>
@@ -277,14 +333,15 @@ export default function Sidebar({ page, setPage }) {
         </div>
       )}
 
-      {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setActiveOverlay(o => o === 'settings' ? null : o) }} />}
-      {showNotifications && (
+    </aside>
+    {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setActiveOverlay(o => o === 'settings' ? null : o) }} />}
+    {showNotifications && (
         <NotificationPanel
           onClose={() => { setShowNotifications(false); setActiveOverlay(o => o === 'notifications' ? null : o); fetchUnread() }}
-          offsetLeft={collapsed ? 56 : 240}
-          onNavigate={setPage}
+          offsetLeft={compact ? 56 : 240}
+          onNavigate={navigate}
         />
-      )}
-    </aside>
+    )}
+    </>
   )
 }

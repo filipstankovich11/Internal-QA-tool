@@ -40,12 +40,12 @@ const STATUS_PILL = {
 
 const S = {
   card: { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' },
-  sectionLabel: { font: "600 12px/1 'Roboto'", letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' },
-  btnPrimary: { height: 40, padding: '0 18px', background: '#FF9780', border: 'none', borderRadius: 8, font: "500 14px/1 'Roboto'", color: ink, cursor: 'pointer' },
-  btnGhost: { height: 40, padding: '0 16px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 14px/1 'Roboto'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' },
-  ticketPill: { font: "500 11px/1 'Roboto'", color: '#B84A2E', background: '#fff', border: '1px solid #F4DDD7', padding: '6px 10px', borderRadius: 9999, cursor: 'pointer' },
+  sectionLabel: { font: "600 12px/1 'DM Sans'", letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)' },
+  btnPrimary: { height: 40, padding: '0 18px', background: '#FF9780', border: 'none', borderRadius: 8, font: "500 14px/1 'DM Sans'", color: ink, cursor: 'pointer' },
+  btnGhost: { height: 40, padding: '0 16px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 14px/1 'DM Sans'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' },
+  ticketPill: { font: "500 11px/1 'DM Sans'", color: '#B84A2E', background: '#fff', border: '1px solid #F4DDD7', padding: '6px 10px', borderRadius: 9999, cursor: 'pointer' },
   aiAvatar: (size) => ({ width: size, height: size, flex: 'none', borderRadius: 9999, background: aiGradient, color: ink, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }),
-  inlineInput: { flex: 1, border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 11px', font: "400 13px/1.4 'Roboto'", color: ink, outline: 'none', background: '#fff' },
+  inlineInput: { flex: 1, border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 11px', font: "400 13px/1.4 'DM Sans'", color: ink, outline: 'none', background: '#fff' },
 }
 
 function RichText({ text }) {
@@ -96,7 +96,7 @@ export default function SessionView({
   return (
     <div>
       {/* Back */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, font: "500 13px/1 'Roboto'", color: 'rgba(26,30,35,.55)', cursor: 'pointer', marginBottom: 16 }}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.55)', cursor: 'pointer', marginBottom: 16 }}
         onClick={onBack}>
         <ArrowLeftIcon />
         Coaching
@@ -113,17 +113,17 @@ export default function SessionView({
               Session with {agentName}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
-              <span style={{ font: "500 11px/1 'Roboto'", color: session.status === 'completed' ? '#2F8F5B' : '#B84A2E', background: session.status === 'completed' ? '#E6F4EC' : '#FFEAE6', padding: '5px 9px', borderRadius: 9999, textTransform: 'capitalize' }}>
+              <span style={{ font: "500 11px/1 'DM Sans'", color: session.status === 'completed' ? '#2F8F5B' : '#B84A2E', background: session.status === 'completed' ? '#E6F4EC' : '#FFEAE6', padding: '5px 9px', borderRadius: 9999, textTransform: 'capitalize' }}>
                 {session.status}
               </span>
-              <span style={{ font: "400 13px/1 'Roboto'", color: 'rgba(26,30,35,.55)' }}>{session.origin}</span>
+              <span style={{ font: "400 13px/1 'DM Sans'", color: 'rgba(26,30,35,.55)' }}>{session.origin}</span>
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
             title={visible ? `${firstName} will see this session once completed — click to hide` : `Hidden from ${firstName} — click to make visible`}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 11px/1 'Roboto'", color: visible ? 'rgba(26,30,35,.65)' : 'rgba(26,30,35,.45)', background: '#FBF7F3', border: '1px solid #F0ECE9', padding: '7px 11px', borderRadius: 9999, cursor: readOnly ? 'default' : 'pointer' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 11px/1 'DM Sans'", color: visible ? 'rgba(26,30,35,.65)' : 'rgba(26,30,35,.45)', background: '#FBF7F3', border: '1px solid #F0ECE9', padding: '7px 11px', borderRadius: 9999, cursor: readOnly ? 'default' : 'pointer' }}
             onClick={() => !readOnly && setVisible(v => !v)}>
             <EyeIcon off={!visible} />
             {visible ? `Visible to ${firstName}` : `Hidden from ${firstName}`}
@@ -151,7 +151,7 @@ export default function SessionView({
                 <span style={S.aiAvatar(24)}><AiIcon /></span>
                 <span style={{ font: "600 12px/1 'Inter Tight'", color: ink }}>Since last coaching</span>
               </div>
-              <div style={{ font: "400 13px/1.6 'Roboto'", color: 'rgba(26,30,35,.75)' }}>
+              <div style={{ font: "400 13px/1.6 'DM Sans'", color: 'rgba(26,30,35,.75)' }}>
                 <RichText text={session.ai_summary} />
               </div>
             </div>
@@ -162,7 +162,7 @@ export default function SessionView({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <span style={S.sectionLabel}>Agenda{session.agenda_source ? ` · ${session.agenda_source}` : ''}</span>
               {!readOnly && onRedraft && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 12px/1 'Roboto'", color: '#FF9780', cursor: 'pointer' }}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 12px/1 'DM Sans'", color: '#FF9780', cursor: 'pointer' }}
                   onClick={() => setAgenda(onRedraft())}>
                   <AiIcon size={14} />
                   Redraft
@@ -176,9 +176,9 @@ export default function SessionView({
                     {i + 1}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ font: "500 13.5px/1.35 'Roboto'", color: ink }}>{item.title}</div>
+                    <div style={{ font: "500 13.5px/1.35 'DM Sans'", color: ink }}>{item.title}</div>
                     {item.detail && (
-                      <div style={{ font: "400 12px/1.5 'Roboto'", color: 'rgba(26,30,35,.6)', marginTop: 4 }}>{item.detail}</div>
+                      <div style={{ font: "400 12px/1.5 'DM Sans'", color: 'rgba(26,30,35,.6)', marginTop: 4 }}>{item.detail}</div>
                     )}
                     {/* Ticket pills below the text — real ticket ids are long, and
                         beside the text they crush it into a one-word column */}
@@ -203,11 +203,11 @@ export default function SessionView({
                   <input autoFocus value={pointText} onChange={e => setPointText(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addPoint(); if (e.key === 'Escape') setAddingPoint(false) }}
                     placeholder="Talking point…" style={S.inlineInput} />
-                  <button style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'Roboto'" }} onClick={addPoint}>Add</button>
+                  <button style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'DM Sans'" }} onClick={addPoint}>Add</button>
                 </div>
               ) : (
                 <button
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 38, background: 'transparent', border: '1.5px dashed #D8CFC7', borderRadius: 12, font: "500 13px/1 'Roboto'", color: 'rgba(26,30,35,.55)', cursor: 'pointer' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 38, background: 'transparent', border: '1.5px dashed #D8CFC7', borderRadius: 12, font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.55)', cursor: 'pointer' }}
                   onClick={() => setAddingPoint(true)}>
                   <PlusIcon />
                   Add talking point
@@ -220,13 +220,13 @@ export default function SessionView({
           <div style={{ ...S.card, padding: '20px 22px' }}>
             <div style={{ ...S.sectionLabel, marginBottom: 12 }}>Session notes</div>
             {readOnly ? (
-              <p style={{ font: "400 13px/1.55 'Roboto'", color: notes ? 'rgba(26,30,35,.75)' : 'rgba(26,30,35,.4)', margin: 0, whiteSpace: 'pre-wrap' }}>
+              <p style={{ font: "400 13px/1.55 'DM Sans'", color: notes ? 'rgba(26,30,35,.75)' : 'rgba(26,30,35,.4)', margin: 0, whiteSpace: 'pre-wrap' }}>
                 {notes || 'No notes recorded.'}
               </p>
             ) : (
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
                 placeholder="How did the conversation go? What did you agree on?"
-                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E1DCD7', borderRadius: 10, padding: '13px 15px', minHeight: 76, font: "400 13px/1.55 'Roboto'", color: ink, resize: 'vertical', outline: 'none', background: '#fff' }} />
+                style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E1DCD7', borderRadius: 10, padding: '13px 15px', minHeight: 76, font: "400 13px/1.55 'DM Sans'", color: ink, resize: 'vertical', outline: 'none', background: '#fff' }} />
             )}
           </div>
 
@@ -240,13 +240,13 @@ export default function SessionView({
                 <div key={a.id}
                   style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#FBF7F3', border: '1px solid #F0ECE9', borderRadius: 10, padding: '11px 14px', cursor: readOnly ? 'default' : 'pointer' }}
                   onClick={() => toggleAction(a.id)}>
-                  <span style={{ width: 18, height: 18, border: a.done ? 'none' : '1.5px solid #C8B8AD', background: a.done ? '#FF9780' : 'transparent', borderRadius: 5, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: ink, font: "600 12px/1 'Roboto'" }}>
+                  <span style={{ width: 18, height: 18, border: a.done ? 'none' : '1.5px solid #C8B8AD', background: a.done ? '#FF9780' : 'transparent', borderRadius: 5, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: ink, font: "600 12px/1 'DM Sans'" }}>
                     {a.done ? '✓' : ''}
                   </span>
-                  <span style={{ flex: 1, font: "400 13px/1.4 'Roboto'", color: ink, textDecoration: a.done ? 'line-through' : 'none', opacity: a.done ? 0.55 : 1 }}>
+                  <span style={{ flex: 1, font: "400 13px/1.4 'DM Sans'", color: ink, textDecoration: a.done ? 'line-through' : 'none', opacity: a.done ? 0.55 : 1 }}>
                     {a.text}
                   </span>
-                  <span style={{ font: "400 11px/1 'Roboto'", color: 'rgba(26,30,35,.45)' }}>{a.owner}</span>
+                  <span style={{ font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.45)' }}>{a.owner}</span>
                 </div>
               ))}
               {!readOnly && (addingAction ? (
@@ -255,15 +255,15 @@ export default function SessionView({
                     onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') setAddingAction(false) }}
                     placeholder="Action item…" style={S.inlineInput} />
                   <select value={actionOwner} onChange={e => setActionOwner(e.target.value)}
-                    style={{ border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 8px', font: "400 12px/1 'Roboto'", color: ink, background: '#fff', outline: 'none' }}>
+                    style={{ border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 8px', font: "400 12px/1 'DM Sans'", color: ink, background: '#fff', outline: 'none' }}>
                     <option value="agent">{firstName}</option>
                     <option value="lead">Lead</option>
                   </select>
-                  <button style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'Roboto'" }} onClick={addAction}>Add</button>
+                  <button style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'DM Sans'" }} onClick={addAction}>Add</button>
                 </div>
               ) : (
                 <button
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 4px', background: 'transparent', border: 'none', font: "500 13px/1 'Roboto'", color: '#FF9780', cursor: 'pointer', alignSelf: 'flex-start' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 4px', background: 'transparent', border: 'none', font: "500 13px/1 'DM Sans'", color: '#FF9780', cursor: 'pointer', alignSelf: 'flex-start' }}
                   onClick={() => setAddingAction(true)}>
                   <PlusIcon />
                   Add action item
@@ -286,12 +286,12 @@ export default function SessionView({
                     <div key={t.scoreId || t.ticketId}
                       style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 10px', border: '1px solid #F0ECE9', borderRadius: 10, cursor: 'pointer' }}
                       onClick={() => onOpenTicket(t, patch())}>
-                      <span style={{ font: "500 11px/1 'Roboto'", color: pill.color, background: pill.bg, padding: '5px 8px', borderRadius: 9999, flex: 'none' }}>
+                      <span style={{ font: "500 11px/1 'DM Sans'", color: pill.color, background: pill.bg, padding: '5px 8px', borderRadius: 9999, flex: 'none' }}>
                         {pill.glyph} {t.score}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ font: "500 12.5px/1.3 'Roboto'", color: '#B84A2E' }}>#{t.ticketId}</div>
-                        <div style={{ font: "400 11px/1.3 'Roboto'", color: 'rgba(26,30,35,.55)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ font: "500 12.5px/1.3 'DM Sans'", color: '#B84A2E' }}>#{t.ticketId}</div>
+                        <div style={{ font: "400 11px/1.3 'DM Sans'", color: 'rgba(26,30,35,.55)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {t.subject || '—'}
                         </div>
                       </div>
@@ -309,12 +309,12 @@ export default function SessionView({
               <div style={{ ...S.sectionLabel, marginBottom: 14 }}>{agentStats.label}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <span style={{ font: "600 30px/1 'Inter Tight'", color: agentStats.avgScoreColor }}>{agentStats.avgScore}</span>
-                <span style={{ font: "400 12px/1 'Roboto'", color: 'rgba(26,30,35,.5)' }}>{agentStats.sub}</span>
+                <span style={{ font: "400 12px/1 'DM Sans'", color: 'rgba(26,30,35,.5)' }}>{agentStats.sub}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 16 }}>
                 {agentStats.dimensions.map((d) => (
                   <div key={d.name}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', font: "400 11px/1 'Roboto'", color: 'rgba(26,30,35,.6)', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.6)', marginBottom: 5 }}>
                       <span>{d.name}</span>
                       <span style={{ color: d.color, fontWeight: 600 }}>{d.score.toFixed(1)}</span>
                     </div>
@@ -324,7 +324,7 @@ export default function SessionView({
                   </div>
                 ))}
               </div>
-              <div style={{ font: "400 11px/1.4 'Roboto'", marginTop: 16, paddingTop: 13, borderTop: '1px solid #F4F0ED', color: 'rgba(26,30,35,.5)' }}>
+              <div style={{ font: "400 11px/1.4 'DM Sans'", marginTop: 16, paddingTop: 13, borderTop: '1px solid #F4F0ED', color: 'rgba(26,30,35,.5)' }}>
                 Full scorecard on the{' '}
                 <span style={{ color: '#FF9780', fontWeight: 500, cursor: 'pointer' }} onClick={() => onOpenScorecard(patch())}>
                   Agents page →
