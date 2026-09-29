@@ -5,11 +5,12 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+import uuid
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 import anthropic
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 
 from auth import (
@@ -19,6 +20,7 @@ from auth import (
 from gorgias_client import GorgiasClient
 from scorer import score_ticket, _recompute_weighted
 from rubric import DEFAULT_RUBRIC
+from automated_grader import GradingError, authorized, grade, preview
 
 app = Flask(__name__)
 
@@ -135,6 +137,61 @@ def extract_agent_senders(ticket: dict, messages: list) -> list:
             add(msg.get('sender') or {})
 
     return senders
+
+
+@app.route('/api/grade-ticket', methods=['POST'])
+def grade_ticket_from_cortex():
+    if not authorized(request.headers.get('X-Cortex-Secret', '')):
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json(silent=True) or {}
+    ticket_id = data.get('ticket_id')
+    if not isinstance(ticket_id, int) or isinstance(ticket_id, bool) or ticket_id <= 0:
+        return jsonify({'error': 'ticket_id must be a positive integer'}), 400
+    try:
+        return jsonify(grade(ticket_id, extract_agent_senders))
+    except GradingError as error:
+        return jsonify({'error': str(error)}), error.status
+    except Exception:
+        app.logger.exception('Automated ticket grading failed')
+        return jsonify({'error': 'Automated ticket grading failed'}), 502
+
+
+@app.route('/api/gorgias-teams', methods=['GET'])
+@require_auth
+def gorgias_teams():
+    gorgias_auth, gorgias_domain, _ = get_env()
+    if not gorgias_auth:
+        return jsonify({'error': 'GORGIAS_AUTH not configured'}), 503
+    try:
+        teams = GorgiasClient(gorgias_domain, gorgias_auth).list_teams()
+        return jsonify([{'id': team.get('id'), 'name': team.get('name', '')} for team in teams])
+    except Exception:
+        app.logger.exception('Could not fetch Gorgias teams')
+        return jsonify({'error': 'Could not fetch Gorgias teams'}), 502
+
+
+@app.route('/api/guidance-preview', methods=['POST'])
+@require_auth
+def guidance_preview():
+    data = request.get_json(silent=True) or {}
+    ticket_id = data.get('ticket_id')
+    team_id = data.get('team_id')
+    variant = data.get('variant')
+    if not isinstance(ticket_id, int) or isinstance(ticket_id, bool) or ticket_id <= 0:
+        return jsonify({'error': 'ticket_id must be a positive integer'}), 400
+    try:
+        uuid.UUID(str(team_id))
+    except (ValueError, TypeError, AttributeError):
+        return jsonify({'error': 'team_id must be a UUID'}), 400
+    if variant not in ('published', 'draft'):
+        return jsonify({'error': 'variant must be published or draft'}), 400
+    try:
+        return jsonify(preview(ticket_id, team_id, variant, g.current_user_id))
+    except GradingError as error:
+        return jsonify({'error': str(error)}), error.status
+    except Exception:
+        app.logger.exception('Guidance preview failed')
+        return jsonify({'error': 'Guidance preview failed'}), 502
 
 
 # ─── Slack webhook ───────────────────────────────────────────────────────────

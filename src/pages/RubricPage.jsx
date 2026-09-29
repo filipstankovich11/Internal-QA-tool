@@ -1,13 +1,16 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, useId, memo } from 'react'
 import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { diffRubricDetailed } from '../lib/rubricDiff'
+import TeamGuidanceEditor from '../components/TeamGuidanceEditor'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import AccessibleTabs from '../components/AccessibleTabs'
 
 const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
 function CriterionEditor({ crit, onChange, onRemove }) {
+  const fieldId = useId()
   return (
     <Accordion type="single" collapsible>
       <AccordionItem value="crit"
@@ -22,20 +25,20 @@ function CriterionEditor({ crit, onChange, onRemove }) {
             style={{ top: 11, right: 36, color: 'rgba(26,30,35,.45)', background: 'transparent', border: 'none' }}
             onMouseEnter={e => e.currentTarget.style.color = '#D14B3D'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.45)'}
-            title="Remove criterion">
+            aria-label={`Remove ${crit.name || 'criterion'}`} title="Remove criterion">
             ✕
           </button>
         )}
         <AccordionContent className="pb-0">
           <div className="px-3.5 pb-3.5 pt-3 flex flex-col gap-2.5 border-t" style={{ borderColor: '#F0ECE9' }}>
             <div>
-              <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Criterion name</label>
-              <input value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
+              <label htmlFor={`${fieldId}-name`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Criterion name</label>
+              <input id={`${fieldId}-name`} value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
                 className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="e.g. Core Inquiry Resolution" />
             </div>
             <div>
-              <label className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Description & scoring guide (1–5)</label>
-              <textarea value={crit.description} onChange={e => onChange({ ...crit, description: e.target.value })}
+              <label htmlFor={`${fieldId}-description`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Description & scoring guide (1–5)</label>
+              <textarea id={`${fieldId}-description`} value={crit.description} onChange={e => onChange({ ...crit, description: e.target.value })}
                 rows={6}
                 className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-y g-input"
                 style={{ minHeight: 120 }}
@@ -51,18 +54,23 @@ function CriterionEditor({ crit, onChange, onRemove }) {
 // memo + stable (index-based) callbacks: editing one dimension, the Scoring
 // Guidance, or the thresholds won't re-render the other dimension editors.
 const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, onRemove }) {
+  const [open, setOpen] = useState(dim.id.startsWith('dim_'))
   const update  = updated => onChange(index, updated)
   const addCrit = () => update({ ...dim, criteria: [...dim.criteria, { id: `c_${Date.now()}`, name: '', description: '' }] })
 
   return (
-    <div className="rounded-2xl" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
+    <details open={open} onToggle={event => setOpen(event.currentTarget.open)} className="rounded-2xl" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05)', padding: '16px 20px' }}>
+      <summary className="cursor-pointer text-sm font-semibold" style={{ color: '#1A1E23' }}>
+        {dim.name || 'New dimension'} <span className="font-normal ml-2" style={{ color: 'rgba(26,30,35,.6)' }}>{dim.weight}% · {dim.criteria.length} criteri{dim.criteria.length === 1 ? 'on' : 'a'}</span>
+      </summary>
+      <div className="mt-4 pt-4" style={{ borderTop: '1px solid #F0ECE9' }}>
       <div className="flex items-center gap-3 mb-4">
-        <input value={dim.name} onChange={e => update({ ...dim, name: e.target.value })}
+        <input aria-label="Dimension name" value={dim.name} onChange={e => update({ ...dim, name: e.target.value })}
           className="flex-1 rounded-lg px-3 py-2 g-input"
           style={{ fontFamily: "'Inter Tight'", fontSize: 15, fontWeight: 600 }}
           placeholder="Dimension name" />
         <div className="flex items-center gap-2 shrink-0">
-          <input type="number" min="0" max="100" value={dim.weight}
+          <input type="number" aria-label={`${dim.name || 'Dimension'} weight in percent`} min="0" max="100" value={dim.weight}
             onChange={e => update({ ...dim, weight: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
             className="w-16 rounded-lg px-2 py-2 text-center g-input"
             style={{ color: '#B84A2E', fontFamily: "'Inter Tight'", fontSize: 16, fontWeight: 600 }} />
@@ -71,7 +79,7 @@ const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, on
             className="ml-1 w-7 h-7 flex items-center justify-center rounded-md text-xs transition-colors" style={{ color: 'rgba(26,30,35,.45)' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.background = '#FEF6F4' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.45)'; e.currentTarget.style.background = 'transparent' }}
-            title="Remove dimension">
+            aria-label={`Remove ${dim.name || 'dimension'}`} title="Remove dimension">
             ✕
           </button>
         </div>
@@ -92,7 +100,8 @@ const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, on
         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.borderColor = '#E7E3DF' }}>
         + Add criterion
       </button>
-    </div>
+      </div>
+    </details>
   )
 })
 
@@ -117,7 +126,7 @@ function AutoFailEditor({ conditions, onChange }) {
           <div key={af.id} className="rounded-[10px] p-3" style={{ background: '#FEF6F4', border: '1px solid #F4DDD7' }}>
             <div className="flex items-center gap-2 mb-2">
               <span aria-hidden className="shrink-0 text-sm" style={{ color: '#D14B3D' }}>⊗</span>
-              <input value={af.name} onChange={e => onChange(conditions.map((c, j) => j === i ? { ...c, name: e.target.value } : c))}
+              <input aria-label={`Auto-fail condition ${i + 1} name`} value={af.name} onChange={e => onChange(conditions.map((c, j) => j === i ? { ...c, name: e.target.value } : c))}
                 className="flex-1 rounded-lg px-3 py-1.5 text-sm font-medium g-input"
                 placeholder="Condition name" />
               <button onClick={() => remove(i)}
@@ -125,11 +134,11 @@ function AutoFailEditor({ conditions, onChange }) {
                 style={{ color: 'rgba(26,30,35,.45)' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#D14B3D'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.45)'}
-                title="Remove condition">
+                aria-label={`Remove ${af.name || `condition ${i + 1}`}`} title="Remove condition">
                 ✕
               </button>
             </div>
-            <textarea value={af.description} onChange={e => onChange(conditions.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
+            <textarea aria-label={`Auto-fail condition ${i + 1} description`} value={af.description} onChange={e => onChange(conditions.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
               rows={2} className="w-full rounded-lg px-3 py-2 text-sm g-input resize-none"
               placeholder="Describe what triggers this auto-fail." />
           </div>
@@ -151,6 +160,8 @@ export default function RubricPage() {
   const [saved,        setSaved]        = useState(false)
   const [error,        setError]        = useState(null)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [section, setSection] = useState('team')
+  const [rubricView, setRubricView] = useState('dimensions')
 
   // Resync the draft if the rubric loads/changes after mount (e.g. the page was
   // opened before the rubric finished loading) — but only when the user hasn't
@@ -204,16 +215,16 @@ export default function RubricPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 pt-10 pb-16">
+    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8 gap-4">
+      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 style={{ fontFamily: "'Inter Tight'", fontSize: 30, fontWeight: 600, color: '#1A1E23' }}>QA guidance</h1>
           <p className="text-sm mt-0.5" style={{ color: 'rgba(26,30,35,.6)' }}>
-            Customise the scoring framework — changes apply to all future scorings.
+            {section === 'team' ? 'Write, test, and publish guidance for each team.' : 'Edit the shared framework used across all teams.'}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        {section === 'rubric' && <div className="flex items-center gap-2 flex-wrap">
           {dirty && (
             <span className="text-xs px-2.5 py-1 rounded-lg" style={{ background: '#FFEAE6', color: '#B84A2E', border: '1px solid #F4DDD7' }}>
               Unsaved changes
@@ -239,8 +250,24 @@ export default function RubricPage() {
             style={{ opacity: (!canSave || saving) ? 0.5 : 1 }}>
             {saving ? 'Saving…' : saved ? '✓ Saved' : '✓ Save rubric'}
           </button>
-        </div>
+        </div>}
       </div>
+
+      <AccessibleTabs idPrefix="qa-guidance" label="QA guidance sections" value={section} onChange={setSection}
+        tabs={[{ id: 'team', label: 'Team guidance' }, { id: 'rubric', label: 'Shared rubric' }]} />
+
+      <section id="qa-guidance-panel-team" role="tabpanel" aria-labelledby="qa-guidance-tab-team" tabIndex={0} hidden={section !== 'team'}>
+        <TeamGuidanceEditor />
+      </section>
+
+      <section id="qa-guidance-panel-rubric" role="tabpanel" aria-labelledby="qa-guidance-tab-rubric" tabIndex={0} hidden={section !== 'rubric'}>
+
+      <AccessibleTabs idPrefix="shared-rubric" label="Shared rubric tasks" value={rubricView} onChange={setRubricView}
+        tabs={[{ id: 'dimensions', label: 'Dimensions' }, { id: 'rules', label: 'Verdicts & guidance' }, { id: 'history', label: 'History' }]} />
+
+      {error && <p role="alert" className="text-sm mb-4" style={{ color: '#D14B3D' }}>{error}</p>}
+
+      <div id="shared-rubric-panel-dimensions" role="tabpanel" aria-labelledby="shared-rubric-tab-dimensions" tabIndex={0} hidden={rubricView !== 'dimensions'}>
 
       {/* Weight validator */}
       <div className="rounded-[10px] mb-6 flex items-center justify-between gap-4 flex-wrap"
@@ -253,33 +280,6 @@ export default function RubricPage() {
             <span key={d.id} className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>{d.name || 'Untitled'} <span className="font-bold" style={{ color: '#B84A2E' }}>{d.weight}%</span></span>
           ))}
         </div>
-      </div>
-
-      {error && <p className="text-sm mb-4 text-center" style={{ color: '#D14B3D' }}>{error}</p>}
-
-      {/* Verdict thresholds */}
-      <div className="rounded-2xl mb-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(26,30,35,.5)' }}>Verdict Thresholds</p>
-        <div className="flex items-center flex-wrap" style={{ gap: 34 }}>
-          {[
-            { key: 'pass',         label: 'PASS ≥',         color: '#2F8F5B' },
-            { key: 'needs_review', label: 'NEEDS REVIEW ≥', color: '#C8841E' },
-          ].map(({ key, label, color }) => (
-            <div key={key} className="flex items-center gap-2">
-              <span className="text-sm font-medium" style={{ color }}>{label}</span>
-              <input type="number" min="0" max="100"
-                value={draft.verdict_thresholds[key]}
-                onChange={e => setDraft(d => ({ ...d, verdict_thresholds: { ...d.verdict_thresholds, [key]: parseInt(e.target.value) || 0 } }))}
-                className="text-center g-input"
-                style={{ width: 62, height: 38, borderRadius: 8, fontFamily: "'Inter Tight'", fontSize: 16, fontWeight: 600, color: '#1A1E23' }} />
-              <span className="text-sm" style={{ color: 'rgba(26,30,35,.5)' }}>pts</span>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs mt-4 flex items-center gap-1.5" style={{ color: 'rgba(26,30,35,.6)' }}><span aria-hidden style={{ color: '#D14B3D' }}>⊘</span>Fail: below the needs-review threshold, or any auto-fail condition triggered.</p>
-        {!thresholdsOk && (
-          <p className="text-xs mt-3" style={{ color: '#D14B3D' }}>⚠ The PASS threshold must be higher than NEEDS REVIEW.</p>
-        )}
       </div>
 
       {/* Dimensions */}
@@ -298,6 +298,33 @@ export default function RubricPage() {
         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.6)'; e.currentTarget.style.borderColor = '#DDD6CF' }}>
         + Add dimension
       </button>
+      </div>
+
+      <div id="shared-rubric-panel-rules" role="tabpanel" aria-labelledby="shared-rubric-tab-rules" tabIndex={0} hidden={rubricView !== 'rules'}>
+      {/* Verdict thresholds */}
+      <div className="rounded-2xl mb-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(26,30,35,.5)' }}>Verdict Thresholds</p>
+        <div className="flex items-center flex-wrap" style={{ gap: 34 }}>
+          {[
+            { key: 'pass',         label: 'PASS ≥',         color: '#2F8F5B' },
+            { key: 'needs_review', label: 'NEEDS REVIEW ≥', color: '#C8841E' },
+          ].map(({ key, label, color }) => (
+            <div key={key} className="flex items-center gap-2">
+              <label htmlFor={`threshold-${key}`} className="text-sm font-medium" style={{ color }}>{label}</label>
+              <input id={`threshold-${key}`} type="number" min="0" max="100"
+                value={draft.verdict_thresholds[key]}
+                onChange={e => setDraft(d => ({ ...d, verdict_thresholds: { ...d.verdict_thresholds, [key]: parseInt(e.target.value) || 0 } }))}
+                className="text-center g-input"
+                style={{ width: 62, height: 38, borderRadius: 8, fontFamily: "'Inter Tight'", fontSize: 16, fontWeight: 600, color: '#1A1E23' }} />
+              <span className="text-sm" style={{ color: 'rgba(26,30,35,.5)' }}>pts</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs mt-4 flex items-center gap-1.5" style={{ color: 'rgba(26,30,35,.6)' }}><span aria-hidden style={{ color: '#D14B3D' }}>⊘</span>Fail: below the needs-review threshold, or any auto-fail condition triggered.</p>
+        {!thresholdsOk && (
+          <p className="text-xs mt-3" style={{ color: '#D14B3D' }}>⚠ The PASS threshold must be higher than NEEDS REVIEW.</p>
+        )}
+      </div>
 
       {/* Auto-fail conditions */}
       <AutoFailEditor
@@ -307,12 +334,12 @@ export default function RubricPage() {
       {/* Scoring Guidance */}
       <div className="rounded-2xl mt-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
         <div className="mb-3">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(26,30,35,.5)' }}>Scoring Guidance</p>
+          <label htmlFor="shared-scoring-guidance" className="text-xs font-semibold uppercase tracking-wider block" style={{ color: 'rgba(26,30,35,.5)' }}>Scoring Guidance</label>
           <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>
             Free-text instructions injected into every AI scoring prompt before the rubric. Use this to give Claude context it can't infer from the ticket alone — your product domain, internal tools agents are expected to use, escalation norms, or how to handle recurring edge cases. The more specific, the more consistent the scores.
           </p>
         </div>
-        <textarea
+        <textarea id="shared-scoring-guidance"
           value={draft.scoring_guidance || ''}
           onChange={e => setDraft(d => ({ ...d, scoring_guidance: e.target.value }))}
           rows={6}
@@ -322,8 +349,13 @@ export default function RubricPage() {
         />
       </div>
 
+      </div>
+
       {/* Change history */}
+      <div id="shared-rubric-panel-history" role="tabpanel" aria-labelledby="shared-rubric-tab-history" tabIndex={0} hidden={rubricView !== 'history'}>
       <RevisionHistory refreshKey={saved} />
+      </div>
+      </section>
     </div>
   )
 }
@@ -352,7 +384,8 @@ function RevisionHistory({ refreshKey }) {
     return () => { cancelled = true }
   }, [refreshKey])
 
-  if (loading || revisions.length === 0) return null
+  if (loading) return <p role="status" className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>Loading rubric history…</p>
+  if (revisions.length === 0) return <p className="text-sm" style={{ color: 'rgba(26,30,35,.6)' }}>No rubric changes have been saved yet.</p>
 
   const valueBlock = (text, kind) => (
     <div className="text-xs leading-relaxed rounded-lg px-2.5 py-1.5 whitespace-pre-wrap"

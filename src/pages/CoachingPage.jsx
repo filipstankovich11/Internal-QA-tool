@@ -2,6 +2,12 @@ import { useMemo, useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import {
+  STRENGTH_MIN_EVIDENCE,
+  STRENGTH_MIN_SCORE,
+  finiteScore,
+  isMeaningfulStrength,
+} from '../lib/coachingStats'
 import SessionView from '../components/coaching/SessionView'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
@@ -22,7 +28,7 @@ const scoreBorder = v => v >= 4 ? '#BFE3CD' : v >= 3 ? '#EAD3AE' : '#F4DDD7'
 function ScorePips({ score }) {
   const color = scoreColor(score)
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" role="img" aria-label={`${score.toFixed(1)} out of 5`}>
       {[1,2,3,4,5].map(i => (
         <div key={i} className="rounded-full"
           style={{ width: 7, height: 7, background: i <= Math.round(score) ? color : '#F0ECE9' }} />
@@ -146,23 +152,26 @@ export default function CoachingPage() {
     return CRITERIA.map(c => {
       const entries = scores
         .map(s => s.fullScore?.scores?.[c.dimKey]?.[c.key])
-        .filter(v => v?.score != null)
+        .map(entry => ({ entry, score: finiteScore(entry?.score) }))
+        .filter(({ score }) => score != null)
 
-      if (!entries.length) return { ...c, avg: null, notes: [] }
+      if (!entries.length) return { ...c, avg: null, n: 0, notes: [] }
 
-      const avg   = entries.reduce((sum, e) => sum + Number(e.score), 0) / entries.length
+      const avg   = entries.reduce((sum, item) => sum + item.score, 0) / entries.length
       const notes = entries
-        .filter(e => e.notes?.trim())
+        .map(item => item.entry)
+        .filter(entry => entry.notes?.trim())
         .slice(0, 6)
-        .map(e => e.notes)
+        .map(entry => entry.notes)
 
-      return { ...c, avg, notes }
+      return { ...c, avg, n: entries.length, notes }
     }).filter(c => c.avg != null)
   }, [scores])
 
   const sorted     = [...criteriaStats].sort((a, b) => a.avg - b.avg)
   const focusAreas = sorted.slice(0, 3)
-  const strengths  = sorted.slice(-2).reverse()
+  const strengths  = sorted.filter(isMeaningfulStrength).slice(-2).reverse()
+  const hasLimitedStrengthData = scores.length > 0 && strengths.length === 0
 
   // ── Key improvements from recent scores ────────────────────────────────────
   const improvements = useMemo(() => {
@@ -186,7 +195,7 @@ export default function CoachingPage() {
   if (activeSession) {
     const me = agents.find(a => a.id === activeSession.agent_id)
     return (
-      <div className="max-w-6xl mx-auto px-8 pt-8 pb-14">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8 pb-14">
         <SessionView
           session={activeSession}
           agentName={me?.name || 'you'}
@@ -362,6 +371,15 @@ export default function CoachingPage() {
               <CriterionCard key={c.key} criterion={c} avg={c.avg} notes={c.notes} isWeak={false} />
             ))}
           </div>
+        </div>
+      )}
+
+      {hasLimitedStrengthData && (
+        <div className="rounded-2xl px-5 py-4" style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
+          <h2 className="text-sm font-semibold" style={{ color: '#1A1E23', fontFamily: "'Inter Tight'" }}>More evidence needed</h2>
+          <p className="text-xs leading-relaxed mt-1.5" style={{ color: 'rgba(26,30,35,.62)' }}>
+            No consistent strength is ready to show yet. An area appears after at least {STRENGTH_MIN_EVIDENCE} scored examples averaging {STRENGTH_MIN_SCORE.toFixed(1)}/5 or higher.
+          </p>
         </div>
       )}
 

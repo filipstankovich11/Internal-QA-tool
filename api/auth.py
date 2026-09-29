@@ -91,6 +91,7 @@ def require_auth(f):
 
         g.jwt_claims = claims
         g.jwt_token = token
+        g.current_user_id = claims.get('sub')
         return f(*args, **kwargs)
     return wrapper
 

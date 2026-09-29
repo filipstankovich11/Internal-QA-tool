@@ -10,7 +10,8 @@ An AI-powered QA scoring tool for Gorgias support tickets. Score individual tick
 - **Batch scoring** — upload a CSV or pull tickets directly from a Gorgias view
 - **Score history** — filterable by agent, date range, and verdict
 - **Agent & team management** — import agents from Gorgias, assign to teams
-- **QA Guidance / Rubric editor** — customise scoring dimensions, weights, auto-fail conditions, and free-text scoring guidance
+- **QA Guidance / Rubric editor** — customise shared scoring dimensions and publish team-specific guidance
+- **Guidance testing** — compare a saved draft against published guidance on up to three existing tickets, then record which grade better matches each ticket
 - **Slack DM notifications** — send formatted QA feedback directly to an agent's Slack DM with a preview before sending
 - **Review queue** — manage tickets pending review
 - **Coaching hub (leads)** — recurring issues and strengths surfaced per agent from score data; run coaching sessions, set plan goals, share strengths and team topics

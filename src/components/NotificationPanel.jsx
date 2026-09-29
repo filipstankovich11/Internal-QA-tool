@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { QA_GUIDANCE_ENABLED } from '../config/features'
 
 const TYPE_META = {
   dispute_submitted:  { icon: '⚑', color: '#f59e0b', label: 'Dispute' },
@@ -140,7 +141,7 @@ export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
     const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
     const score = linkedScore(n)
     // Guidance changes link to the QA Guidance page (admin-gated tab)
-    const guidanceLink = n.type === 'rubric_updated' && isAdmin && !!onNavigate
+    const guidanceLink = QA_GUIDANCE_ENABLED && n.type === 'rubric_updated' && isAdmin && !!onNavigate
     // Shared coaching sessions link to the agent's Coaching page (agent-gated tab)
     const coachingLink = ['coaching_session', 'coaching_goal'].includes(n.type) && role === 'agent' && !!onNavigate
     const clickable = !!score || guidanceLink || coachingLink

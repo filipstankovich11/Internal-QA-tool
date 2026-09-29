@@ -5,6 +5,7 @@ import { useNavigate } from '../context/NavigationContext'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { gradeColor } from '../lib/verdict'
+import { finiteScore } from '../lib/coachingStats'
 import SessionView from '../components/coaching/SessionView'
 import { TeamTopicModal, ShareStrengthModal, AddToPlanModal } from '../components/coaching/CoachingModals'
 
@@ -16,8 +17,7 @@ import { TeamTopicModal, ShareStrengthModal, AddToPlanModal } from '../component
  * tickets. Low averages over multiple tickets become issues; high ones become
  * strengths — each with the real tickets as evidence. No backend needed.
  *
- * Session actions (start/plan/log) have no data model yet — stubbed with
- * toasts until coaching sessions land.
+ * Session, plan, and team-sharing actions persist through the coaching tables.
  */
 
 const ink = '#1A1E23'
@@ -95,12 +95,12 @@ const S = {
     justifyContent: 'center',
   }),
   btnPrimary: {
-    display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 18px',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 44, padding: '0 18px',
     background: '#FF9780', border: 'none', borderRadius: 8,
     font: "500 14px/1 'DM Sans'", color: ink, cursor: 'pointer',
   },
   btnSecondary: {
-    display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 16px',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 44, padding: '0 16px',
     background: 'transparent', border: `1px solid ${ink}`, borderRadius: 8,
     font: "500 14px/1 'DM Sans'", color: ink, cursor: 'pointer',
   },
@@ -153,9 +153,10 @@ function OpportunityCard({ opp, onStart, onShare, onAddToPlan, onOpenTicket }) {
             </span>
             <span style={{ ...S.metaPill, gap: 0 }}>{opp.dimension}</span>
             {opp.tickets.map((t) => (
-              <span key={t.scoreId} style={S.ticketPill} onClick={() => onOpenTicket(t.scoreId)} title="Open the scored ticket">
+              <button type="button" key={t.scoreId} style={S.ticketPill} onClick={() => onOpenTicket(t.scoreId)}
+                aria-label={`Open scored ticket ${t.ticketId}`} title="Open the scored ticket">
                 #{t.ticketId}
-              </span>
+              </button>
             ))}
             {opp.moreTickets > 0 && (
               <span style={{ font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.45)' }}>+{opp.moreTickets} more</span>
@@ -163,27 +164,27 @@ function OpportunityCard({ opp, onStart, onShare, onAddToPlan, onOpenTicket }) {
           </div>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, paddingTop: 14, borderTop: '1px solid #F4F0ED' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid #F4F0ED' }}>
         {isStrength ? (
-          <button style={{ ...S.btnSecondary, height: 36, padding: '0 15px', font: "500 13px/1 'DM Sans'" }} onClick={onShare}>
+          <button type="button" style={{ ...S.btnSecondary, minHeight: 40, padding: '0 15px', font: "500 13px/1 'DM Sans'" }} onClick={onShare}>
             <MegaphoneIcon />
             Share with team
           </button>
         ) : (
           <>
-            <button style={{ ...S.btnPrimary, height: 36, padding: '0 15px', font: "500 13px/1 'DM Sans'" }} onClick={onStart}>
+            <button type="button" style={{ ...S.btnPrimary, minHeight: 40, padding: '0 15px', font: "500 13px/1 'DM Sans'" }} onClick={onStart}>
               <SessionIcon />
               Start session
             </button>
-            <button
-              style={{ height: 36, padding: '0 15px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' }}
+            <button type="button"
+              style={{ minHeight: 40, padding: '0 15px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' }}
               onClick={onAddToPlan}>
               Add to plan
             </button>
           </>
         )}
-        <button
-          style={{ height: 36, padding: '0 15px', background: 'transparent', border: 'none', font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.45)', cursor: 'pointer' }}
+        <button type="button" aria-label={`Dismiss ${opp.title}`}
+          style={{ minHeight: 40, padding: '0 15px', background: 'transparent', border: 'none', font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.45)', cursor: 'pointer' }}
           onClick={opp.onDismiss}>
           Dismiss
         </button>
@@ -260,8 +261,8 @@ export default function CoachingHubPage() {
       for (const d of dims) {
         for (const c of d.criteria || []) {
           const rows = theirScores
-            .map(s => ({ s, v: Number(s.fullScore?.scores?.[d.id]?.[c.id]?.score) }))
-            .filter(x => Number.isFinite(x.v))
+            .map(s => ({ s, v: finiteScore(s.fullScore?.scores?.[d.id]?.[c.id]?.score) }))
+            .filter(x => x.v != null)
           // A re-scored ticket has multiple score rows — count each ticket once,
           // using its latest score, so superseded grades don't skew the average
           const byTicket = new Map()
@@ -325,7 +326,7 @@ export default function CoachingHubPage() {
     let insight = 'Not enough scored tickets yet — insights appear as reviews accumulate.'
     let weakest = null
     const dimAvgs = dims.map(d => {
-      const vals = scoreHistory.map(s => Number(s.fullScore?.scores?.[d.id]?.dimension_average)).filter(Number.isFinite)
+      const vals = scoreHistory.map(s => finiteScore(s.fullScore?.scores?.[d.id]?.dimension_average)).filter(v => v != null)
       return { d, avg: vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null, n: vals.length }
     }).filter(x => x.avg != null)
     if (dimAvgs.length && scoreHistory.length >= 3) {
@@ -348,7 +349,7 @@ export default function CoachingHubPage() {
     const avg = theirs.reduce((sum, s) => sum + (Number(s.effectiveScore) || 0), 0) / theirs.length
     const passPct = Math.round(theirs.filter(s => s.effectiveVerdict === 'PASS').length / theirs.length * 100)
     const dimensions = (rubric?.dimensions || []).map(d => {
-      const vals = theirs.map(s => Number(s.fullScore?.scores?.[d.id]?.dimension_average)).filter(Number.isFinite)
+      const vals = theirs.map(s => finiteScore(s.fullScore?.scores?.[d.id]?.dimension_average)).filter(v => v != null)
       if (!vals.length) return null
       const score = vals.reduce((a, b) => a + b, 0) / vals.length
       return { name: d.name, score, pct: Math.round(score / 5 * 100), color: gradeColor(score * 20, rubric?.verdict_thresholds) }
@@ -518,8 +519,8 @@ export default function CoachingHubPage() {
     if (!weakestDim) return null
     const seen = new Set()
     const worst = scoreHistory
-      .map(s => ({ s, v: Number(s.fullScore?.scores?.[weakestDim.d.id]?.dimension_average) }))
-      .filter(x => Number.isFinite(x.v))
+      .map(s => ({ s, v: finiteScore(s.fullScore?.scores?.[weakestDim.d.id]?.dimension_average) }))
+      .filter(x => x.v != null)
       .sort((x, y) => x.v - y.v || y.s.scoredAt - x.s.scoredAt)
       .filter(x => !seen.has(x.s.ticketId) && seen.add(x.s.ticketId))
     return {
@@ -682,7 +683,7 @@ export default function CoachingHubPage() {
       ? opportunities.find(o => o.id === activeSession.opportunity_key)
       : null
     return (
-      <div className="max-w-6xl mx-auto px-8 pt-8 pb-14 panel-push">
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8 pb-14 panel-push">
         <SessionView
           session={activeSession}
           agentName={agent?.name || 'Agent'}
@@ -703,29 +704,31 @@ export default function CoachingHubPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-8 pt-8 pb-14 panel-push">
+    <div className="max-w-6xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8 pb-14 panel-push">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between" style={{ marginBottom: 22 }}>
         <div>
           <h1 style={{ font: "600 30px/1.1 'Inter Tight', sans-serif", letterSpacing: '-0.02em', color: ink, margin: 0 }}>Coaching</h1>
           <p style={{ font: "400 14px/1.5 'DM Sans'", color: 'rgba(26,30,35,.6)', margin: '6px 0 0' }}>
             {visible.length} open {visible.length === 1 ? 'opportunity' : 'opportunities'} · found across {scoreHistory.length} scored tickets
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, position: 'relative' }}>
-          <button style={S.btnSecondary} onClick={() => setLogOpen(true)}>
+        <div className="flex w-full flex-wrap gap-2.5 sm:w-auto" style={{ position: 'relative' }}>
+          <button type="button" className="flex-1 sm:flex-none" style={S.btnSecondary} onClick={() => setLogOpen(true)}>
             <HistoryIcon />
             Coaching log{sessions.length > 0 ? ` (${sessions.length})` : ''}
           </button>
-          <button style={S.btnPrimary} onClick={() => setPickerOpen(o => !o)}>
+          <button type="button" className="flex-1 sm:flex-none" style={S.btnPrimary} onClick={() => setPickerOpen(o => !o)}
+            aria-expanded={pickerOpen} aria-controls="new-session-agent-picker">
             <PlusIcon />
             New session
           </button>
           {pickerOpen && (
-            <div style={{ position: 'absolute', top: 46, right: 0, zIndex: 30, minWidth: 220, maxHeight: 280, overflowY: 'auto', ...S.card, padding: 6 }}>
+            <div id="new-session-agent-picker" role="group" aria-label="Choose an agent for the new session"
+              style={{ position: 'absolute', top: 50, right: 0, zIndex: 30, minWidth: 220, maxWidth: 'calc(100vw - 32px)', maxHeight: 280, overflowY: 'auto', ...S.card, padding: 6 }}>
               <p style={{ font: "600 10px/1 'DM Sans'", letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.45)', padding: '8px 10px 6px', margin: 0 }}>Session with…</p>
               {agents.map(a => (
-                <button key={a.id} onClick={() => startBlankSession(a)}
+                <button type="button" key={a.id} onClick={() => startBlankSession(a)}
                   style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent', font: "400 13px/1.2 'DM Sans'", color: ink, cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -739,13 +742,16 @@ export default function CoachingHubPage() {
 
       {/* Coaching log overlay */}
       {logOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter"
-          style={{ background: 'rgba(26,30,35,0.35)', backdropFilter: 'blur(8px)' }} onClick={() => setLogOpen(false)}>
-          <div className="rounded-2xl w-full max-w-lg max-h-[75vh] flex flex-col modal-enter" onClick={e => e.stopPropagation()}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overlay-enter">
+          <button type="button" className="absolute inset-0" aria-label="Close coaching log"
+            style={{ background: 'rgba(26,30,35,0.35)', backdropFilter: 'blur(8px)', border: 'none' }} onClick={() => setLogOpen(false)} />
+          <div role="dialog" aria-modal="true" aria-labelledby="coaching-log-title"
+            className="relative z-10 rounded-2xl w-full max-w-lg max-h-[75vh] flex flex-col modal-enter"
             style={{ background: '#FFFFFF', border: '1px solid #EEEEEE' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #EEEEEE' }}>
-              <span style={{ font: "600 15px/1 'Inter Tight'", color: ink }}>Coaching log</span>
-              <button onClick={() => setLogOpen(false)} style={{ border: 'none', background: 'transparent', fontSize: 20, color: 'rgba(26,30,35,.45)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+              <h2 id="coaching-log-title" style={{ font: "600 15px/1 'Inter Tight'", color: ink, margin: 0 }}>Coaching log</h2>
+              <button type="button" aria-label="Close coaching log" onClick={() => setLogOpen(false)}
+                style={{ border: 'none', background: 'transparent', fontSize: 20, color: 'rgba(26,30,35,.45)', cursor: 'pointer', lineHeight: 1, minWidth: 44, minHeight: 44 }}>×</button>
             </div>
             <div style={{ overflowY: 'auto', padding: '10px 12px' }}>
               {sessions.length === 0 && (
@@ -757,7 +763,7 @@ export default function CoachingHubPage() {
                 const a = agents.find(x => x.id === s.agent_id)
                 const done = s.status === 'completed'
                 return (
-                  <button key={s.id} onClick={() => openSessionRow(s)}
+                  <button type="button" key={s.id} onClick={() => openSessionRow(s)}
                     style={{ display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left', padding: '11px 12px', borderRadius: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -783,17 +789,19 @@ export default function CoachingHubPage() {
 
       {/* Agent filter chips */}
       {chipAgents.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-          <span style={S.chip(agentFilter === null)} onClick={() => setAgentFilter(null)}>All agents</span>
+        <div role="group" aria-label="Filter coaching opportunities by agent" style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+          <button type="button" style={S.chip(agentFilter === null)} aria-pressed={agentFilter === null}
+            onClick={() => setAgentFilter(null)}>All agents</button>
           {chipAgents.map(a => (
-            <span key={a.id} style={S.chip(agentFilter === a.id)} onClick={() => setAgentFilter(a.id)}>{a.name}</span>
+            <button type="button" key={a.id} style={S.chip(agentFilter === a.id)} aria-pressed={agentFilter === a.id}
+              onClick={() => setAgentFilter(a.id)}>{a.name}</button>
           ))}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 1fr', gap: 16, alignItems: 'start' }}>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         {/* Feed */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {visible.map(opp => (
             <OpportunityCard key={opp.id} opp={{ ...opp, onDismiss: () => dismiss(opp.id) }}
               onStart={() => startSession(opp)}
@@ -809,7 +817,7 @@ export default function CoachingHubPage() {
         </div>
 
         {/* Right rail */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ ...S.card, padding: 20 }}>
             <div style={{ font: "600 12px/1 'DM Sans'", letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(26,30,35,.5)', marginBottom: 14 }}>
               Needs coaching first
@@ -842,11 +850,12 @@ export default function CoachingHubPage() {
               <span style={S.aiAvatar(26)}><AiIcon size={13} /></span>
               <span style={{ font: "600 13px/1 'Inter Tight'", color: '#fff' }}>This week in reviews</span>
             </div>
-            <div style={{ font: "400 12.5px/1.6 'DM Sans'", color: 'rgba(255,255,255,.75)' }}>
+            <div id="weekly-review-insight" style={{ font: "400 12.5px/1.6 'DM Sans'", color: 'rgba(255,255,255,.75)' }}>
               {weeklyInsight}
             </div>
-            <button
-              style={{ marginTop: 14, height: 34, padding: '0 14px', background: 'transparent', border: '1px solid rgba(255,255,255,.3)', borderRadius: 8, font: "500 12px/1 'DM Sans'", color: '#fff', cursor: 'pointer' }}
+            <button type="button" disabled={!weakestDim} aria-describedby="weekly-review-insight"
+              title={weakestDim ? 'Draft a team coaching topic' : 'At least three scored tickets are needed'}
+              style={{ marginTop: 14, minHeight: 40, padding: '0 14px', background: 'transparent', border: '1px solid rgba(255,255,255,.3)', borderRadius: 8, font: "500 12px/1 'DM Sans'", color: '#fff', cursor: weakestDim ? 'pointer' : 'not-allowed', opacity: weakestDim ? 1 : 0.5 }}
               onClick={openTeamTopic}>
               Turn into team topic
             </button>

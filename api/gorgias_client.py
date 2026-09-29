@@ -64,6 +64,18 @@ class GorgiasClient:
     def get_ticket(self, ticket_id: int) -> dict:
         return self._get(f"/tickets/{ticket_id}")
 
+    def list_teams(self) -> list[dict]:
+        teams, cursor = [], None
+        while True:
+            params = {'limit': 100}
+            if cursor:
+                params['cursor'] = cursor
+            page = self._get('/teams', params=params)
+            teams.extend(page.get('data', []))
+            cursor = page.get('meta', {}).get('next_cursor')
+            if not cursor:
+                return teams
+
     def get_ticket_custom_fields(self, ticket_id: int) -> list[dict]:
         """Custom-field *values* set on a ticket (list-ticket-custom-fields).
         Gorgias wraps list responses in {"data": [...]}, but older shapes
@@ -132,4 +144,3 @@ class GorgiasClient:
             if not cursor or len(batch) < 100:
                 break
         return tickets[:max_tickets]
-

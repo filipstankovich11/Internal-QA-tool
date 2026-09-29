@@ -45,7 +45,7 @@ const S = {
   btnGhost: { height: 40, padding: '0 16px', background: 'transparent', border: '1px solid #E7DED6', borderRadius: 8, font: "500 14px/1 'DM Sans'", color: 'rgba(26,30,35,.7)', cursor: 'pointer' },
   ticketPill: { font: "500 11px/1 'DM Sans'", color: '#B84A2E', background: '#fff', border: '1px solid #F4DDD7', padding: '6px 10px', borderRadius: 9999, cursor: 'pointer' },
   aiAvatar: (size) => ({ width: size, height: size, flex: 'none', borderRadius: 9999, background: aiGradient, color: ink, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }),
-  inlineInput: { flex: 1, border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 11px', font: "400 13px/1.4 'DM Sans'", color: ink, outline: 'none', background: '#fff' },
+  inlineInput: { flex: 1, width: '100%', minWidth: 0, border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 11px', font: "400 13px/1.4 'DM Sans'", color: ink, outline: 'none', background: '#fff' },
 }
 
 function RichText({ text }) {
@@ -94,25 +94,26 @@ export default function SessionView({
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       {/* Back */}
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.55)', cursor: 'pointer', marginBottom: 16 }}
+      <button type="button" aria-label="Back to Coaching"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 40, padding: '0 4px', border: 'none', background: 'transparent', font: "500 13px/1 'DM Sans'", color: 'rgba(26,30,35,.55)', cursor: 'pointer', marginBottom: 16 }}
         onClick={onBack}>
         <ArrowLeftIcon />
         Coaching
-      </div>
+      </button>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="min-w-0" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 9999, background: agentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', font: "600 18px/1 'Inter Tight'", color: ink, flex: 'none' }}>
             {agentInitial}
           </div>
-          <div>
-            <h1 style={{ font: "600 26px/1.1 'Inter Tight'", letterSpacing: '-0.02em', color: ink, margin: 0 }}>
+          <div className="min-w-0">
+            <h1 style={{ font: "600 26px/1.1 'Inter Tight'", letterSpacing: '-0.02em', color: ink, margin: 0, overflowWrap: 'anywhere' }}>
               Session with {agentName}
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7, flexWrap: 'wrap' }}>
               <span style={{ font: "500 11px/1 'DM Sans'", color: session.status === 'completed' ? '#2F8F5B' : '#B84A2E', background: session.status === 'completed' ? '#E6F4EC' : '#FFEAE6', padding: '5px 9px', borderRadius: 9999, textTransform: 'capitalize' }}>
                 {session.status}
               </span>
@@ -120,20 +121,27 @@ export default function SessionView({
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            title={visible ? `${firstName} will see this session once completed — click to hide` : `Hidden from ${firstName} — click to make visible`}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 11px/1 'DM Sans'", color: visible ? 'rgba(26,30,35,.65)' : 'rgba(26,30,35,.45)', background: '#FBF7F3', border: '1px solid #F0ECE9', padding: '7px 11px', borderRadius: 9999, cursor: readOnly ? 'default' : 'pointer' }}
-            onClick={() => !readOnly && setVisible(v => !v)}>
-            <EyeIcon off={!visible} />
-            {visible ? `Visible to ${firstName}` : `Hidden from ${firstName}`}
-          </button>
+        <div className="flex w-full flex-wrap items-center gap-2.5 sm:w-auto sm:justify-end">
+          {readOnly ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 40, gap: 6, font: "500 11px/1 'DM Sans'", color: visible ? 'rgba(26,30,35,.65)' : 'rgba(26,30,35,.45)', background: '#FBF7F3', border: '1px solid #F0ECE9', padding: '7px 11px', borderRadius: 9999 }}>
+              <EyeIcon off={!visible} />
+              {visible ? `Visible to ${firstName}` : `Hidden from ${firstName}`}
+            </span>
+          ) : (
+            <button type="button" aria-pressed={visible}
+              title={visible ? `${firstName} will see this session once completed — click to hide` : `Hidden from ${firstName} — click to make visible`}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 40, gap: 6, font: "500 11px/1 'DM Sans'", color: visible ? 'rgba(26,30,35,.65)' : 'rgba(26,30,35,.45)', background: '#FBF7F3', border: '1px solid #F0ECE9', padding: '7px 11px', borderRadius: 9999, cursor: 'pointer' }}
+              onClick={() => setVisible(v => !v)}>
+              <EyeIcon off={!visible} />
+              {visible ? `Visible to ${firstName}` : `Hidden from ${firstName}`}
+            </button>
+          )}
           {!readOnly && (
             <>
-              <button style={S.btnGhost} disabled={saving} onClick={() => onSaveDraft(patch())}>
+              <button type="button" className="flex-1 sm:flex-none" style={S.btnGhost} disabled={saving} onClick={() => onSaveDraft(patch())}>
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
-              <button style={S.btnPrimary} disabled={saving} onClick={() => onComplete(patch())}>
+              <button type="button" className="flex-1 sm:flex-none" style={S.btnPrimary} disabled={saving} onClick={() => onComplete(patch())}>
                 Mark complete
               </button>
             </>
@@ -141,9 +149,9 @@ export default function SessionView({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 16, alignItems: 'start' }}>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* AI trend summary */}
           {session.ai_summary && (
             <div style={{ border: '1px solid #F4DDD7', background: 'linear-gradient(135deg,#FFF3EE,#FFF9F4)', borderRadius: 14, padding: '18px 20px' }}>
@@ -159,14 +167,14 @@ export default function SessionView({
 
           {/* Agenda */}
           <div style={{ ...S.card, padding: '20px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
               <span style={S.sectionLabel}>Agenda{session.agenda_source ? ` · ${session.agenda_source}` : ''}</span>
               {!readOnly && onRedraft && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, font: "500 12px/1 'DM Sans'", color: '#FF9780', cursor: 'pointer' }}
+                <button type="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, padding: '0 4px', border: 'none', background: 'transparent', font: "500 12px/1 'DM Sans'", color: '#FF9780', cursor: 'pointer' }}
                   onClick={() => setAgenda(onRedraft())}>
                   <AiIcon size={14} />
                   Redraft
-                </span>
+                </button>
               )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -185,9 +193,10 @@ export default function SessionView({
                     {(item.tickets || []).length > 0 && (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
                         {item.tickets.map((t) => (
-                          <span key={t.scoreId || t.ticketId} style={S.ticketPill} onClick={() => onOpenTicket(t, patch())}>
+                          <button type="button" key={t.scoreId || t.ticketId} style={S.ticketPill}
+                            aria-label={`Open scored ticket ${t.ticketId}`} onClick={() => onOpenTicket(t, patch())}>
                             #{t.ticketId}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -199,11 +208,11 @@ export default function SessionView({
                 </div>
               ))}
               {!readOnly && (addingPoint ? (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input autoFocus value={pointText} onChange={e => setPointText(e.target.value)}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input autoFocus aria-label="New talking point" value={pointText} onChange={e => setPointText(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addPoint(); if (e.key === 'Escape') setAddingPoint(false) }}
                     placeholder="Talking point…" style={S.inlineInput} />
-                  <button style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'DM Sans'" }} onClick={addPoint}>Add</button>
+                  <button type="button" className="w-full sm:w-auto" style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'DM Sans'" }} onClick={addPoint}>Add</button>
                 </div>
               ) : (
                 <button
@@ -224,7 +233,7 @@ export default function SessionView({
                 {notes || 'No notes recorded.'}
               </p>
             ) : (
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              <textarea aria-label="Session notes" value={notes} onChange={(e) => setNotes(e.target.value)}
                 placeholder="How did the conversation go? What did you agree on?"
                 style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E1DCD7', borderRadius: 10, padding: '13px 15px', minHeight: 76, font: "400 13px/1.55 'DM Sans'", color: ink, resize: 'vertical', outline: 'none', background: '#fff' }} />
             )}
@@ -236,30 +245,37 @@ export default function SessionView({
               Action items{visible ? ` · shared with ${firstName}` : ''}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {actionItems.map((a) => (
-                <div key={a.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 11, background: '#FBF7F3', border: '1px solid #F0ECE9', borderRadius: 10, padding: '11px 14px', cursor: readOnly ? 'default' : 'pointer' }}
-                  onClick={() => toggleAction(a.id)}>
-                  <span style={{ width: 18, height: 18, border: a.done ? 'none' : '1.5px solid #C8B8AD', background: a.done ? '#FF9780' : 'transparent', borderRadius: 5, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: ink, font: "600 12px/1 'DM Sans'" }}>
-                    {a.done ? '✓' : ''}
-                  </span>
-                  <span style={{ flex: 1, font: "400 13px/1.4 'DM Sans'", color: ink, textDecoration: a.done ? 'line-through' : 'none', opacity: a.done ? 0.55 : 1 }}>
-                    {a.text}
-                  </span>
-                  <span style={{ font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.45)' }}>{a.owner}</span>
-                </div>
-              ))}
+              {actionItems.map((a) => {
+                const ActionItem = readOnly ? 'div' : 'button'
+                return (
+                  <ActionItem key={a.id} {...(!readOnly ? {
+                    type: 'button',
+                    'aria-pressed': a.done,
+                    'aria-label': `${a.done ? 'Mark incomplete' : 'Mark complete'}: ${a.text}`,
+                    onClick: () => toggleAction(a.id),
+                  } : {})}
+                    style={{ display: 'flex', width: '100%', textAlign: 'left', alignItems: 'center', gap: 11, background: '#FBF7F3', border: '1px solid #F0ECE9', borderRadius: 10, padding: '11px 14px', cursor: readOnly ? 'default' : 'pointer' }}>
+                    <span aria-hidden style={{ width: 18, height: 18, border: a.done ? 'none' : '1.5px solid #C8B8AD', background: a.done ? '#FF9780' : 'transparent', borderRadius: 5, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: ink, font: "600 12px/1 'DM Sans'" }}>
+                      {a.done ? '✓' : ''}
+                    </span>
+                    <span style={{ flex: 1, font: "400 13px/1.4 'DM Sans'", color: ink, textDecoration: a.done ? 'line-through' : 'none', opacity: a.done ? 0.55 : 1 }}>
+                      {a.text}
+                    </span>
+                    <span style={{ font: "400 11px/1 'DM Sans'", color: 'rgba(26,30,35,.45)' }}>{a.owner}</span>
+                  </ActionItem>
+                )
+              })}
               {!readOnly && (addingAction ? (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input autoFocus value={actionText} onChange={e => setActionText(e.target.value)}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input autoFocus aria-label="New action item" value={actionText} onChange={e => setActionText(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addAction(); if (e.key === 'Escape') setAddingAction(false) }}
                     placeholder="Action item…" style={S.inlineInput} />
-                  <select value={actionOwner} onChange={e => setActionOwner(e.target.value)}
+                  <select aria-label="Action item owner" value={actionOwner} onChange={e => setActionOwner(e.target.value)}
                     style={{ border: '1px solid #E1DCD7', borderRadius: 8, padding: '8px 8px', font: "400 12px/1 'DM Sans'", color: ink, background: '#fff', outline: 'none' }}>
                     <option value="agent">{firstName}</option>
                     <option value="lead">Lead</option>
                   </select>
-                  <button style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'DM Sans'" }} onClick={addAction}>Add</button>
+                  <button type="button" className="w-full sm:w-auto" style={{ ...S.btnPrimary, height: 36, padding: '0 14px', font: "500 13px/1 'DM Sans'" }} onClick={addAction}>Add</button>
                 </div>
               ) : (
                 <button
@@ -274,7 +290,7 @@ export default function SessionView({
         </div>
 
         {/* Right rail */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="min-w-0" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Evidence tickets */}
           {(session.evidence || []).length > 0 && (
             <div style={{ ...S.card, padding: 20 }}>
@@ -283,8 +299,8 @@ export default function SessionView({
                 {session.evidence.map((t) => {
                   const pill = STATUS_PILL[t.status] || STATUS_PILL.review
                   return (
-                    <div key={t.scoreId || t.ticketId}
-                      style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 10px', border: '1px solid #F0ECE9', borderRadius: 10, cursor: 'pointer' }}
+                    <button type="button" key={t.scoreId || t.ticketId} aria-label={`Open scored ticket ${t.ticketId}`}
+                      style={{ display: 'flex', width: '100%', textAlign: 'left', alignItems: 'center', gap: 11, padding: '11px 10px', border: '1px solid #F0ECE9', background: '#fff', borderRadius: 10, cursor: 'pointer' }}
                       onClick={() => onOpenTicket(t, patch())}>
                       <span style={{ font: "500 11px/1 'DM Sans'", color: pill.color, background: pill.bg, padding: '5px 8px', borderRadius: 9999, flex: 'none' }}>
                         {pill.glyph} {t.score}
@@ -296,7 +312,7 @@ export default function SessionView({
                         </div>
                       </div>
                       <span style={{ color: '#C8B8AD', flex: 'none', display: 'inline-flex' }}><ChevronRightIcon /></span>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -326,9 +342,9 @@ export default function SessionView({
               </div>
               <div style={{ font: "400 11px/1.4 'DM Sans'", marginTop: 16, paddingTop: 13, borderTop: '1px solid #F4F0ED', color: 'rgba(26,30,35,.5)' }}>
                 Full scorecard on the{' '}
-                <span style={{ color: '#FF9780', fontWeight: 500, cursor: 'pointer' }} onClick={() => onOpenScorecard(patch())}>
+                <button type="button" style={{ color: '#FF9780', fontWeight: 500, cursor: 'pointer', border: 'none', background: 'transparent', padding: 0 }} onClick={() => onOpenScorecard(patch())}>
                   Agents page →
-                </span>
+                </button>
               </div>
             </div>
           )}
