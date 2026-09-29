@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from '../context/NavigationContext'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { QA_GUIDANCE_ENABLED } from '../config/features'
 
 // ⌘K / Ctrl-K command palette — search + grouped Actions / Go-to / Recent.
 const PAGES = [
@@ -42,11 +43,11 @@ export default function CommandPalette() {
   const match = (label) => !ql || label.toLowerCase().includes(ql)
 
   const groups = useMemo(() => {
-    const pages = PAGES.filter(p => !(p.scorer && !canScore) && !(p.admin && !isAdmin) && !(p.agent && !isAgent))
+    const pages = PAGES.filter(p => (p.id !== 'rubric' || QA_GUIDANCE_ENABLED) && !(p.scorer && !canScore) && !(p.admin && !isAdmin) && !(p.agent && !isAgent))
     const actions = [
       canScore && { id: 'a-score', label: 'Score a ticket', go: 'score' },
       canScore && { id: 'a-review', label: 'Open the review queue', go: 'review' },
-      isAdmin && { id: 'a-rubric', label: 'Edit QA guidance', go: 'rubric' },
+      QA_GUIDANCE_ENABLED && isAdmin && { id: 'a-rubric', label: 'Edit QA guidance', go: 'rubric' },
     ].filter(Boolean)
     const recent = [...scoreHistory].sort((a, b) => b.scoredAt - a.scoredAt).slice(0, 4)
       .map(s => ({ id: 'r-' + s.id, label: `#${s.ticketId} · ${s.fullScore?.ticket_subject || '—'}`, go: 'dashboard' }))

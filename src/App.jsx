@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './components/Toast'
 import NavigationContext from './context/NavigationContext'
+import { QA_GUIDANCE_ENABLED } from './config/features'
 import Sidebar           from './components/Sidebar'
 import CommandPalette    from './components/CommandPalette'
 import LoginPage         from './pages/LoginPage'
@@ -62,7 +63,7 @@ function Router({ page, role }) {
     case 'coaching':  return <CoachingPage />
     case 'coachinghub': return <CoachingHubPage />
     case 'teams':     return <TeamsPage />
-    case 'rubric':       return <RubricPage />
+    case 'rubric':       return QA_GUIDANCE_ENABLED ? <RubricPage /> : <DashboardPage />
     default:             return <ScorePage />
   }
 }
@@ -108,6 +109,7 @@ function AppShell() {
     const blocked =
       (['score', 'review', 'teams', 'coachinghub'].includes(page) && !canScore) ||
       (['myqueue', 'rubric'].includes(page) && !isAdmin) ||
+      (page === 'rubric' && !QA_GUIDANCE_ENABLED) ||
       (['inbox', 'coaching'].includes(page) && !isAgent)
     if (blocked) setPage('dashboard')
   }, [page, canScore, isAdmin, isAgent, loading, role])

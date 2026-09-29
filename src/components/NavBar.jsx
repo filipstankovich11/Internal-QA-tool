@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import GorgiasLogo from './GorgiasLogo'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
+import { QA_GUIDANCE_ENABLED } from '../config/features'
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
@@ -49,6 +50,7 @@ export default function NavBar({ page, setPage }) {
 
   const visibleTabs = TABS
     .filter(t => {
+      if (t.id === 'rubric' && !QA_GUIDANCE_ENABLED) return false
       if (t.scorerOnly && !canScore) return false
       if (t.adminOnly && !isAdmin) return false
       if (t.agentOnly && !isAgent) return false

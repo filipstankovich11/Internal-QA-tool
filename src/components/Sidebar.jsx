@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { isInReviewQueue } from '../lib/queue'
 import { isClaimActive } from '../lib/claims'
+import { QA_GUIDANCE_ENABLED } from '../config/features'
 
 // Lucide-style icons, 18px / 2px stroke (per the Gorgias handoff)
 const ic = (children) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>
@@ -169,6 +170,7 @@ export default function Sidebar({ page, setPage }) {
 
   const visibleTabs = MENU_TABS
     .filter(t => {
+      if (t.id === 'rubric' && !QA_GUIDANCE_ENABLED) return false
       if (t.scorerOnly && !canScore) return false
       if (t.adminOnly  && !isAdmin)  return false
       if (t.agentOnly  && !isAgent)  return false
