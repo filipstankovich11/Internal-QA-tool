@@ -114,6 +114,7 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
     </div>
 
     <section className="report-content" aria-busy={dataLoading}>
+      <div key={`${report}-${period}-${teamId}`} className="report-sheet">
       <div className="report-content-heading">
         <div><h2>{REPORTS.find(item => item.id === report).title}</h2>
           <p>{report === 'dispute' ? 'Filtered by dispute date.' : 'Filtered by score date. Latest score per ticket.'}</p></div>
@@ -176,6 +177,7 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
           <p className="report-note">Resolved dispute history is not stored yet, so this report shows open cases within the loaded scores only.</p>
         </>}
       </>}
+      </div>
     </section>
   </main>
 }
