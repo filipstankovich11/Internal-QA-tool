@@ -226,6 +226,7 @@ export function AppProvider({ children }) {
     const { data, error } = await supabase
       .from('agents').update(dbPatch).eq('id', id).select().single()
     if (!error) setAgents(prev => prev.map(a => a.id === id ? data : a))
+    return { data, error }
   }
 
   const deleteAgent = async (id) => {

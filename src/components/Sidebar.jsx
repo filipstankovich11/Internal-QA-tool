@@ -110,6 +110,7 @@ export default function Sidebar({ page, setPage }) {
   const closeButtonRef = useRef(null)
   const sidebarRef = useRef(null)
   const notificationButtonRef = useRef(null)
+  const settingsButtonRef = useRef(null)
   const compact = collapsed && !mobileOpen
   const closeMobile = () => {
     setMobileOpen(false)
@@ -175,13 +176,30 @@ export default function Sidebar({ page, setPage }) {
     fetchUnread()
     if (restoreFocus) {
       requestAnimationFrame(() => {
-        const target = window.matchMedia('(max-width: 767px)').matches
-          ? menuButtonRef.current
-          : notificationButtonRef.current
-        target?.focus()
+        requestAnimationFrame(() => {
+          const target = window.matchMedia('(max-width: 767px)').matches
+            ? menuButtonRef.current
+            : notificationButtonRef.current
+          target?.focus()
+        })
       })
     }
   }, [fetchUnread, setActiveOverlay])
+
+  const closeSettings = useCallback(({ restoreFocus = true } = {}) => {
+    setShowSettings(false)
+    setActiveOverlay(current => current === 'settings' ? null : current)
+    if (restoreFocus) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const target = window.matchMedia('(max-width: 767px)').matches
+            ? menuButtonRef.current
+            : settingsButtonRef.current
+          target?.focus()
+        })
+      })
+    }
+  }, [setActiveOverlay])
 
   const reviewCount  = scoreHistory.filter(isInReviewQueue).length
   const myQueueCount = scoreHistory.filter(s => s.claimedBy === user?.id && isClaimActive(s) && isInReviewQueue(s)).length
@@ -307,12 +325,16 @@ export default function Sidebar({ page, setPage }) {
             ariaExpanded={showNotifications}
           />
           <NavItem
+            buttonRef={settingsButtonRef}
             icon={<GearIcon />}
             label="Settings"
             isActive={showSettings}
             onClick={() => { setShowSettings(true); setShowNotifications(false); setActiveOverlay('settings'); setMobileOpen(false) }}
             badge={null}
             collapsed={compact}
+            ariaControls="settings-dialog"
+            ariaHaspopup="dialog"
+            ariaExpanded={showSettings}
           />
           <NavItem
             icon={<SignOutIcon />}
@@ -360,7 +382,7 @@ export default function Sidebar({ page, setPage }) {
       )}
 
     </aside>
-    {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setActiveOverlay(o => o === 'settings' ? null : o) }} />}
+    {showSettings && <SettingsModal onClose={closeSettings} />}
     {showNotifications && (
         <NotificationPanel
           onClose={closeNotifications}
