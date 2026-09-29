@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useApp } from '../context/AppContext'
 import { VERDICT_COLOR, VERDICT_LABEL } from '../lib/verdict'
 import { filterReportScores, latestScoresByTicket, questionRows, scorecardSummary } from '../lib/reportData'
@@ -39,11 +39,16 @@ function Empty({ title, detail }) {
   return <div className="report-empty"><h3>{title}</h3><p>{detail}</p></div>
 }
 
-export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, openScore }) {
-  const [report, setReport] = useState('scorecard')
-  const [period, setPeriod] = useState('30')
-  const [teamId, setTeamId] = useState('all')
-  const [selectedQuestion, setSelectedQuestion] = useState(null)
+export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, openScore, reportsState, setReportsState }) {
+  const { report, period, teamId, selectedQuestion } = reportsState
+  const updateReportsState = patch => setReportsState(current => ({ ...current, ...patch }))
+  const setReport = value => updateReportsState({ report: value })
+  const setPeriod = value => updateReportsState({ period: value })
+  const setTeamId = value => updateReportsState({ teamId: value })
+  const setSelectedQuestion = value => setReportsState(current => ({
+    ...current,
+    selectedQuestion: typeof value === 'function' ? value(current.selectedQuestion) : value,
+  }))
 
   const latestScores = useMemo(() => latestScoresByTicket(scoreHistory), [scoreHistory])
   const selectedScores = useMemo(() => filterReportScores(latestScores, agents, { days: period, teamId }), [latestScores, agents, period, teamId])
