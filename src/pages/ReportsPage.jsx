@@ -5,9 +5,9 @@ import { filterReportScores, latestScoresByTicket, questionRows, scorecardSummar
 import './ReportsPage.css'
 
 const REPORTS = [
-  { id: 'scorecard', title: 'Scorecard report', description: 'Overall quality, verdict mix, and team performance.' },
-  { id: 'question', title: 'Question report', description: 'Which rubric questions consistently need attention.' },
-  { id: 'dispute', title: 'Dispute report', description: 'Open score disputes that need a reviewer decision.' },
+  { id: 'scorecard', label: 'Scorecard', title: 'Scorecard report', description: 'Overall quality, verdict mix, and team performance.' },
+  { id: 'question', label: 'Questions', title: 'Question report', description: 'Which rubric questions consistently need attention.' },
+  { id: 'dispute', label: 'Disputes', title: 'Dispute report', description: 'Open score disputes that need a reviewer decision.' },
 ]
 const PERIODS = [
   { value: '7', label: 'Last 7 days' },
@@ -24,6 +24,12 @@ function ReportIcon({ type }) {
     {type === 'scorecard' && <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></>}
     {type === 'question' && <><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.5 2.5 0 0 1 4.4 1.6c0 1.6-2.2 2-2.2 3.5M12 17.5h.01"/></>}
     {type === 'dispute' && <><path d="M5 4h14v12H9l-4 4V4Z"/><path d="M12 8v4M12 14h.01"/></>}
+  </svg>
+}
+
+function ArrowIcon({ open = false }) {
+  return <svg aria-hidden="true" className={`report-arrow${open ? ' is-open' : ''}`} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14M13 6l6 6-6 6"/>
   </svg>
 }
 
@@ -67,6 +73,12 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
     return { score, rating: raw == null ? null : Number(raw) }
   }).filter(item => item.rating !== null && Number.isFinite(item.rating))
     .sort((a, b) => a.rating - b.rating || b.score.scoredAt - a.score.scoredAt).slice(0, 5) : []
+  const questionCount = questions.filter(row => row.count > 0).length
+  const reportCounts = {
+    scorecard: dataLoading ? 'Loading' : `${summary.count} ${summary.count === 1 ? 'ticket' : 'tickets'}`,
+    question: dataLoading ? 'Loading' : `${questionCount} ${questionCount === 1 ? 'question' : 'questions'}`,
+    dispute: dataLoading ? 'Loading' : `${disputes.length} open`,
+  }
 
   const openTicket = score => openScore({
     ...score.fullScore, scoreId: score.id, reviewerNote: score.notes,
@@ -79,7 +91,7 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
   return <main className="reports-page">
     <header className="reports-header">
       <div><h1>Reports</h1><p>Explore QA results and the tickets behind them.</p>
-        <p className="report-scope">Based on up to 500 recently loaded score records.</p></div>
+        <p className="report-scope"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>Based on up to 500 recently loaded score records.</p></div>
       <div className="reports-filters">
         <label>Time period<select value={period} onChange={event => setPeriod(event.target.value)}>
           {PERIODS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -96,8 +108,8 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
         className={`report-choice ${report === item.id ? 'is-selected' : ''}`}
         aria-pressed={report === item.id}>
         <span className="report-choice-icon"><ReportIcon type={item.id} /></span>
-        <span className="report-choice-copy"><strong>{item.title}</strong><small>{item.description}</small></span>
-        <span className="report-choice-arrow" aria-hidden="true">→</span>
+        <span className="report-choice-copy"><strong>{item.label}</strong><small>{item.description}</small></span>
+        <span className="report-choice-meta">{reportCounts[item.id]}</span>
       </button>)}
     </div>
 
@@ -127,8 +139,8 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
               })}</div>
             </div>
             <div className="report-block"><h3>By team</h3>
-              {teamRows.length ? <><div className="report-table-wrap"><table className="report-table"><thead><tr><th>Team</th><th>Tickets</th><th>Avg score</th><th>Pass rate</th></tr></thead>
-                <tbody>{teamRows.map(row => <tr key={row.team.id}><th scope="row"><button type="button" className="report-row-link" onClick={() => setTeamId(String(row.team.id))} aria-label={`Filter reports to ${row.team.name}`}>{row.team.name} <span aria-hidden="true">→</span></button></th><td>{row.count}</td><td>{fmt(row.average)}</td><td>{Math.round(row.passRate)}%</td></tr>)}</tbody></table></div>
+              {teamRows.length ? <><div className="report-table-wrap"><table className="report-table report-team-table"><thead><tr><th>Team</th><th>Tickets</th><th>Avg score</th><th>Pass rate</th></tr></thead>
+                <tbody>{teamRows.map(row => <tr key={row.team.id}><th scope="row"><button type="button" className="report-row-link" onClick={() => setTeamId(String(row.team.id))} aria-label={`Filter reports to ${row.team.name}`}>{row.team.name} <ArrowIcon /></button></th><td data-label="Tickets">{row.count}</td><td data-label="Avg score">{fmt(row.average)}</td><td data-label="Pass rate">{Math.round(row.passRate)}%</td></tr>)}</tbody></table></div>
                 <p className="report-note">A ticket linked to agents on multiple teams can appear in more than one team row.</p></>
                 : <p className="report-note">No team-linked tickets in this selection.</p>}
             </div>
@@ -137,15 +149,15 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
         {report === 'question' && (questions.every(row => row.count === 0)
           ? <Empty title="No question scores in this view" detail="Choose another period or team. Questions appear when scored tickets contain rubric ratings." />
           : <div className="report-block"><div className="report-block-heading"><h3>Rubric questions</h3><p>Lower averages appear first. Each row shows how many tickets had a rating for that question.</p></div>
-            <div className="report-table-wrap"><table className="report-table"><thead><tr><th>Question</th><th>Section</th><th>Rated</th><th>Avg / 5</th><th>Rated 1–2</th></tr></thead>
-              <tbody>{[...questions].filter(row => row.count).sort((a, b) => a.average - b.average).map(row => <tr key={row.id}>
-                <th scope="row"><button type="button" className="report-row-link" onClick={() => setSelectedQuestion(current => current === row.id ? null : row.id)} aria-expanded={selectedQuestion === row.id} aria-controls={selectedQuestion === row.id ? 'report-question-evidence' : undefined}>{row.name} <span aria-hidden="true">→</span></button></th><td>{row.dimension}</td><td>{row.count}</td>
-                <td><strong className={row.average <= 2.5 ? 'report-low' : ''}>{fmt(row.average)}</strong></td><td>{row.belowStandard}</td>
+            <div className="report-table-wrap"><table className="report-table report-question-table"><thead><tr><th>Question</th><th>Section</th><th>Rated</th><th>Avg / 5</th><th>Rated 1–2</th></tr></thead>
+              <tbody>{[...questions].filter(row => row.count).sort((a, b) => a.average - b.average).map(row => <tr key={row.id} className={selectedQuestion === row.id ? 'is-expanded' : ''}>
+                <th scope="row"><button type="button" className="report-row-link" onClick={() => setSelectedQuestion(current => current === row.id ? null : row.id)} aria-expanded={selectedQuestion === row.id} aria-controls={selectedQuestion === row.id ? 'report-question-evidence' : undefined}>{row.name} <ArrowIcon open={selectedQuestion === row.id} /></button></th><td data-label="Section">{row.dimension}</td><td data-label="Rated">{row.count}</td>
+                <td data-label="Avg / 5"><strong className={row.average <= 2.5 ? 'report-low' : ''}>{fmt(row.average)}</strong></td><td data-label="Rated 1–2">{row.belowStandard}</td>
               </tr>)}</tbody></table></div>
             {selectedQuestionRow && <div id="report-question-evidence" className="report-evidence">
               <h4>Lowest rated tickets · {selectedQuestionRow.name}</h4>
               <div>{questionEvidence.map(({ score, rating }) => <button key={score.id} type="button" onClick={() => openTicket(score)}>
-                <span>Ticket #{score.ticketId}</span><span>{rating}/5 <span aria-hidden="true">→</span></span>
+                <span>Ticket #{score.ticketId}</span><span>{rating}/5 <ArrowIcon /></span>
               </button>)}</div>
             </div>}
             <p className="report-note">Questions added to the current rubric may have fewer historical ratings.</p>
@@ -158,7 +170,7 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
               <div className="report-disputes">{disputes.map(score => <article key={score.id} className="report-dispute">
                 <div><strong>Ticket #{score.ticketId}</strong><span>{shortDate(score.disputeAt)}</span></div>
                 <p>{score.disputeNote || 'No reason was provided.'}</p>
-                <button type="button" onClick={() => openTicket(score)} aria-label={`Open disputed ticket ${score.ticketId}`}>Open scored ticket <span aria-hidden="true">→</span></button>
+                <button type="button" onClick={() => openTicket(score)} aria-label={`Open disputed ticket ${score.ticketId}`}>Open scored ticket <ArrowIcon /></button>
               </article>)}</div>
             </div>}
           <p className="report-note">Resolved dispute history is not stored yet, so this report shows open cases within the loaded scores only.</p>
