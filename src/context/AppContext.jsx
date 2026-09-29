@@ -92,6 +92,7 @@ export function AppProvider({ children }) {
     period: '30',
     teamId: 'all',
     selectedQuestion: null,
+    ticketSelection: null,
   })
 
   // ── Active overlay surface ───────────────────────────────────────────────────

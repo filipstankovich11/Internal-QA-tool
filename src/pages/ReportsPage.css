@@ -201,13 +201,39 @@
   min-width: 0;
   min-height: 102px;
   padding: 18px 20px;
+  border: 0;
   border-right: 1px solid var(--hairline-2);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .report-stat:last-child { border-right: 0; }
 .report-stat strong { font: 600 27px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
 .report-stat span { margin-top: 7px; color: var(--ink-72); font-size: 12px; font-weight: 500; }
 .report-stat small { margin-top: 3px; color: var(--ink-60); font-size: 11px; }
+
+.report-stat-button {
+  cursor: pointer;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.report-stat-button:hover { background: var(--warm-surface); }
+.report-stat-button.is-active { background: #FFF4F0; }
+.report-stat-button:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px var(--coral); }
+
+.report-stat .report-stat-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 8px;
+  color: var(--coral-text);
+  font-weight: 600;
+}
+
+.report-stat-action .report-arrow { width: 13px; height: 13px; }
 
 .report-block {
   margin-top: 16px;
@@ -221,6 +247,25 @@
 .report-block-heading h3 { margin-bottom: 3px; }
 .report-block-heading p { margin: 0 0 16px; color: var(--ink-60); font-size: 12px; }
 .report-verdicts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.report-verdict {
+  min-width: 0;
+  padding: 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease, box-shadow 140ms ease, transform 120ms ease;
+}
+
+.report-verdict:hover { background: var(--warm-surface); }
+.report-verdict:active { transform: scale(.985); }
+.report-verdict.is-active { background: #FFF4F0; }
+.report-verdict:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--coral); }
+.report-verdict:disabled { cursor: default; opacity: .52; }
+.report-verdict:disabled:hover { background: transparent; }
 .report-verdict > div:first-child { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-72); font-size: 12px; }
 .report-verdict strong { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .report-verdict small { color: var(--ink-60); font-weight: 400; }
@@ -285,6 +330,34 @@
 .report-arrow { display: inline-block; flex: none; transition: transform 160ms ease; }
 .report-arrow.is-open { transform: rotate(90deg); }
 .report-low { color: var(--danger); }
+
+.report-count-link {
+  min-width: 28px;
+  min-height: 28px;
+  margin: -6px;
+  padding: 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline;
+  text-decoration-color: rgba(207, 84, 58, .36);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, text-decoration-color 140ms ease;
+}
+
+.report-count-link:hover,
+.report-count-link[aria-expanded="true"] {
+  background: #FFF4F0;
+  color: var(--coral-text);
+  text-decoration-color: currentColor;
+}
+
+.report-count-link:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
 
 .report-evidence {
   margin-top: 18px;
@@ -368,6 +441,110 @@
 
 .report-dispute button:hover { text-decoration: underline; text-underline-offset: 3px; }
 
+.report-ticket-results {
+  margin-top: 16px;
+  scroll-margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--white);
+  animation: report-evidence-in 220ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.report-ticket-results-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.report-ticket-results-heading h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.report-ticket-results-heading p { margin: 4px 0 0; color: var(--ink-60); font-size: 12px; }
+
+.report-ticket-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--btn-border);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--ink-72);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-ticket-close:hover { border-color: var(--coral); color: var(--coral-text); }
+.report-ticket-close:focus-visible,
+.report-ticket-row:focus-visible,
+.report-ticket-more:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.report-ticket-list { border-top: 1px solid var(--hairline-2); }
+
+.report-ticket-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  min-height: 62px;
+  padding: 11px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--hairline-2);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 120ms ease;
+}
+
+.report-ticket-row:hover { background: var(--warm-surface); }
+.report-ticket-row:active { transform: scale(.992); }
+
+.report-ticket-name {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.report-ticket-name strong { font-size: 12px; font-weight: 600; }
+.report-ticket-name small { overflow: hidden; color: var(--ink-60); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+.report-ticket-meta {
+  display: grid;
+  grid-template-columns: minmax(74px, auto) 42px 86px 15px;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.report-ticket-meta strong { font-size: 13px; }
+.report-ticket-meta small { color: var(--ink-60); }
+.report-ticket-meta .report-arrow { color: var(--coral-text); }
+.report-ticket-verdict { font-weight: 600; }
+
+.report-ticket-more {
+  display: block;
+  min-height: 40px;
+  margin: 12px auto 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--warm-surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-ticket-more:hover { background: #FFF0EC; color: var(--coral-text); }
+.report-ticket-more span { margin-left: 4px; color: var(--ink-60); font-weight: 400; }
+
 @media (max-width: 1040px) and (min-width: 701px) {
   .report-choices { grid-template-columns: 1fr; }
   .report-choice { min-height: 66px; }
@@ -399,11 +576,30 @@
   .report-stat { min-height: 96px; padding: 16px 12px; }
   .report-stat strong { font-size: 24px; }
   .report-stat span { font-size: 11px; line-height: 1.35; }
+  .report-stat .report-stat-action { font-size: 10px; }
   .report-verdicts { grid-template-columns: 1fr; gap: 18px; }
   .report-period-label { display: none; }
   .report-row-link,
   .report-dispute button { min-height: 44px; }
   .report-evidence button { min-height: 44px; }
+  .report-count-link { min-width: 44px; min-height: 44px; margin: -10px; padding: 10px; }
+
+  .report-ticket-results { padding: 16px; }
+  .report-ticket-results-heading { gap: 12px; }
+  .report-ticket-close { min-height: 44px; }
+  .report-ticket-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    min-height: 82px;
+    padding: 12px 4px;
+  }
+  .report-ticket-meta {
+    grid-template-columns: auto 42px minmax(76px, auto) 15px;
+    justify-content: start;
+    text-align: left;
+  }
+  .report-ticket-name small { white-space: normal; }
+  .report-ticket-more { min-height: 44px; }
 
   .report-table-wrap { overflow: visible; }
   .report-table,
@@ -453,13 +649,20 @@
   }
 
   .report-choice,
+  .report-stat-button,
+  .report-verdict,
+  .report-count-link,
   .report-table tbody tr,
   .report-arrow,
-  .report-evidence button { transition: none; }
+  .report-evidence button,
+  .report-ticket-row { transition: none; }
 
-  .report-choice:active { transform: none; }
+  .report-choice:active,
+  .report-verdict:active,
+  .report-ticket-row:active { transform: none; }
   .report-choice.is-selected .report-choice-icon { transform: none; }
   .report-sheet,
-  .report-evidence { animation: report-state-fade 100ms ease-out both; }
+  .report-evidence,
+  .report-ticket-results { animation: report-state-fade 100ms ease-out both; }
   .report-bar span { animation: none; }
 }
