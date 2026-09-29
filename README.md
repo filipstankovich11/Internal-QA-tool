@@ -16,6 +16,7 @@ An AI-powered QA scoring tool for Gorgias support tickets. Score individual tick
 - **Review queue** — manage tickets pending review
 - **Coaching hub (leads)** — recurring issues and strengths surfaced per agent from score data; run coaching sessions, set plan goals, share strengths and team topics
 - **Coaching page (agents)** — personal focus areas, sessions and goals shared by the lead
+- **Reports** — scorecard, rubric question, and open dispute views for reviewers and leads; currently based on the latest 500 loaded score records
 - **Role-based access** — admin / lead / agent roles via Supabase Auth, enforced by Postgres RLS and the API
 
 ---

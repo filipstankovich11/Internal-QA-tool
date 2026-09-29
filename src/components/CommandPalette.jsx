@@ -12,6 +12,7 @@ const PAGES = [
   { id: 'myqueue',     label: 'My Queue',     admin: true },
   { id: 'agents',      label: 'Agents' },
   { id: 'teams',       label: 'Teams',        scorer: true },
+  { id: 'reports',     label: 'Reports',      scorer: true },
   { id: 'rubric',      label: 'QA Guidance',  admin: true },
   { id: 'inbox',       label: 'Inbox',        agent: true },
   { id: 'coaching',    label: 'Coaching',     agent: true },

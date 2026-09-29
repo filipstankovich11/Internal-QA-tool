@@ -22,6 +22,7 @@ const MENU_TABS = [
   { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: ic(<><path d="M9 3h12v13H11"/><path d="M13 7h5"/><path d="M14 10h4"/><circle cx="4.5" cy="5.5" r="2.5"/><path d="M2.5 21l.6-6.5A4 4 0 0 1 7 10.9l3.4 2.9 3.8-1"/></>) },
   { id: 'teams',       label: 'Teams',        scorerOnly: true, icon: ic(<><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></>) },
   { id: 'coachinghub', label: 'Coaching',     scorerOnly: true, icon: ic(<><path d="M9 3h12v13H11"/><path d="M13 7h5"/><path d="M14 10h4"/><circle cx="4.5" cy="5.5" r="2.5"/><path d="M2.5 21l.6-6.5A4 4 0 0 1 7 10.9l3.4 2.9 3.8-1"/></>) },
+  { id: 'reports',     label: 'Reports',      scorerOnly: true, icon: ic(<><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 19h20M8 15v-3M12 15V8M16 15v-5"/></>) },
   { id: 'rubric',      label: 'QA Guidance',  adminOnly: true, icon: ic(<><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></>) },
 ]
 
