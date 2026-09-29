@@ -1,317 +1,440 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  BarChart3, Bell, Check, CheckCheck, ClipboardList, Compass, Eye, Flag,
+  GraduationCap, Megaphone, MessageCircle, Package, Pencil, Ruler, Target,
+  Trash2, TriangleAlert, X,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useApp } from '../context/AppContext'
 import { QA_GUIDANCE_ENABLED } from '../config/features'
+import { useToast } from './Toast'
+import './NotificationPanel.css'
 
 const TYPE_META = {
-  dispute_submitted:  { icon: '⚑', color: '#f59e0b', label: 'Dispute' },
-  score_overridden:   { icon: '✎', color: '#818cf8', label: 'Override' },
-  reviewer_note:      { icon: '💬', color: '#38bdf8', label: 'Note' },
-  dispute_cleared:    { icon: '✓', color: '#10b981', label: 'Cleared' },
-  calibration_open:   { icon: '🎯', color: '#FF9780', label: 'Calibration' },
-  score_acknowledged: { icon: '👁', color: '#2F8F5B', label: 'Seen' },
-  score_published:    { icon: '📊', color: '#FF9780', label: 'Graded' },
-  dispute_reply:      { icon: '💬', color: '#f59e0b', label: 'Reply' },
-  score_assigned:     { icon: '📋', color: '#3B7DD8', label: 'Assigned' },
-  auto_fail_triggered:{ icon: '⚠️', color: '#D14B3D', label: 'Auto-fail' },
-  batch_complete:     { icon: '📦', color: '#818cf8', label: 'Batch' },
-  rubric_updated:     { icon: '📐', color: '#2F8F5B', label: 'Guidance' },
-  coaching_session:   { icon: '🎓', color: '#B84A2E', label: 'Coaching' },
-  coaching_goal:      { icon: '🧭', color: '#C8841E', label: 'Plan' },
-  team_post:          { icon: '📣', color: '#3B7DD8', label: 'Team' },
+  dispute_submitted:  { Icon: Flag,          tone: 'warning', label: 'Dispute' },
+  score_overridden:   { Icon: Pencil,        tone: 'violet',  label: 'Override' },
+  reviewer_note:      { Icon: MessageCircle, tone: 'info',    label: 'Note' },
+  dispute_cleared:    { Icon: Check,         tone: 'success', label: 'Cleared' },
+  calibration_open:   { Icon: Target,        tone: 'coral',   label: 'Calibration' },
+  score_acknowledged: { Icon: Eye,           tone: 'success', label: 'Seen' },
+  score_published:    { Icon: BarChart3,     tone: 'coral',   label: 'Graded' },
+  dispute_reply:      { Icon: MessageCircle, tone: 'warning', label: 'Reply' },
+  score_assigned:     { Icon: ClipboardList, tone: 'info',    label: 'Assigned' },
+  auto_fail_triggered:{ Icon: TriangleAlert, tone: 'danger',  label: 'Auto-fail' },
+  batch_complete:     { Icon: Package,       tone: 'violet',  label: 'Batch' },
+  rubric_updated:     { Icon: Ruler,         tone: 'success', label: 'Guidance' },
+  coaching_session:   { Icon: GraduationCap, tone: 'coral',   label: 'Coaching' },
+  coaching_goal:      { Icon: Compass,       tone: 'warning', label: 'Plan' },
+  team_post:          { Icon: Megaphone,     tone: 'info',    label: 'Team' },
 }
 
-function timeAgo(ts) {
-  const secs = Math.floor((Date.now() - new Date(ts).getTime()) / 1000)
-  if (secs < 60)  return 'just now'
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`
-  return `${Math.floor(secs / 86400)}d ago`
+const pendingNotificationDeletes = new Map()
+const sortNotifications = rows => [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function timeAgo(timestamp) {
+  const time = new Date(timestamp).getTime()
+  if (!Number.isFinite(time)) return 'recently'
+  const seconds = Math.max(0, Math.floor((Date.now() - time) / 1000))
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  return `${Math.floor(seconds / 86400)}d ago`
 }
 
 export default function NotificationPanel({ onClose, offsetLeft, onNavigate }) {
-  // Animated close: slide the panel out (and fade the backdrop) before
-  // unmounting. All close paths route through requestClose.
-  const [closing, setClosing] = useState(false)
-  const requestClose = () => {
-    if (closing) return
-    setClosing(true)
-    setTimeout(onClose, 180)
-  }
-  const { user, isAdmin, role } = useAuth()
-  const { agents, scoreHistory, openScore } = useApp()
+  const { isAdmin, role } = useAuth()
+  const { scoreHistory, openScore } = useApp()
+  const toast = useToast()
+  const panelRef = useRef(null)
+  const closeButtonRef = useRef(null)
+  const closeTimerRef = useRef(null)
+  const confirmTimerRef = useRef(null)
+  const freshTimersRef = useRef(new Map())
+  const mountedRef = useRef(false)
+  const closingRef = useRef(false)
+
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [closing, setClosing] = useState(false)
+  const [clearConfirm, setClearConfirm] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [markingAll, setMarkingAll] = useState(false)
+  const [pendingIds, setPendingIds] = useState(new Set())
+  const [freshIds, setFreshIds] = useState(new Set())
+  const [removingIds, setRemovingIds] = useState(new Set())
 
-  const myAgent = agents.find(a => a.email?.toLowerCase() === user?.email?.toLowerCase())
+  const scoresById = useMemo(
+    () => new Map(scoreHistory.map(score => [score.id, score])),
+    [scoreHistory],
+  )
 
-  const fetchNotifications = useCallback(async () => {
+  const setIdState = (setter, id, active) => {
+    setter(previous => {
+      const next = new Set(previous)
+      if (active) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const requestClose = useCallback((restoreFocus = true) => {
+    if (closingRef.current) return
+    closingRef.current = true
+    setClosing(true)
+    closeTimerRef.current = window.setTimeout(
+      () => onClose({ restoreFocus }),
+      prefersReducedMotion() ? 100 : 150,
+    )
+  }, [onClose])
+
+  const fetchNotifications = useCallback(async ({ showLoading = false } = {}) => {
+    if (showLoading) setLoading(true)
+    setError('')
     const cutoff = new Date(Date.now() - 30 * 86400000).toISOString()
-    const { data } = await supabase
+    const { data, error: fetchError } = await supabase
       .from('notifications')
       .select('*')
       .gte('created_at', cutoff)
       .order('created_at', { ascending: false })
       .limit(50)
-    setNotifications(data || [])
+
+    if (!mountedRef.current) return
+    if (fetchError) {
+      setError('Notifications could not be loaded. Check your connection and try again.')
+      setLoading(false)
+      return
+    }
+    setNotifications((data || []).filter(item => !pendingNotificationDeletes.has(item.id)))
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchNotifications()
+    mountedRef.current = true
+    fetchNotifications({ showLoading: true })
+
+    const restoreDismissed = event => {
+      const notification = event.detail
+      if (!notification) return
+      setNotifications(previous => sortNotifications([
+        notification,
+        ...previous.filter(item => item.id !== notification.id),
+      ]))
+    }
+    window.addEventListener('notification-undo', restoreDismissed)
 
     const channel = supabase.channel('notifications-panel')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-      }, () => fetchNotifications())
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-      }, payload => {
-        setNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, payload => {
+        if (pendingNotificationDeletes.has(payload.new.id)) return
+        setNotifications(previous => sortNotifications([
+          payload.new,
+          ...previous.filter(item => item.id !== payload.new.id),
+        ]))
+        setIdState(setFreshIds, payload.new.id, true)
+        const timer = window.setTimeout(() => {
+          if (mountedRef.current) setIdState(setFreshIds, payload.new.id, false)
+          freshTimersRef.current.delete(payload.new.id)
+        }, prefersReducedMotion() ? 100 : 260)
+        freshTimersRef.current.set(payload.new.id, timer)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' }, payload => {
+        setNotifications(previous => previous.map(item => item.id === payload.new.id ? payload.new : item))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'notifications' }, payload => {
+        setNotifications(previous => previous.filter(item => item.id !== payload.old.id))
       })
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      mountedRef.current = false
+      window.clearTimeout(closeTimerRef.current)
+      window.clearTimeout(confirmTimerRef.current)
+      freshTimersRef.current.forEach(window.clearTimeout)
+      window.removeEventListener('notification-undo', restoreDismissed)
+      supabase.removeChannel(channel)
+    }
   }, [fetchNotifications])
 
+  useEffect(() => {
+    const hiddenSurfaces = ['.app-main', '.app-sidebar', '.mobile-app-header']
+      .map(selector => document.querySelector(selector))
+      .filter(Boolean)
+      .map(element => ({ element, inert: element.inert }))
+    hiddenSurfaces.forEach(({ element }) => { element.inert = true })
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    requestAnimationFrame(() => closeButtonRef.current?.focus())
+
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        requestClose(true)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = [...panelRef.current.querySelectorAll(
+        'button:not(:disabled), a[href], input:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      )].filter(element => element.getClientRects().length > 0)
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      hiddenSurfaces.forEach(({ element, inert }) => { element.inert = inert })
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [requestClose])
+
+  const markRead = async id => {
+    const current = notifications.find(item => item.id === id)
+    if (!current || current.read || pendingIds.has(id)) return
+    setIdState(setPendingIds, id, true)
+    setNotifications(previous => previous.map(item => item.id === id ? { ...item, read: true } : item))
+    const { error: updateError } = await supabase.from('notifications').update({ read: true }).eq('id', id)
+    if (mountedRef.current) {
+      setIdState(setPendingIds, id, false)
+      if (updateError) {
+        setNotifications(previous => previous.map(item => item.id === id ? { ...item, read: false } : item))
+        toast.error('Could not mark that notification as read.')
+      }
+    }
+  }
+
   const markAllRead = async () => {
-    const unreadIds = notifications.filter(n => !n.read).map(n => n.id)
-    if (!unreadIds.length) return
-    await supabase.from('notifications').update({ read: true }).in('id', unreadIds)
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    const unreadIds = notifications.filter(item => !item.read).map(item => item.id)
+    if (!unreadIds.length || markingAll) return
+    const snapshot = notifications
+    setMarkingAll(true)
+    setNotifications(previous => previous.map(item => ({ ...item, read: true })))
+    const { error: updateError } = await supabase.from('notifications').update({ read: true }).in('id', unreadIds)
+    if (!mountedRef.current) return
+    setMarkingAll(false)
+    if (updateError) {
+      setNotifications(snapshot)
+      toast.error('Could not mark all notifications as read.')
+    }
   }
 
-  const markRead = async (id) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id)
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-  }
+  const dismiss = notification => {
+    if (pendingNotificationDeletes.has(notification.id)) return
+    setIdState(setRemovingIds, notification.id, true)
+    const removeDelay = prefersReducedMotion() ? 0 : 140
+    window.setTimeout(() => {
+      if (!mountedRef.current) return
+      setNotifications(previous => previous.filter(item => item.id !== notification.id))
+      setIdState(setRemovingIds, notification.id, false)
+    }, removeDelay)
 
-  const dismiss = async (id) => {
-    const { error } = await supabase.from('notifications').delete().eq('id', id)
-    if (error) { console.error('notification delete failed:', error); return }
-    setNotifications(prev => prev.filter(n => n.id !== id))
-  }
+    const deleteTimer = window.setTimeout(async () => {
+      pendingNotificationDeletes.delete(notification.id)
+      const { error: deleteError } = await supabase.from('notifications').delete().eq('id', notification.id)
+      if (deleteError && mountedRef.current) {
+        setNotifications(previous => sortNotifications([notification, ...previous.filter(item => item.id !== notification.id)]))
+        toast.error('Could not dismiss that notification.')
+      }
+    }, 7000)
+    pendingNotificationDeletes.set(notification.id, { timer: deleteTimer, notification })
 
-  const [clearConfirm, setClearConfirm] = useState(false)
-  const clearAll = async () => {
-    if (!clearConfirm) { setClearConfirm(true); setTimeout(() => setClearConfirm(false), 3000); return }
-    const ids = notifications.map(n => n.id)
-    if (!ids.length) return
-    const { error } = await supabase.from('notifications').delete().in('id', ids)
-    if (error) { console.error('clear notifications failed:', error); return }
-    setNotifications([])
-    setClearConfirm(false)
-  }
-
-  const unreadCount = notifications.filter(n => !n.read).length
-  const newOnes = notifications.filter(n => !n.read)
-  const earlier = notifications.filter(n => n.read)
-
-  const GroupLabel = ({ children }) => (
-    <p style={{ padding: '12px 16px 4px', fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(26,30,35,.4)' }}>{children}</p>
-  )
-
-  // Notifications that reference a score open it full-page on click.
-  const linkedScore = (n) => n.score_id ? scoreHistory.find(s => s.id === n.score_id) : null
-
-  const openLinkedScore = (s) => {
-    openScore({
-      ...s.fullScore,
-      scoreId:         s.id,
-      reviewerNote:    s.notes,
-      overrideVerdict: s.overrideVerdict,
-      overrideScore:   s.overrideScore,
-      overrideNote:    s.overrideNote,
-      overrideAt:      s.overrideAt,
-      disputed:        s.disputed,
-      disputeNote:     s.disputeNote,
-      disputeAt:       s.disputeAt,
-      acknowledged:    s.acknowledged,
-      acknowledgedAt:  s.acknowledgedAt,
+    toast.action('Notification dismissed.', {
+      label: 'Undo',
+      duration: 6500,
+      onClick: () => {
+        const pending = pendingNotificationDeletes.get(notification.id)
+        if (!pending) return
+        window.clearTimeout(pending.timer)
+        pendingNotificationDeletes.delete(notification.id)
+        window.dispatchEvent(new CustomEvent('notification-undo', { detail: notification }))
+        toast.info('Notification restored.')
+      },
     })
-    requestClose()
   }
 
-  const renderRow = (n) => {
-    const meta = TYPE_META[n.type] || { icon: '•', color: 'rgba(26,30,35,.5)', label: '' }
-    const score = linkedScore(n)
-    // Guidance changes link to the QA Guidance page (admin-gated tab)
-    const guidanceLink = QA_GUIDANCE_ENABLED && n.type === 'rubric_updated' && isAdmin && !!onNavigate
-    // Shared coaching sessions link to the agent's Coaching page (agent-gated tab)
-    const coachingLink = ['coaching_session', 'coaching_goal'].includes(n.type) && role === 'agent' && !!onNavigate
-    const clickable = !!score || guidanceLink || coachingLink
+  const clearAll = async () => {
+    if (!notifications.length || clearing) return
+    if (!clearConfirm) {
+      setClearConfirm(true)
+      window.clearTimeout(confirmTimerRef.current)
+      confirmTimerRef.current = window.setTimeout(() => {
+        if (mountedRef.current) setClearConfirm(false)
+      }, 4000)
+      return
+    }
+
+    const ids = notifications.map(item => item.id)
+    setClearing(true)
+    const { error: deleteError } = await supabase.from('notifications').delete().in('id', ids)
+    if (!mountedRef.current) return
+    setClearing(false)
+    setClearConfirm(false)
+    if (deleteError) {
+      toast.error('Could not clear notifications. Nothing was removed.')
+      return
+    }
+    setNotifications([])
+    toast.success('Notifications cleared.')
+  }
+
+  const openLinkedScore = score => {
+    openScore({
+      ...score.fullScore,
+      scoreId: score.id,
+      reviewerNote: score.notes,
+      overrideVerdict: score.overrideVerdict,
+      overrideScore: score.overrideScore,
+      overrideNote: score.overrideNote,
+      overrideAt: score.overrideAt,
+      disputed: score.disputed,
+      disputeNote: score.disputeNote,
+      disputeAt: score.disputeAt,
+      acknowledged: score.acknowledged,
+      acknowledgedAt: score.acknowledgedAt,
+    })
+    requestClose(false)
+  }
+
+  const unread = notifications.filter(item => !item.read)
+  const earlier = notifications.filter(item => item.read)
+
+  const renderRow = notification => {
+    const meta = TYPE_META[notification.type] || { Icon: Bell, tone: 'neutral', label: 'Update' }
+    const Icon = meta.Icon
+    const score = notification.score_id ? scoresById.get(notification.score_id) : null
+    const guidanceLink = QA_GUIDANCE_ENABLED && notification.type === 'rubric_updated' && isAdmin && !!onNavigate
+    const coachingLink = ['coaching_session', 'coaching_goal'].includes(notification.type) && role === 'agent' && !!onNavigate
+    const actionLabel = score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance changes' : coachingLink ? 'Open coaching' : ''
+    const canOpen = !!actionLabel
+
+    const openDestination = () => {
+      markRead(notification.id)
+      if (score) openLinkedScore(score)
+      else if (guidanceLink) { onNavigate('rubric'); requestClose(false) }
+      else if (coachingLink) { onNavigate('coaching'); requestClose(false) }
+    }
+
+    const copy = (
+      <>
+        <span className={`notification-type-icon tone-${meta.tone}`} aria-hidden="true"><Icon size={15} strokeWidth={2} /></span>
+        <span className="notification-copy">
+          <span className="notification-message">{notification.message}</span>
+          <span className="notification-meta">
+            <span className={`notification-type-label tone-${meta.tone}`}>{meta.label}</span>
+            <span aria-hidden="true">·</span>
+            <span>{timeAgo(notification.created_at)}</span>
+            {canOpen && <><span aria-hidden="true">·</span><span className="notification-action-hint">{actionLabel} →</span></>}
+          </span>
+        </span>
+      </>
+    )
+
     return (
-      <div key={n.id} role="button" tabIndex={0}
-        onClick={() => {
-          markRead(n.id)
-          if (score) openLinkedScore(score)
-          else if (guidanceLink) { onNavigate('rubric'); requestClose() }
-          else if (coachingLink) { onNavigate('coaching'); requestClose() }
-        }}
-        title={score ? `Open ticket #${score.ticketId}` : guidanceLink ? 'Open QA Guidance change history' : coachingLink ? 'Open your coaching page' : undefined}
-        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--hairline-2)', background: n.read ? 'transparent' : 'var(--coral-tint)', textAlign: 'left', transition: 'background 150ms', cursor: clickable ? 'pointer' : 'default' }}
-        onMouseEnter={e => { e.currentTarget.style.background = '#FBF7F3'; e.currentTarget.querySelector('.notif-actions').style.opacity = 1 }}
-        onMouseLeave={e => { e.currentTarget.style.background = n.read ? 'transparent' : '#FFEAE6'; e.currentTarget.querySelector('.notif-actions').style.opacity = 0 }}>
-        <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: `${meta.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, marginTop: 1 }}>{meta.icon}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ color: n.read ? 'var(--ink-60)' : 'var(--ink)', fontSize: 13, lineHeight: 1.45, marginBottom: 3 }}>{n.message}</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 10, color: meta.color, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{meta.label}</span>
-            <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
-            <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>{timeAgo(n.created_at)}</span>
-            {score && (
-              <>
-                <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
-                <span style={{ fontSize: 10, color: 'var(--coral-text)', fontWeight: 600 }}>View ticket →</span>
-              </>
-            )}
-            {guidanceLink && (
-              <>
-                <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
-                <span style={{ fontSize: 10, color: 'var(--coral-text)', fontWeight: 600 }}>View changes →</span>
-              </>
-            )}
-            {coachingLink && (
-              <>
-                <span style={{ fontSize: 10, color: 'var(--ink-45)' }}>·</span>
-                <span style={{ fontSize: 10, color: 'var(--coral-text)', fontWeight: 600 }}>View session →</span>
-              </>
-            )}
-          </div>
-        </div>
-        {/* Hover actions: mark one as read without navigating, or dismiss it */}
-        <div className="notif-actions" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, opacity: 0, transition: 'opacity 120ms' }}>
-          {!n.read && (
-            <button onClick={e => { e.stopPropagation(); markRead(n.id) }} title="Mark as read"
-              style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-50)', fontSize: 12, lineHeight: 1 }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#FFEAE6'; e.currentTarget.style.color = '#B84A2E' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,30,35,.5)' }}>✓</button>
+      <li key={notification.id} className={`notification-item${notification.read ? '' : ' is-unread'}${freshIds.has(notification.id) ? ' is-fresh' : ''}${removingIds.has(notification.id) ? ' is-removing' : ''}`}>
+        {canOpen ? (
+          <button type="button" className="notification-primary" onClick={openDestination} aria-label={`${notification.message}. ${actionLabel}`}>
+            {copy}
+          </button>
+        ) : (
+          <div className="notification-primary">{copy}</div>
+        )}
+        <div className="notification-row-actions" role="group" aria-label="Notification actions">
+          {!notification.read && (
+            <button type="button" onClick={() => markRead(notification.id)} disabled={pendingIds.has(notification.id)} aria-label="Mark notification as read" title="Mark as read">
+              <Check size={15} aria-hidden="true" />
+            </button>
           )}
-          <button onClick={e => { e.stopPropagation(); dismiss(n.id) }} title="Dismiss notification"
-            style={{ width: 20, height: 20, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-50)', fontSize: 12, lineHeight: 1 }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#FEF6F4'; e.currentTarget.style.color = '#D14B3D' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(26,30,35,.5)' }}>✕</button>
+          <button type="button" onClick={() => dismiss(notification)} aria-label="Dismiss notification" title="Dismiss notification">
+            <X size={15} aria-hidden="true" />
+          </button>
         </div>
-        {!n.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--coral)', flexShrink: 0, marginTop: 5 }} />}
-      </div>
+        {!notification.read && <span className="notification-unread-dot" aria-hidden="true" />}
+      </li>
     )
   }
 
+  const renderGroup = (label, rows) => rows.length > 0 && (
+    <section className="notification-group" aria-labelledby={`notification-group-${label.toLowerCase()}`}>
+      <h3 id={`notification-group-${label.toLowerCase()}`}>{label}{label === 'New' ? ` — ${rows.length}` : ''}</h3>
+      <ul>{rows.map(renderRow)}</ul>
+    </section>
+  )
+
   return (
     <>
-      {/* Backdrop — closes panel when clicking content area */}
-      <div
-        className="notification-backdrop"
-        style={{
-          position: 'fixed', inset: 0, zIndex: 45, background: 'rgba(26,30,35,.35)', backdropFilter: 'blur(2px)',
-          animation: closing ? 'fadeOut 180ms ease forwards' : undefined,
-        }}
-        onClick={requestClose}
-      />
-
-      {/* Panel */}
-      <div
-        className="notification-panel"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: offsetLeft,
-          width: 320,
-          height: '100vh',
-          zIndex: 46,
-          background: 'var(--white)',
-          borderRight: '1px solid var(--hairline)',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 20px 48px rgba(0,0,0,.12)',
-          animation: closing
-            ? 'slideOutPanel 180ms cubic-bezier(0.4,0,0.7,0.2) forwards'
-            : 'slideInLeft 180ms cubic-bezier(0.16,1,0.3,1)',
-        }}
-        onClick={e => e.stopPropagation()}
+      <div className={`notification-backdrop${closing ? ' is-closing' : ''}`} onClick={() => requestClose(true)} aria-hidden="true" />
+      <section
+        ref={panelRef}
+        id="notification-panel"
+        className={`notification-panel${closing ? ' is-closing' : ''}`}
+        style={{ left: offsetLeft }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notification-panel-title"
+        aria-describedby="notification-panel-scope"
+        aria-busy={loading || clearing}
       >
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 16px', height: 56, flexShrink: 0,
-          borderBottom: '1px solid var(--hairline-2)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="font-semibold text-sm" style={{ color: 'var(--ink)', fontFamily: "'Inter Tight'" }}>Notifications</span>
-            {unreadCount > 0 && (
-              <span style={{ background: 'var(--coral)', color: 'var(--white)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999 }}>
-                {unreadCount}
-              </span>
-            )}
+        <header className="notification-header">
+          <div className="notification-title-row">
+            <div className="notification-title-wrap">
+              <h2 id="notification-panel-title">Notifications</h2>
+              {unread.length > 0 && <span className="notification-count" aria-label={`${unread.length} unread`}>{unread.length}</span>}
+            </div>
+            <button ref={closeButtonRef} type="button" className="notification-close" onClick={() => requestClose(true)} aria-label="Close notifications">
+              <X size={18} aria-hidden="true" />
+            </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllRead}
-                className="text-xs transition-colors"
-                style={{ color: 'var(--ink-60)' }}
-                onMouseEnter={e => e.target.style.color = '#B84A2E'}
-                onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.6)'}
-              >
-                Mark all read
+          {notifications.length > 0 && (
+            <div className="notification-header-actions">
+              {unread.length > 0 && (
+                <button type="button" onClick={markAllRead} disabled={markingAll}>
+                  <CheckCheck size={15} aria-hidden="true" />
+                  {markingAll ? 'Marking…' : 'Mark all read'}
+                </button>
+              )}
+              <button type="button" className={clearConfirm ? 'is-confirming' : ''} onClick={clearAll} disabled={clearing}>
+                <Trash2 size={15} aria-hidden="true" />
+                {clearing ? 'Clearing…' : clearConfirm ? 'Confirm clear all' : 'Clear all'}
               </button>
-            )}
-            {notifications.length > 0 && (
-              <button
-                onClick={clearAll}
-                className="text-xs transition-colors"
-                title="Delete all notifications"
-                style={{ color: clearConfirm ? 'var(--danger)' : 'var(--ink-60)', fontWeight: clearConfirm ? 600 : 400 }}
-                onMouseEnter={e => e.target.style.color = '#D14B3D'}
-                onMouseLeave={e => e.target.style.color = clearConfirm ? '#D14B3D' : 'rgba(26,30,35,.6)'}
-              >
-                {clearConfirm ? 'Sure? Click again' : 'Clear all'}
-              </button>
-            )}
-            <button
-              onClick={requestClose}
-              className="text-xl leading-none transition-colors"
-              style={{ color: 'var(--ink-45)' }}
-              onMouseEnter={e => e.target.style.color = '#1A1E23'}
-              onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.45)'}
-            >×</button>
-          </div>
-        </div>
+            </div>
+          )}
+        </header>
 
-        {/* List */}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div className="notification-list-scroll">
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-50)', fontSize: 13 }}>Loading…</div>
+            <div className="notification-state notification-loading" role="status">
+              <span className="notification-skeleton" />
+              <span>Loading notifications…</span>
+            </div>
+          ) : error ? (
+            <div className="notification-state notification-error" role="alert">
+              <TriangleAlert size={24} aria-hidden="true" />
+              <strong>Something went wrong</strong>
+              <p>{error}</p>
+              <button type="button" onClick={() => fetchNotifications({ showLoading: true })}>Try again</button>
+            </div>
           ) : notifications.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: '50%', background: '#FBEBD3',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 12px',
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C8841E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
-                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                </svg>
-              </div>
-              <p style={{ color: 'var(--ink)', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No notifications yet</p>
-              <p style={{ color: 'var(--ink-50)', fontSize: 12 }}>You'll see disputes, overrides, and notes here</p>
+            <div className="notification-state notification-empty">
+              <span className="notification-empty-icon"><Bell size={24} aria-hidden="true" /></span>
+              <strong>No notifications yet</strong>
+              <p>Ticket reviews, disputes, assignments, and coaching updates will appear here.</p>
             </div>
           ) : (
-            <>
-              {newOnes.length > 0 && <GroupLabel>New — {newOnes.length}</GroupLabel>}
-              {newOnes.map(renderRow)}
-              {earlier.length > 0 && <GroupLabel>Earlier</GroupLabel>}
-              {earlier.map(renderRow)}
-            </>
+            <>{renderGroup('New', unread)}{renderGroup('Earlier', earlier)}</>
           )}
         </div>
-      </div>
+        <p id="notification-panel-scope" className="notification-scope">Showing up to 50 notifications from the last 30 days.</p>
+      </section>
     </>
   )
 }

@@ -22,6 +22,7 @@ const MENU_TABS = [
   { id: 'coaching',    label: 'Coaching',     agentOnly: true, icon: ic(<><path d="M9 3h12v13H11"/><path d="M13 7h5"/><path d="M14 10h4"/><circle cx="4.5" cy="5.5" r="2.5"/><path d="M2.5 21l.6-6.5A4 4 0 0 1 7 10.9l3.4 2.9 3.8-1"/></>) },
   { id: 'teams',       label: 'Teams',        scorerOnly: true, icon: ic(<><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></>) },
   { id: 'coachinghub', label: 'Coaching',     scorerOnly: true, icon: ic(<><path d="M9 3h12v13H11"/><path d="M13 7h5"/><path d="M14 10h4"/><circle cx="4.5" cy="5.5" r="2.5"/><path d="M2.5 21l.6-6.5A4 4 0 0 1 7 10.9l3.4 2.9 3.8-1"/></>) },
+  { id: 'reports',     label: 'Reports',      scorerOnly: true, icon: ic(<><path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 19h20M8 15v-3M12 15V8M16 15v-5"/></>) },
   { id: 'rubric',      label: 'QA Guidance',  adminOnly: true, icon: ic(<><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></>) },
 ]
 
@@ -32,7 +33,7 @@ const SignOutIcon = () => ic(<><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><pa
 const ChevronLeft  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
 const ChevronRight = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
 
-function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
+function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger, buttonRef, ariaControls, ariaHaspopup, ariaExpanded }) {
   const [hovered, setHovered] = useState(false)
   const iconColor  = isActive ? '#FF9780' : (danger && hovered) ? '#D14B3D' : 'rgba(26,30,35,.72)'
   const labelColor = isActive ? '#1A1E23' : (danger && hovered) ? '#D14B3D' : 'rgba(26,30,35,.72)'
@@ -40,9 +41,13 @@ function NavItem({ icon, label, isActive, onClick, badge, collapsed, danger }) {
 
   return (
     <button
+      ref={buttonRef}
       className="nav-item-motion"
       onClick={(e) => { onClick(); if (e.detail) e.currentTarget.blur() }}
       title={collapsed ? label : undefined}
+      aria-controls={ariaControls}
+      aria-haspopup={ariaHaspopup}
+      aria-expanded={ariaExpanded}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -104,6 +109,7 @@ export default function Sidebar({ page, setPage }) {
   const menuButtonRef = useRef(null)
   const closeButtonRef = useRef(null)
   const sidebarRef = useRef(null)
+  const notificationButtonRef = useRef(null)
   const compact = collapsed && !mobileOpen
   const closeMobile = () => {
     setMobileOpen(false)
@@ -162,6 +168,20 @@ export default function Sidebar({ page, setPage }) {
       .subscribe()
     return () => supabase.removeChannel(channel)
   }, [fetchUnread])
+
+  const closeNotifications = useCallback(({ restoreFocus = true } = {}) => {
+    setShowNotifications(false)
+    setActiveOverlay(current => current === 'notifications' ? null : current)
+    fetchUnread()
+    if (restoreFocus) {
+      requestAnimationFrame(() => {
+        const target = window.matchMedia('(max-width: 767px)').matches
+          ? menuButtonRef.current
+          : notificationButtonRef.current
+        target?.focus()
+      })
+    }
+  }, [fetchUnread, setActiveOverlay])
 
   const reviewCount  = scoreHistory.filter(isInReviewQueue).length
   const myQueueCount = scoreHistory.filter(s => s.claimedBy === user?.id && isClaimActive(s) && isInReviewQueue(s)).length
@@ -275,12 +295,16 @@ export default function Sidebar({ page, setPage }) {
         <div style={{ marginTop: 'auto', paddingTop: 8 }}>
           <SectionLabel label="General" collapsed={compact} />
           <NavItem
+            buttonRef={notificationButtonRef}
             icon={<BellIcon />}
             label="Notifications"
             isActive={showNotifications}
             onClick={() => { setShowNotifications(true); setShowSettings(false); setActiveOverlay('notifications'); setMobileOpen(false) }}
             badge={unreadCount}
             collapsed={compact}
+            ariaControls="notification-panel"
+            ariaHaspopup="dialog"
+            ariaExpanded={showNotifications}
           />
           <NavItem
             icon={<GearIcon />}
@@ -339,7 +363,7 @@ export default function Sidebar({ page, setPage }) {
     {showSettings && <SettingsModal onClose={() => { setShowSettings(false); setActiveOverlay(o => o === 'settings' ? null : o) }} />}
     {showNotifications && (
         <NotificationPanel
-          onClose={() => { setShowNotifications(false); setActiveOverlay(o => o === 'notifications' ? null : o); fetchUnread() }}
+          onClose={closeNotifications}
           offsetLeft={compact ? 56 : 240}
           onNavigate={navigate}
         />

@@ -87,6 +87,13 @@ export function AppProvider({ children }) {
   const [scoreHistory, setScoreHistory] = useState([])
   const [rubric,       setRubric]       = useState(DEFAULT_RUBRIC)
   const [dataLoading,  setDataLoading]  = useState(true)
+  const [reportsState, setReportsState] = useState({
+    report: 'scorecard',
+    period: '30',
+    teamId: 'all',
+    selectedQuestion: null,
+    ticketSelection: null,
+  })
 
   // ── Active overlay surface ───────────────────────────────────────────────────
   // Only one slide-in/modal surface should be open at a time across the app
@@ -498,6 +505,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       teams, agents, scoreHistory: visibleScoreHistory, rubric, dataLoading, myAgentId,
+      reportsState, setReportsState,
       activeOverlay, setActiveOverlay,
       viewingScore, openScore, closeScore,
       scoreToEdit, openScoreEditor, closeScoreEditor,

@@ -83,17 +83,6 @@
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0)   scale(1);    }
 }
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0);     }
-}
-@keyframes slideOutPanel {
-  to { transform: translateX(-100%); opacity: 0.6; }
-}
-@keyframes fadeOut {
-  to { opacity: 0; }
-}
-
 /* Score review reveal: verdict first, value second, then the weighted
    dimensions. The sequence mirrors how a reviewer reads the result. */
 @keyframes verdictReveal {
@@ -390,8 +379,7 @@
     opacity: 1;
     transform: none;
   }
-  .app-sidebar,
-  .notification-panel { transition-duration: 0.001ms !important; }
+  .app-sidebar { transition-duration: 0.001ms !important; }
 }
 
 .mobile-app-header,
@@ -452,69 +440,7 @@
   .notification-backdrop { z-index: 79 !important; }
   .notification-panel {
     left: 0 !important;
-    width: min(320px, 100vw) !important;
-    z-index: 80 !important;
-  }
-}
-
-.mobile-app-header,
-.mobile-nav-close { display: none; }
-
-@media (max-width: 767px) {
-  .app-main { padding-top: 60px; }
-  .mobile-app-header {
-    position: fixed;
-    inset: 0 0 auto;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 0 14px;
-    background: var(--white);
-    border-bottom: 1px solid var(--hairline);
-    z-index: 50;
-  }
-  .mobile-app-header button,
-  .mobile-nav-close {
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: var(--ink);
-    background: transparent;
-    border: 0;
-    border-radius: 8px;
-  }
-  .mobile-nav-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(26, 30, 35, .45);
-    z-index: 60;
-  }
-  .app-sidebar {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    width: min(280px, 85vw) !important;
-    height: 100dvh !important;
-    max-width: 85vw;
-    z-index: 70 !important;
-    visibility: hidden;
-    transform: translateX(-100%);
-    transition: transform 220ms cubic-bezier(.16, 1, .3, 1), visibility 220ms;
-  }
-  .app-sidebar.mobile-open {
-    visibility: visible;
-    transform: translateX(0);
-  }
-  .app-sidebar nav button { min-height: 44px; }
-  .desktop-sidebar-collapse { display: none !important; }
-  .notification-backdrop { z-index: 79 !important; }
-  .notification-panel {
-    left: 0 !important;
-    width: min(320px, 100vw) !important;
+    width: min(360px, 100vw) !important;
     z-index: 80 !important;
   }
 }

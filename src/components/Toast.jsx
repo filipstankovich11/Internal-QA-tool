@@ -42,20 +42,21 @@ export function ToastProvider({ children }) {
           const run = () => { act?.onClick?.(); dismiss(t.id) }
           return (
             <div key={t.id} className="toast-enter"
-              onClick={act ? run : undefined}
-              style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: act ? '11px 14px 11px 16px' : '10px 16px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 240, maxWidth: 360, boxShadow: '0 20px 48px rgba(0,0,0,.12)', pointerEvents: act ? 'auto' : 'none', cursor: act ? 'pointer' : 'default' }}>
+              role="status"
+              style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: act ? '8px 8px 8px 16px' : '10px 16px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 240, maxWidth: 360, boxShadow: '0 20px 48px rgba(0,0,0,.12)', pointerEvents: act ? 'auto' : 'none' }}>
               <span style={{ color: s.color, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{s.icon}</span>
               <span style={{ color: '#1A1E23', fontSize: 13, lineHeight: 1.4, flex: 1 }}>{t.message}</span>
               {act && (
                 <>
-                  <span style={{ color: '#B84A2E', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <button type="button" onClick={run}
+                    style={{ minHeight: 34, padding: '0 6px', border: 0, borderRadius: 7, background: 'transparent', color: '#B84A2E', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, cursor: 'pointer' }}>
                     {act.label || 'View'} →
-                  </span>
+                  </button>
                   <button type="button" aria-label="Dismiss"
                     onClick={e => { e.stopPropagation(); dismiss(t.id) }}
-                    style={{ color: 'rgba(26,30,35,.4)', fontSize: 16, lineHeight: 1, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px' }}
+                    style={{ width: 34, height: 34, color: 'rgba(26,30,35,.6)', fontSize: 16, lineHeight: 1, flexShrink: 0, background: 'none', border: 'none', borderRadius: 7, cursor: 'pointer', padding: 0 }}
                     onMouseEnter={e => e.currentTarget.style.color = 'rgba(26,30,35,.7)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.4)'}>×</button>
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(26,30,35,.6)'}>×</button>
                 </>
               )}
             </div>
