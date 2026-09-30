@@ -200,7 +200,6 @@ export default function Sidebar({ page, setPage }) {
       })
     }
   }, [setActiveOverlay])
-
   const reviewCount  = scoreHistory.filter(isInReviewQueue).length
   const myQueueCount = scoreHistory.filter(s => s.claimedBy === user?.id && isClaimActive(s) && isInReviewQueue(s)).length
   const inboxUnread  = scoreHistory.filter(s => !s.acknowledged).length
