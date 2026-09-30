@@ -1,4 +1,9 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  Check, ChevronDown, Download, LoaderCircle, Pencil, Plus, Search,
+  Star, Trash2, TrendingDown, TrendingUp, UserMinus, UserPlus,
+  UsersRound, X,
+} from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
@@ -6,6 +11,7 @@ import { ScoreInfoPopover } from '../components/ScoreInfo'
 import { TrendChart } from '../components/TrendChart'
 import Segmented from '../components/Segmented'
 import { VERDICT_COLOR, gradeColor } from '../lib/verdict'
+import './TeamsPage.css'
 
 const SORT_OPTIONS   = [
   { id: 'avg',    label: 'Avg score' },
@@ -35,9 +41,12 @@ const LOW_SAMPLE = 5 // fewer scored tickets than this → flag the average as l
 
 // Single pass over a score set → all the aggregates a card/row needs
 function aggregate(scores) {
-  let sum = 0, pass = 0, rev = 0, fail = 0, unack = 0, disputed = 0, autoFail = 0
+  let sum = 0, scoreCount = 0, pass = 0, rev = 0, fail = 0, unack = 0, disputed = 0, autoFail = 0
   for (const s of scores) {
-    sum += s.effectiveScore
+    if (Number.isFinite(s.effectiveScore)) {
+      sum += s.effectiveScore
+      scoreCount++
+    }
     const v = s.effectiveVerdict
     if (v === 'PASS') pass++
     else if (v === 'NEEDS_REVIEW') rev++
@@ -47,7 +56,7 @@ function aggregate(scores) {
     if (s.fullScore?.auto_fail?.triggered) autoFail++
   }
   const n = scores.length
-  return { n, avg: n ? +(sum / n).toFixed(1) : null, pass, rev, fail, unack, disputed, autoFail, passRate: n ? Math.round((pass / n) * 100) : null }
+  return { n, avg: scoreCount ? +(sum / scoreCount).toFixed(1) : null, pass, rev, fail, unack, disputed, autoFail, passRate: n ? Math.round((pass / n) * 100) : null }
 }
 
 // Average each rubric dimension's 1–5 score across a set of tickets (for the
@@ -68,11 +77,12 @@ function dimensionAverages(scores, dims) {
 function TrendBadge({ current, prev }) {
   if (current === null || prev === null) return null
   const diff = +(current - prev).toFixed(1)
-  if (Math.abs(diff) < 1) return <span className="text-xs ml-2" style={{ color: 'rgba(26,30,35,.5)' }}>→ stable</span>
+  if (Math.abs(diff) < 1) return <span className="teams-trend is-stable">Stable</span>
   const up = diff > 0
   return (
-    <span className="text-xs font-medium ml-2" style={{ color: up ? '#2F8F5B' : '#D14B3D' }}>
-      {up ? '↑' : '↓'} {Math.abs(diff)} pts
+    <span className={`teams-trend ${up ? 'is-up' : 'is-down'}`}>
+      {up ? <TrendingUp size={13} aria-hidden="true" /> : <TrendingDown size={13} aria-hidden="true" />}
+      {Math.abs(diff)} pts
     </span>
   )
 }
@@ -81,7 +91,7 @@ function TrendBadge({ current, prev }) {
 
 function SummaryTile({ label, value, color, borderColor }) {
   return (
-    <div style={{ background: '#FFFFFF', border: `1px solid ${borderColor || '#EEEEEE'}`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+    <div className="teams-summary-tile" style={{ borderColor: borderColor || undefined }}>
       <p className="tabular-nums m-0" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, fontSize: 28, color: color || '#1A1E23', lineHeight: 1.1 }}>{value}</p>
       <p className="m-0 mt-1 uppercase" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>{label}</p>
     </div>
@@ -92,17 +102,17 @@ function SummaryTile({ label, value, color, borderColor }) {
 
 function ComparisonView({ rows, thresholds }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
-      <p className="uppercase mb-5" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>Team comparison</p>
+    <section className="teams-comparison" aria-labelledby="team-comparison-title">
+      <h2 id="team-comparison-title" className="teams-section-title">Team comparison</h2>
       <div className="flex flex-col gap-4">
         {rows.map(({ team, agg, members }) => (
           <div key={team.id}>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2">
+            <div className="teams-comparison-heading">
+              <div className="teams-comparison-name">
                 <span className="text-sm font-medium" style={{ color: '#1A1E23' }}>{team.name}</span>
                 <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>{members.length} agent{members.length !== 1 ? 's' : ''}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="teams-comparison-metrics">
                 <span style={{ color: 'rgba(26,30,35,.5)' }}>{agg.n} tickets</span>
                 {agg.passRate !== null && <span style={{ color: '#2F8F5B' }}>{agg.passRate}% pass</span>}
                 <span className="font-bold" style={{ color: gradeColor(agg.avg, thresholds) }}>
@@ -117,7 +127,7 @@ function ComparisonView({ rows, thresholds }) {
           </div>
         ))}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -125,32 +135,46 @@ function ComparisonView({ rows, thresholds }) {
 
 function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign }) {
   const [search, setSearch] = useState('')
+  const [busyAgentId, setBusyAgentId] = useState(null)
+  const [error, setError] = useState('')
+  const searchId = useId()
   const unassigned = allAgents.filter(a =>
     a.team_id !== teamId &&
     (!search || a.name?.toLowerCase().includes(search.toLowerCase()))
   )
 
+  const changeMembership = async (agentId, action) => {
+    if (busyAgentId) return
+    setBusyAgentId(agentId)
+    setError('')
+    const ok = await action(agentId)
+    if (!ok) setError('The team assignment could not be updated. Try again.')
+    setBusyAgentId(null)
+  }
+
   return (
-    <div className="px-5 py-4" style={{ borderTop: '1px solid #F0ECE9', background: '#FBF7F3' }}>
-      <p className="uppercase mb-3" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>Manage agents</p>
+    <div className="teams-manage-panel">
+      <h3 className="teams-section-title">Manage agents</h3>
+      {error && <p className="teams-inline-error" role="alert">{error}</p>}
 
       {teamAgents.length > 0 && (
         <div className="mb-4">
           <p className="text-xs mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>In this team</p>
           <div className="flex flex-col gap-1">
             {teamAgents.map(a => (
-              <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #F0ECE9' }}>
-                <div className="flex items-center gap-2">
+              <div key={a.id} className="teams-agent-manage-row">
+                <div className="teams-agent-identity">
                   <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                     style={{ background: '#FFD2C9', color: '#B84A2E' }}>
                     {a.name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <span className="text-sm" style={{ color: '#1A1E23' }}>{a.name}</span>
+                  <span className="teams-agent-name">{a.name}</span>
                 </div>
-                <button onClick={() => onUnassign(a.id)}
-                  className="text-xs transition-colors" style={{ color: 'rgba(26,30,35,.5)' }}
-                  onMouseEnter={e => e.target.style.color = '#D14B3D'}
-                  onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>Remove</button>
+                <button type="button" disabled={!!busyAgentId} onClick={() => changeMembership(a.id, onUnassign)}
+                  className="teams-roster-action is-remove" aria-label={`Remove ${a.name} from this team`}>
+                  {busyAgentId === a.id ? <LoaderCircle className="teams-spinner" size={15} aria-hidden="true" /> : <UserMinus size={15} aria-hidden="true" />}
+                  Remove
+                </button>
               </div>
             ))}
           </div>
@@ -158,28 +182,32 @@ function ManageAgentsPanel({ teamId, teamAgents, allAgents, onAssign, onUnassign
       )}
 
       <div>
-        <p className="text-xs mb-2" style={{ color: 'rgba(26,30,35,.5)' }}>Add agents</p>
-        <input placeholder="Search agents…"
-          value={search} onChange={e => setSearch(e.target.value)}
-          className="w-full rounded-lg px-3 py-2 text-xs mb-2 g-input" />
+        <label htmlFor={searchId} className="teams-field-label">Add agents</label>
+        <div className="teams-search-wrap">
+          <Search size={15} aria-hidden="true" />
+          <input id={searchId} placeholder="Search agents…"
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="teams-search-input" />
+        </div>
         {unassigned.length === 0
           ? <p className="text-xs text-center py-2" style={{ color: 'rgba(26,30,35,.5)' }}>No agents available to add</p>
           : (
             <div className="flex flex-col gap-1 max-h-36 overflow-y-auto">
               {unassigned.map(a => (
-                <div key={a.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #F0ECE9' }}>
-                  <div className="flex items-center gap-2">
+                <div key={a.id} className="teams-agent-manage-row">
+                  <div className="teams-agent-identity">
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                       style={{ background: '#E8E3E1', color: 'rgba(26,30,35,.6)' }}>
                       {a.name?.[0]?.toUpperCase() || '?'}
                     </div>
-                    <span className="text-sm" style={{ color: '#1A1E23' }}>{a.name}</span>
-                    {a.team_id && <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>· currently in another team</span>}
+                    <span className="teams-agent-name">{a.name}</span>
+                    {a.team_id && <span className="teams-agent-note">Currently in another team</span>}
                   </div>
-                  <button onClick={() => onAssign(a.id)}
-                    className="text-xs transition-colors" style={{ color: '#B84A2E' }}
-                    onMouseEnter={e => e.target.style.color = '#1A1E23'}
-                    onMouseLeave={e => e.target.style.color = '#B84A2E'}>+ Add</button>
+                  <button type="button" disabled={!!busyAgentId} onClick={() => changeMembership(a.id, onAssign)}
+                    className="teams-roster-action" aria-label={`Add ${a.name} to this team`}>
+                    {busyAgentId === a.id ? <LoaderCircle className="teams-spinner" size={15} aria-hidden="true" /> : <UserPlus size={15} aria-hidden="true" />}
+                    Add
+                  </button>
                 </div>
               ))}
             </div>
@@ -198,6 +226,11 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [expanded,      setExpanded]      = useState(false)
   const [managing,      setManaging]      = useState(false)
+  const [savingName,    setSavingName]    = useState(false)
+  const [deleting,      setDeleting]      = useState(false)
+  const [error,         setError]         = useState('')
+  const agentsPanelId = useId()
+  const managePanelId = useId()
 
   const scored = memberStats.filter(m => m.n > 0)
   const top    = scored[0] ?? null
@@ -207,7 +240,35 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
   const weakest    = scoredDims.length > 1 ? scoredDims.reduce((a, b) => b.avg < a.avg ? b : a) : null
   const strongest  = scoredDims.length > 1 ? scoredDims.reduce((a, b) => b.avg > a.avg ? b : a) : null
 
-  const save = () => { if (name.trim()) onEdit(team.id, name.trim()); setEditing(false) }
+  const cancelEdit = () => { setName(team.name); setEditing(false); setError('') }
+  const save = async () => {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setError('Enter a team name before saving.')
+      return
+    }
+    if (trimmedName === team.name) {
+      setEditing(false)
+      return
+    }
+    setSavingName(true)
+    setError('')
+    const ok = await onEdit(team.id, trimmedName)
+    if (ok) setEditing(false)
+    else setError('The team name could not be saved. Try again.')
+    setSavingName(false)
+  }
+
+  const removeTeam = async () => {
+    if (deleting) return
+    setDeleting(true)
+    setError('')
+    const ok = await onDelete(team.id)
+    if (!ok) {
+      setError('The team could not be deleted. Try again.')
+      setDeleting(false)
+    }
+  }
 
   const scoreColor = gradeColor(agg.avg, thresholds)
   // Roster health — needs attention when there's a low performer or pending acks
@@ -221,22 +282,28 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
     { label: 'Failed',    value: agg.fail, color: '#D14B3D' },
   ]
 
-  const actionBtn = 'text-xs px-3 rounded-lg transition-colors'
-  const actionBtnStyle = { height: 32, border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.72)' }
-
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 16, padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
+    <article className="teams-card">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="teams-card-header">
         <div className="flex items-center gap-3 min-w-0">
           <div className="min-w-0">
             {editing ? (
-              <input autoFocus value={name}
-                onChange={e => setName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
-                onBlur={save}
-                className="rounded-lg px-2.5 py-1 g-input" style={{ border: '1px solid #FF9780', fontFamily: "'Inter Tight'", fontWeight: 600, fontSize: 19 }} />
+              <div className="teams-name-editor">
+                <label className="sr-only" htmlFor={`team-name-${team.id}`}>Team name</label>
+                <input id={`team-name-${team.id}`} autoFocus value={name} maxLength={80}
+                  onChange={e => { setName(e.target.value); setError('') }}
+                  onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancelEdit() }}
+                  aria-invalid={!!error}
+                  className="teams-name-input" />
+                <button type="button" className="teams-icon-action is-confirm" onClick={save} disabled={savingName} aria-label="Save team name">
+                  {savingName ? <LoaderCircle className="teams-spinner" size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+                </button>
+                <button type="button" className="teams-icon-action" onClick={cancelEdit} disabled={savingName} aria-label="Cancel editing team name">
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2.5 flex-wrap">
                 <button onClick={onOpen} className="text-left block min-w-0 transition-colors" title="Open team details"
@@ -263,41 +330,43 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="teams-card-actions">
           {canEdit && !confirmDelete && (
             <>
-              <button className={actionBtn} style={{ ...actionBtnStyle, color: managing ? '#B84A2E' : 'rgba(26,30,35,.72)', borderColor: managing ? '#FFD2C9' : '#E7E3DF' }}
+              <button type="button" className={`teams-card-action${managing ? ' is-active' : ''}`}
                 onClick={() => { setManaging(v => !v); setExpanded(false) }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                aria-expanded={managing} aria-controls={managePanelId}>
+                <UserPlus size={15} aria-hidden="true" />
                 Manage
               </button>
-              <button className={actionBtn} style={actionBtnStyle}
-                onClick={() => setEditing(true)}
-                onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+              <button type="button" className="teams-card-action"
+                onClick={() => { setEditing(true); setError('') }}>
+                <Pencil size={15} aria-hidden="true" />
                 Edit
               </button>
-              <button className={actionBtn} style={actionBtnStyle}
-                onClick={() => setConfirmDelete(true)}
-                onMouseEnter={e => { e.currentTarget.style.color = '#D14B3D'; e.currentTarget.style.background = '#FEF6F4' }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.background = 'transparent' }}>
+              <button type="button" className="teams-card-action is-danger"
+                onClick={() => { setConfirmDelete(true); setError('') }}>
+                <Trash2 size={15} aria-hidden="true" />
                 Delete
               </button>
             </>
           )}
           {confirmDelete && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#D14B3D' }}>Delete team?</span>
-              <button className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: '#FEF6F4', border: '1px solid #F4DDD7', color: '#D14B3D' }} onClick={() => onDelete(team.id)}>Yes</button>
-              <button className="text-xs g-btn-ghost px-2 py-0.5" onClick={() => setConfirmDelete(false)}>Cancel</button>
+            <div className="teams-delete-confirm" role="group" aria-label={`Delete ${team.name}`}>
+              <span>Delete this team?</span>
+              <button type="button" className="teams-delete-button" disabled={deleting} onClick={removeTeam}>
+                {deleting && <LoaderCircle className="teams-spinner" size={15} aria-hidden="true" />}
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+              <button type="button" className="teams-cancel-button" disabled={deleting} onClick={() => setConfirmDelete(false)}>Cancel</button>
             </div>
           )}
         </div>
       </div>
+      {error && <p className="teams-inline-error" role="alert">{error}</p>}
 
       {/* Metric strip */}
-      <div className="grid mt-5 pt-5" style={{ gridTemplateColumns: 'repeat(5, 1fr)', borderTop: '1px solid #F0ECE9', gap: 16 }}>
+      <div className="teams-metric-strip">
         {metrics.map((m) => (
           <div key={m.label}>
             <p className="uppercase m-0" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: 'rgba(26,30,35,.5)' }}>{m.label}</p>
@@ -344,16 +413,16 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between gap-3 mt-4 pt-4" style={{ borderTop: '1px solid #F0ECE9' }}>
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="teams-card-footer">
+        <div className="teams-performers">
           {top && (
             <span className="inline-flex items-center gap-1.5 text-xs truncate" style={{ color: 'rgba(26,30,35,.72)' }} title="Top performer in this team">
-              <span style={{ color: '#2F8F5B' }}>★</span>{top.agent.name} · {top.avg}/100
+              <Star size={13} fill="currentColor" className="teams-success-icon" aria-hidden="true" />{top.agent.name} · {top.avg}/100
             </span>
           )}
           {bottom && (
             <span className="inline-flex items-center gap-1.5 text-xs truncate" style={{ color: 'rgba(26,30,35,.72)' }} title="Lowest average in this team">
-              <span style={{ color: 'rgba(26,30,35,.5)' }}>↘</span>{bottom.agent.name} · {bottom.avg}/100
+              <TrendingDown size={13} aria-hidden="true" />{bottom.agent.name} · {bottom.avg}/100
             </span>
           )}
           {!top && !bottom && <span className="text-xs" style={{ color: 'rgba(26,30,35,.45)' }}>No agents scored yet</span>}
@@ -378,11 +447,10 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
             </span>
           )}
           {members.length > 0 && !managing && (
-            <button onClick={() => setExpanded(v => !v)}
-              className="text-xs px-2.5 py-1 rounded-lg transition-colors" style={{ border: '1px solid #E7E3DF', color: 'rgba(26,30,35,.72)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-              {expanded ? 'Hide agents ▲' : 'Show agents ▼'}
+            <button type="button" onClick={() => setExpanded(v => !v)}
+              className="teams-disclosure-button" aria-expanded={expanded} aria-controls={agentsPanelId}>
+              {expanded ? 'Hide agents' : 'Show agents'}
+              <ChevronDown size={15} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -390,13 +458,12 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
 
       {/* Expanded agent list */}
       {expanded && !managing && members.length > 0 && (
-        <div className="flex flex-col gap-2 mt-4">
+        <div id={agentsPanelId} className="teams-agent-list">
           {memberStats.map((m) => {
             const isTop = top?.agent.id === m.agent.id && scored.length > 1
             const isLow = bottom?.agent.id === m.agent.id && scored.length > 1
             return (
-              <div key={m.agent.id} className="flex items-center justify-between gap-3"
-                style={{ border: `1px solid ${isLow ? '#F4DDD7' : '#F0ECE9'}`, borderRadius: 12, padding: '12px 14px', background: isLow ? '#FEF6F4' : '#FFFFFF' }}>
+              <div key={m.agent.id} className={`teams-agent-stat${isLow ? ' is-low' : ''}`}>
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ width: 34, height: 34, background: isLow ? '#E8E3E1' : '#FFD2C9', color: '#B84A2E' }}>
                     {m.agent.name?.[0]?.toUpperCase() || '?'}
@@ -410,7 +477,7 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
                     {m.n > 0 && <span style={{ fontSize: 12, color: 'rgba(26,30,35,.5)' }}>{m.n} ticket{m.n !== 1 ? 's' : ''} scored</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs shrink-0">
+                <div className="teams-agent-stat-values">
                   {m.n > 0 ? (
                     <>
                       <div className="rounded-full overflow-hidden" style={{ width: 140, height: 6, background: '#F0ECE9' }}>
@@ -431,23 +498,34 @@ function TeamCard({ team, agg, prevAvg, members, memberStats, dims, allAgents, t
 
       {/* Manage agents panel */}
       {managing && (
-        <ManageAgentsPanel
+        <div id={managePanelId} className="teams-disclosure-panel">
+          <ManageAgentsPanel
           teamId={team.id}
           teamAgents={members}
           allAgents={allAgents}
           onAssign={onAssign}
           onUnassign={onUnassign}
-        />
+          />
+        </div>
       )}
-    </div>
+    </article>
   )
 }
 
 // ── Team detail side-panel ───────────────────────────────────────────────────
 
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
 function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
   const { team, agg, members, memberStats, dims, allScores } = stat
   const [expanded, setExpanded] = useState(null)
+  const [closing, setClosing] = useState(false)
+  const panelRef = useRef(null)
+  const closeButtonRef = useRef(null)
+  const closeTimerRef = useRef(null)
+  const closingRef = useRef(false)
+  const titleId = useId()
+  const descriptionId = useId()
   const scoredDims = dims.filter(d => d.avg != null)
   const weakestId   = scoredDims.length > 1 ? scoredDims.reduce((a, b) => b.avg < a.avg ? b : a).id : null
   const strongestId = scoredDims.length > 1 ? scoredDims.reduce((a, b) => b.avg > a.avg ? b : a).id : null
@@ -459,19 +537,69 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
     { label: 'Pending',   value: agg.unack, color: agg.unack > 0 ? '#B84A2E' : '#1A1E23' },
   ]
 
+  const requestClose = useCallback((restoreFocus = true) => {
+    if (closingRef.current) return
+    closingRef.current = true
+    setClosing(true)
+    closeTimerRef.current = window.setTimeout(
+      () => onClose({ restoreFocus }),
+      prefersReducedMotion() ? 80 : 150,
+    )
+  }, [onClose])
+
+  useEffect(() => {
+    const hiddenSurfaces = ['.teams-page-content', '.app-sidebar', '.mobile-app-header']
+      .map(selector => document.querySelector(selector))
+      .filter(Boolean)
+      .map(element => ({ element, inert: element.inert }))
+    hiddenSurfaces.forEach(({ element }) => { element.inert = true })
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    requestAnimationFrame(() => closeButtonRef.current?.focus())
+
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        requestClose(true)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = [...panelRef.current.querySelectorAll(
+        'button:not(:disabled), a[href], input:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      )].filter(element => element.getClientRects().length > 0)
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.clearTimeout(closeTimerRef.current)
+      hiddenSurfaces.forEach(({ element, inert }) => { element.inert = inert })
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [requestClose])
+
   return (
-    <>
-      <div className="fixed inset-0" style={{ zIndex: 39, background: 'rgba(26,30,35,0.28)', backdropFilter: 'blur(2px)', animation: 'fadeIn 180ms ease' }} onClick={onClose} />
-      <div className="fixed right-0 top-0 h-screen overflow-y-auto z-40 panel-enter"
-        style={{ width: 560, background: '#FFFFFF', borderLeft: '1px solid #EEEEEE', boxShadow: '-24px 0 64px rgba(0,0,0,0.12)' }}>
-        <div className="p-6 flex flex-col gap-6">
+    <div className={`teams-detail-overlay${closing ? ' is-closing' : ''}`} onClick={() => requestClose(true)}>
+      <aside ref={panelRef} className={`teams-detail-panel${closing ? ' is-closing' : ''}`}
+        role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId}
+        onClick={event => event.stopPropagation()}>
+        <div className="teams-detail-content">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div style={{ width: 4, height: 32, background: '#FF9780', borderRadius: 2, flexShrink: 0 }} />
+          <header className="teams-detail-header">
+            <div className="teams-detail-heading">
               <div className="min-w-0">
-                <h2 className="truncate m-0" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, fontSize: 22, color: '#1A1E23' }}>{team.name}</h2>
-                <p className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap" style={{ color: 'rgba(26,30,35,.6)' }}>
+                <h2 id={titleId}>{team.name}</h2>
+                <p id={descriptionId} className="teams-detail-subtitle">
                   <span>{members.length} agent{members.length !== 1 ? 's' : ''} · {agg.n} ticket{agg.n !== 1 ? 's' : ''} scored</span>
                   {agg.n > 0 && agg.n < LOW_SAMPLE && (
                     <span className="px-1.5 py-0.5 rounded" style={{ background: '#FBF7F3', color: 'rgba(26,30,35,.5)' }}>low sample</span>
@@ -479,13 +607,15 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="g-btn-ghost text-xs px-3 py-1.5 shrink-0">Close</button>
-          </div>
+            <button ref={closeButtonRef} type="button" onClick={() => requestClose(true)} className="teams-detail-close" aria-label={`Close ${team.name} details`}>
+              <X size={18} aria-hidden="true" />
+            </button>
+          </header>
 
           {/* Metrics */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="teams-detail-metrics">
             {metrics.map(m => (
-              <div key={m.label} style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+              <div key={m.label} className="teams-detail-metric">
                 <p className="tabular-nums m-0" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, fontSize: 20, color: m.color }}>{m.value}</p>
                 <p className="m-0 mt-1 uppercase" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.06em', color: 'rgba(26,30,35,.5)' }}>{m.label}</p>
               </div>
@@ -493,17 +623,17 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
           </div>
 
           {/* 30-day trend */}
-          <div>
-            <p className="uppercase mb-3" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>30-day score trend</p>
+          <section>
+            <h3 className="teams-section-title">30-day score trend</h3>
             <TrendChart scores={allScores} />
-          </div>
+          </section>
 
           {/* Dimension breakdown */}
           {scoredDims.length > 0 && (
-            <div>
-              <p className="uppercase mb-3" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>
+            <section>
+              <h3 className="teams-section-title">
                 Rubric dimensions <span style={{ color: 'rgba(26,30,35,.45)' }}>· avg / 5</span>
-              </p>
+              </h3>
               <div className="flex flex-col gap-3">
                 {dims.map(d => {
                   const isWeak = d.id === weakestId
@@ -527,13 +657,13 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
                   )
                 })}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Verdict mix */}
           {agg.n > 0 && (
-            <div>
-              <p className="uppercase mb-2" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>Verdict mix</p>
+            <section>
+              <h3 className="teams-section-title">Verdict mix</h3>
               <div className="flex rounded-full overflow-hidden h-2 w-full mb-2" style={{ background: '#F0ECE9' }}>
                 {agg.pass > 0 && <div style={{ width: `${(agg.pass / agg.n) * 100}%`, background: VERDICT_COLOR.PASS }} />}
                 {agg.rev  > 0 && <div style={{ width: `${(agg.rev  / agg.n) * 100}%`, background: VERDICT_COLOR.NEEDS_REVIEW }} />}
@@ -558,14 +688,12 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
                   )}
                 </div>
               )}
-            </div>
+            </section>
           )}
 
           {/* Agents */}
-          <div>
-            <p className="uppercase mb-2" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', color: 'rgba(26,30,35,.5)' }}>
-              Agents <span className="normal-case" style={{ fontWeight: 400, letterSpacing: 0, color: 'rgba(26,30,35,.45)' }}>· click to see tickets</span>
-            </p>
+          <section>
+            <h3 className="teams-section-title">Agents <span>· select an agent to see tickets</span></h3>
             {members.length === 0 ? (
               <p className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>No agents in this team.</p>
             ) : (
@@ -573,40 +701,34 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
                 {memberStats.map(m => {
                   const isOpen = expanded === m.agent.id
                   return (
-                    <div key={m.agent.id} className="rounded-lg overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #F0ECE9' }}>
-                      <button onClick={() => m.n > 0 && setExpanded(isOpen ? null : m.agent.id)}
-                        className="w-full flex items-center justify-between py-2 px-3 text-left transition-colors"
-                        style={{ cursor: m.n > 0 ? 'pointer' : 'default' }}
-                        onMouseEnter={e => { if (m.n > 0) e.currentTarget.style.background = '#FBF7F3' }}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <div key={m.agent.id} className="teams-detail-agent">
+                      <button type="button" onClick={() => setExpanded(isOpen ? null : m.agent.id)}
+                        className="teams-detail-agent-button" disabled={m.n === 0}
+                        aria-expanded={m.n > 0 ? isOpen : undefined}
+                        aria-controls={m.n > 0 ? `team-agent-tickets-${m.agent.id}` : undefined}>
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: '#FFD2C9', color: '#B84A2E' }}>
                             {m.agent.name?.[0]?.toUpperCase() || '?'}
                           </div>
                           <span className="text-sm truncate" style={{ color: '#1A1E23' }}>{m.agent.name}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs shrink-0">
+                        <div className="teams-detail-agent-stats">
                           {m.n > 0 ? (
                             <>
                               <span style={{ color: 'rgba(26,30,35,.5)' }}>{m.n} tickets</span>
                               <span className="tabular-nums font-semibold" style={{ color: gradeColor(m.avg, thresholds) }}>{m.avg}/100</span>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                                style={{ color: 'rgba(26,30,35,.45)', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}>
-                                <polyline points="6 9 12 15 18 9" />
-                              </svg>
+                              <ChevronDown className="teams-chevron" size={14} aria-hidden="true" />
                             </>
                           ) : <span style={{ color: 'rgba(26,30,35,.5)' }}>No scores</span>}
                         </div>
                       </button>
                       {isOpen && (
-                        <div style={{ borderTop: '1px solid #F0ECE9' }}>
+                        <div id={`team-agent-tickets-${m.agent.id}`} className="teams-ticket-list">
                           {m.scores.map(s => (
                             <button key={s.id}
                               onClick={() => onViewScore({ ...s.fullScore, scoreId: s.id, reviewerNote: s.notes, overrideVerdict: s.overrideVerdict, overrideScore: s.overrideScore, overrideNote: s.overrideNote, overrideAt: s.overrideAt })}
-                              className="w-full flex items-center gap-2 py-1.5 px-3 text-left text-xs transition-colors"
-                              style={{ borderTop: '1px solid #F0ECE9' }}
-                              onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              className="teams-ticket-button"
+                              aria-label={`Open ticket ${s.ticketId}, ${s.fullScore?.ticket_subject || 'untitled'}, score ${s.effectiveScore?.toFixed(0) ?? 'unavailable'} out of 100`}>
                               <span className="font-mono shrink-0" style={{ color: '#B84A2E' }}>#{s.ticketId}</span>
                               <span className="flex-1 truncate" style={{ color: 'rgba(26,30,35,.6)' }}>{s.fullScore?.ticket_subject || '—'}</span>
                               <span className="tabular-nums shrink-0" style={{ color: 'rgba(26,30,35,.72)' }}>{s.effectiveScore?.toFixed(0)}/100</span>
@@ -620,10 +742,10 @@ function TeamDetailPanel({ stat, thresholds, onClose, onViewScore }) {
                 })}
               </div>
             )}
-          </div>
+          </section>
         </div>
-      </div>
-    </>
+      </aside>
+    </div>
   )
 }
 
@@ -633,8 +755,9 @@ function exportCSV(rows, period) {
   const header = ['Team', 'Agents', 'Tickets', 'Avg Score', 'Pass Rate %', 'Pass', 'Needs Review', 'Fail']
   const data = rows.map(({ team, agg, members }) =>
     [team.name, members.length, agg.n, agg.avg ?? '', agg.passRate ?? '', agg.pass, agg.rev, agg.fail])
-  const csv  = [header, ...data].map(r => r.join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv' })
+  const cell = value => `"${String(value).replaceAll('"', '""')}"`
+  const csv  = [header, ...data].map(row => row.map(cell).join(',')).join('\n')
+  const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href = url; a.download = `teams-${period}.csv`; a.click()
@@ -644,7 +767,7 @@ function exportCSV(rows, period) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function TeamsPage() {
-  const { teams, agents, scoreHistory, rubric, addTeam, updateTeam, deleteTeam, updateAgent, activeOverlay, setActiveOverlay, openScore } = useApp()
+  const { teams, agents, scoreHistory, rubric, dataLoading, addTeam, updateTeam, deleteTeam, updateAgent, activeOverlay, setActiveOverlay, openScore } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
 
@@ -654,32 +777,100 @@ export default function TeamsPage() {
   const [period,  setPeriod]  = useState('week')
   const [view,    setView]    = useState('cards')
   const [detailTeamId, setDetailTeamId] = useState(null)
+  const [addingTeam, setAddingTeam] = useState(false)
+  const [addError, setAddError] = useState('')
+  const addTriggerRef = useRef(null)
+  const detailTriggerRef = useRef(null)
 
   // Team detail panel — coordinated with the global overlay (notifications/settings)
-  const openDetail  = (id) => { setDetailTeamId(id); setActiveOverlay('team') }
-  const closeDetail = () => { setDetailTeamId(null); setActiveOverlay(o => o === 'team' ? null : o) }
+  const openDetail  = (id, trigger) => {
+    detailTriggerRef.current = trigger || document.activeElement
+    setDetailTeamId(id)
+    setActiveOverlay('team')
+  }
+  const closeDetail = useCallback(({ restoreFocus = true } = {}) => {
+    setDetailTeamId(null)
+    setActiveOverlay(o => o === 'team' ? null : o)
+    if (restoreFocus) requestAnimationFrame(() => detailTriggerRef.current?.focus())
+  }, [setActiveOverlay])
   useEffect(() => { if (activeOverlay !== 'team') setDetailTeamId(null) }, [activeOverlay])
 
   const handleAdd = async () => {
-    if (!newName.trim()) return
-    await addTeam(newName.trim())
-    setNewName(''); setAdding(false)
-    toast.success('Team created')
+    const trimmedName = newName.trim()
+    if (!trimmedName) {
+      setAddError('Enter a team name before saving.')
+      return
+    }
+    if (addingTeam) return
+    setAddingTeam(true)
+    setAddError('')
+    try {
+      const result = await addTeam(trimmedName)
+      if (result?.error) {
+        setAddError('The team could not be created. Check your connection and try again.')
+        toast.error('Could not create the team.')
+      } else {
+        setNewName('')
+        setAdding(false)
+        toast.success('Team created')
+        requestAnimationFrame(() => addTriggerRef.current?.focus())
+      }
+    } catch {
+      setAddError('The team could not be created. Check your connection and try again.')
+      toast.error('Could not create the team.')
+    } finally {
+      setAddingTeam(false)
+    }
   }
 
   const handleDelete = async (id) => {
-    await deleteTeam(id)
-    toast.success('Team deleted')
+    try {
+      const result = await deleteTeam(id)
+      if (result?.error) {
+        toast.error('Could not delete the team.')
+        return false
+      }
+      toast.success('Team deleted')
+      return true
+    } catch {
+      toast.error('Could not delete the team.')
+      return false
+    }
+  }
+
+  const handleEdit = async (id, name) => {
+    try {
+      await updateTeam(id, { name })
+      toast.success('Team name updated')
+      return true
+    } catch {
+      toast.error('Could not update the team name.')
+      return false
+    }
   }
 
   const handleAssign = async (agentId, teamId) => {
-    await updateAgent(agentId, { teamId })
-    toast.success('Agent added to team')
+    try {
+      const result = await updateAgent(agentId, { teamId })
+      if (result?.error) throw result.error
+      toast.success('Agent added to team')
+      return true
+    } catch {
+      toast.error('Could not add the agent to this team.')
+      return false
+    }
   }
 
   const handleUnassign = async (agentId) => {
-    await updateAgent(agentId, { teamId: null })
-    toast.success('Agent removed from team')
+    try {
+      const result = await updateAgent(agentId, { teamId: null })
+      if (result?.error) throw result.error
+      toast.success('Agent removed from team')
+      return true
+    } catch {
+      toast.error('Could not remove the agent from this team.')
+      return false
+    }
   }
 
   // ── Single-pass maps: one walk over scoreHistory fills both agent and team
@@ -746,21 +937,20 @@ export default function TeamsPage() {
   const detailStat = detailTeamId ? teamStats.find(s => s.team.id === detailTeamId) : null
 
   return (
-    <div className={`panel-push ${detailStat ? 'is-open' : ''}`}>
-    <div className="max-w-4xl mx-auto px-4 pt-10 pb-16">
+    <div className={`teams-page panel-push ${detailStat ? 'is-open' : ''}`}>
+    <main className="teams-page-content">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5 gap-4">
+      <div className="teams-page-header">
         <div>
           <h1 className="m-0" style={{ fontFamily: "'Inter Tight'", fontWeight: 600, fontSize: 30, color: '#1A1E23' }}>Teams</h1>
-          <p className="text-sm mt-1 flex items-center" style={{ color: 'rgba(26,30,35,.6)' }}>
+          <div className="teams-page-subtitle">
             Group agents and track collective performance<ScoreInfoPopover rubric={rubric} />
-          </p>
+          </div>
         </div>
         {isAdmin && (
-          <button onClick={() => setAdding(true)}
-            className="g-btn-primary shrink-0 whitespace-nowrap inline-flex items-center gap-1.5"
-            style={{ height: 40, padding: '0 16px', borderRadius: 8, fontSize: 14 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <button ref={addTriggerRef} type="button" onClick={() => { setAdding(true); setAddError('') }}
+            className="g-btn-primary teams-add-trigger">
+            <Plus size={17} aria-hidden="true" />
             Add team
           </button>
         )}
@@ -768,7 +958,7 @@ export default function TeamsPage() {
 
       {/* Roster summary */}
       {teams.length > 0 && (
-        <div className="grid mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <div className="teams-summary" aria-label="Team summary">
           <SummaryTile label="Teams" value={summary.teams} />
           <SummaryTile label="Agents" value={summary.agents} />
           <SummaryTile label="Overall avg" value={summary.overall != null ? summary.overall : '—'} color={gradeColor(summary.overall, vt)} />
@@ -788,7 +978,10 @@ export default function TeamsPage() {
             <span key={m.team.id} className="text-xs px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5"
               style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', color: '#1A1E23' }}>
               {m.team.name}
-              <span style={{ color: m.delta > 0 ? '#2F8F5B' : '#D14B3D', fontWeight: 600 }}>{m.delta > 0 ? '↑' : '↓'} {Math.abs(m.delta)}</span>
+              <span className="inline-flex items-center gap-1" style={{ color: m.delta > 0 ? '#2F8F5B' : '#D14B3D', fontWeight: 600 }}>
+                {m.delta > 0 ? <TrendingUp size={13} aria-hidden="true" /> : <TrendingDown size={13} aria-hidden="true" />}
+                {Math.abs(m.delta)}
+              </span>
             </span>
           ))}
         </div>
@@ -796,7 +989,7 @@ export default function TeamsPage() {
 
       {/* Toolbar */}
       {teams.length > 0 && (
-        <div className="flex items-center flex-wrap mb-6 pb-5" style={{ gap: 14, borderBottom: '1px solid #EEEEEE' }}>
+        <div className="teams-toolbar">
           {/* Period */}
           <Segmented options={PERIOD_OPTIONS} value={period} onChange={setPeriod} segWidth={84} fontPx={12} padY={6} />
 
@@ -807,11 +1000,11 @@ export default function TeamsPage() {
 
           {/* Sort by (cards only) */}
           {view === 'cards' && teams.length > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: 'rgba(26,30,35,.5)' }}>Sort by</span>
-              <div className="flex items-center gap-1.5">
+            <div className="teams-sort-group" role="group" aria-label="Sort teams by">
+              <span>Sort by</span>
+              <div>
                 {SORT_OPTIONS.map(o => (
-                  <button key={o.id} onClick={() => setSort(o.id)}
+                  <button key={o.id} type="button" onClick={() => setSort(o.id)} aria-pressed={sort === o.id}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                     style={sort === o.id
                       ? { border: '1px solid #1A1E23', color: '#1A1E23', background: '#FFFFFF' }
@@ -824,13 +1017,10 @@ export default function TeamsPage() {
           )}
 
           {/* Export CSV — pushed to right */}
-          <div className="ml-auto">
+          <div className="teams-export-wrap">
             <button onClick={() => exportCSV(sortedTeams, period)}
-              className="text-xs transition-colors inline-flex items-center gap-1.5"
-              style={{ height: 40, padding: '0 14px', borderRadius: 8, color: 'rgba(26,30,35,.72)', background: '#FFFFFF', border: '1px solid #E7E3DF' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#F6F2EF' }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#FFFFFF' }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              className="teams-export-button">
+              <Download size={16} aria-hidden="true" />
               Export CSV
             </button>
           </div>
@@ -839,22 +1029,37 @@ export default function TeamsPage() {
 
       {/* Add team form */}
       {adding && (
-        <div className="mb-4 flex items-center gap-3" style={{ background: '#FFFFFF', border: '1px solid #FFD2C9', borderRadius: 16, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }}>
-          <input autoFocus placeholder="Team name..."
-            value={newName} onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAdding(false) }}
-            className="flex-1 text-sm g-input" style={{ borderRadius: 8, padding: '10px 16px' }}
-          />
-          <button onClick={handleAdd} className="g-btn-primary text-sm" style={{ height: 40, padding: '0 16px', borderRadius: 8 }}>Save</button>
-          <button onClick={() => setAdding(false)} className="text-sm px-3 g-btn-ghost" style={{ height: 40 }}>Cancel</button>
-        </div>
+        <form className="teams-add-form" onSubmit={event => { event.preventDefault(); handleAdd() }} noValidate>
+          <div className="teams-add-field">
+            <label htmlFor="new-team-name">Team name</label>
+            <input id="new-team-name" autoFocus placeholder="e.g. Billing support" maxLength={80}
+              value={newName} onChange={e => { setNewName(e.target.value); setAddError('') }}
+              onKeyDown={e => { if (e.key === 'Escape') { setAdding(false); setAddError(''); requestAnimationFrame(() => addTriggerRef.current?.focus()) } }}
+              aria-invalid={!!addError} aria-describedby={addError ? 'new-team-error' : undefined}
+              className="teams-add-input" />
+            {addError && <p id="new-team-error" className="teams-inline-error" role="alert">{addError}</p>}
+          </div>
+          <div className="teams-add-actions">
+            <button type="submit" disabled={addingTeam} className="g-btn-primary teams-form-button">
+              {addingTeam && <LoaderCircle className="teams-spinner" size={16} aria-hidden="true" />}
+              {addingTeam ? 'Saving…' : 'Save team'}
+            </button>
+            <button type="button" disabled={addingTeam} onClick={() => { setAdding(false); setAddError(''); requestAnimationFrame(() => addTriggerRef.current?.focus()) }} className="teams-cancel-button">Cancel</button>
+          </div>
+        </form>
       )}
 
       {/* Content */}
-      {teams.length === 0 && !adding ? (
-        <div className="text-center py-20" style={{ color: 'rgba(26,30,35,.5)' }}>
-          <p className="text-4xl mb-3">👥</p>
-          <p className="text-sm">No teams yet. Add one to start grouping agents.</p>
+      {dataLoading ? (
+        <div className="teams-empty" role="status">
+          <LoaderCircle className="teams-spinner" size={24} aria-hidden="true" />
+          <p>Loading teams…</p>
+        </div>
+      ) : teams.length === 0 && !adding ? (
+        <div className="teams-empty">
+          <UsersRound size={28} aria-hidden="true" />
+          <h2>No teams yet</h2>
+          <p>Add a team to group agents and track their performance together.</p>
         </div>
       ) : view === 'compare' ? (
         <ComparisonView rows={sortedTeams} thresholds={vt} />
@@ -869,17 +1074,17 @@ export default function TeamsPage() {
               dims={dims}
               allAgents={agents}
               thresholds={vt}
-              onEdit={updateTeam}
+              onEdit={handleEdit}
               onDelete={handleDelete}
               canEdit={isAdmin}
               onAssign={id => handleAssign(id, team.id)}
               onUnassign={handleUnassign}
-              onOpen={() => openDetail(team.id)}
+              onOpen={event => openDetail(team.id, event.currentTarget)}
             />
           ))}
         </div>
       )}
-    </div>
+    </main>
     {detailStat && <TeamDetailPanel stat={detailStat} thresholds={vt} onClose={closeDetail} onViewScore={openScore} />}
     </div>
   )
