@@ -373,7 +373,7 @@
 }
 
 .teams-manage-panel {
-  margin: 18px -24px -22px;
+  margin: 0 -24px -22px;
   padding: 18px 24px 22px;
   border-top: 1px solid var(--hairline-2);
   background: var(--warm-surface);
@@ -746,7 +746,7 @@
   .teams-card-footer { align-items: stretch; flex-direction: column; }
   .teams-card-footer > div:last-child { justify-content: flex-start; }
   .teams-disclosure-button { min-height: 44px; }
-  .teams-manage-panel { margin: 18px -16px -18px; padding: 18px 16px; }
+  .teams-manage-panel { margin: 0 -16px -18px; padding: 18px 16px; }
   .teams-agent-identity { align-items: flex-start; flex-direction: column; gap: 2px; }
   .teams-agent-identity > div { display: none; }
   .teams-agent-note { display: block; }
