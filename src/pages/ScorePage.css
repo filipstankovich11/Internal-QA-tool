@@ -1,0 +1,196 @@
+.score-page-content,
+.score-page-content * {
+  min-width: 0;
+}
+
+.score-mode-toggle {
+  width: min(100%, 354px);
+}
+
+.score-page-content .g-input::placeholder {
+  color: var(--ink-72);
+}
+
+.score-view-select {
+  min-width: 220px;
+}
+
+.score-agent-filter {
+  max-width: 180px;
+}
+
+.score-date-filter {
+  width: 150px;
+}
+
+.score-history-row:hover {
+  background: var(--warm-surface);
+}
+
+.score-history-ticket,
+.score-history-subject {
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .score-page-content {
+    padding: 24px 16px 48px !important;
+  }
+
+  .score-page-content h1 {
+    font-size: 28px !important;
+  }
+
+  .score-mode-toggle {
+    width: 100%;
+  }
+
+  .score-single-form,
+  .score-view-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .score-single-form > button,
+  .score-load-button {
+    width: 100%;
+  }
+
+  .score-view-select,
+  .score-view-limit {
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  .score-csv-zone {
+    padding: 32px 16px !important;
+  }
+
+  .score-history-heading {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .score-history-heading .score-info-popover-shell {
+    left: -60px !important;
+  }
+
+  .score-history-heading .score-info-popover-shell > span {
+    width: calc(100vw - 32px) !important;
+    max-width: 300px;
+  }
+
+  .score-history-meta {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .score-filter-bar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px !important;
+  }
+
+  .score-agent-filter,
+  .score-date-filter,
+  .score-status-filter {
+    width: 100%;
+    max-width: none;
+  }
+
+  .score-status-options {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .score-history-list {
+    overflow-x: hidden !important;
+  }
+
+  .score-history-header {
+    display: none !important;
+  }
+
+  .score-history-row {
+    grid-template-areas:
+      "ticket score"
+      "subject subject"
+      "agents agents"
+      "status date";
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px 12px;
+    min-width: 0 !important;
+    padding: 14px 16px !important;
+    box-shadow: none !important;
+  }
+
+  .score-history-ticket {
+    grid-area: ticket;
+    min-height: 32px;
+  }
+
+  .score-history-score {
+    grid-area: score;
+    align-self: center;
+    font-weight: 600;
+  }
+
+  .score-history-subject {
+    grid-area: subject;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding-right: 0 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .score-history-agents {
+    grid-area: agents;
+    justify-content: flex-start !important;
+  }
+
+  .score-history-status {
+    grid-area: status;
+    min-height: 32px;
+    justify-content: flex-start !important;
+  }
+
+  .score-history-date {
+    grid-area: date;
+    align-self: center;
+  }
+
+  .score-history-more {
+    min-width: 0 !important;
+  }
+
+  .score-history-more button {
+    width: 100%;
+  }
+
+  .score-batch-actions,
+  .score-batch-summary,
+  .score-result-row {
+    flex-wrap: wrap;
+  }
+
+  .score-result-row > a {
+    width: auto !important;
+  }
+
+  .score-result-row > button {
+    flex-basis: 100%;
+  }
+}
+
+@media (pointer: coarse) {
+  .score-page-content button,
+  .score-page-content a {
+    min-height: 44px;
+  }
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { VERDICT_COLOR } from '../lib/verdict'
 
 // Plain-language definition of the QA score, derived from the live rubric so it
@@ -14,6 +14,7 @@ export function scoreExplanation(rubric) {
 // margin gap) so moving the pointer onto it doesn't dismiss it.
 export function ScoreInfoPopover({ rubric }) {
   const [open, setOpen] = useState(false)
+  const popoverId = useId()
 
   const dims = rubric?.dimensions || []
   const t = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
@@ -28,7 +29,14 @@ export function ScoreInfoPopover({ rubric }) {
     <span className="relative inline-block align-middle ml-1"
       onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <button type="button" aria-label="How the QA score works"
+        aria-expanded={open} aria-describedby={open ? popoverId : undefined}
         onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+        onKeyDown={event => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            setOpen(false)
+          }
+        }}
         className="inline-flex items-center justify-center transition-colors"
         style={{
           width: 18, height: 18, borderRadius: 5,
@@ -42,36 +50,36 @@ export function ScoreInfoPopover({ rubric }) {
         </svg>
       </button>
       {open && (
-        <div className="absolute z-30 left-0" style={{ top: '100%', paddingTop: 8 }}>
-          <div className="rounded-xl p-4 text-left"
+        <span className="score-info-popover-shell absolute z-30 left-0" style={{ top: '100%', paddingTop: 8 }}>
+          <span id={popoverId} role="tooltip" className="rounded-xl p-4 text-left block normal-case tracking-normal"
             style={{ width: 300, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', animation: 'fadeIn 120ms ease' }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: '#1A1E23' }}>How the QA score works</p>
-            <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(26,30,35,.6)' }}>
+            <span className="text-xs font-semibold mb-2 block" style={{ color: '#1A1E23' }}>How the QA score works</span>
+            <span className="text-xs leading-relaxed mb-3 block" style={{ color: 'rgba(26,30,35,.72)' }}>
               Each ticket gets a 0–100 score — a weighted blend of the rubric dimensions:
-            </p>
-            <div className="flex flex-col gap-1.5 mb-3">
+            </span>
+            <span className="flex flex-col gap-1.5 mb-3">
               {dims.map(d => (
-                <div key={d.id} className="flex items-center justify-between text-xs">
+                <span key={d.id} className="flex items-center justify-between text-xs">
                   <span style={{ color: 'rgba(26,30,35,.72)' }}>{d.name}</span>
                   <span className="tabular-nums font-semibold" style={{ color: '#B84A2E' }}>{d.weight}%</span>
-                </div>
+                </span>
               ))}
-            </div>
-            <div className="flex flex-col gap-1 pt-2" style={{ borderTop: '1px solid #F0ECE9' }}>
+            </span>
+            <span className="flex flex-col gap-1 pt-2" style={{ borderTop: '1px solid #F0ECE9' }}>
               {verdicts.map(v => (
-                <div key={v.label} className="flex items-center gap-2 text-xs">
+                <span key={v.label} className="flex items-center gap-2 text-xs">
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: v.c, flexShrink: 0 }} />
-                  <span style={{ color: 'rgba(26,30,35,.6)' }}>{v.label}</span>
-                </div>
+                  <span style={{ color: 'rgba(26,30,35,.72)' }}>{v.label}</span>
+                </span>
               ))}
-            </div>
+            </span>
             {autoFails.length > 0 && (
-              <p className="text-xs mt-3 pt-2 leading-relaxed" style={{ color: 'rgba(26,30,35,.5)', borderTop: '1px solid #F0ECE9' }}>
+              <span className="text-xs mt-3 pt-2 leading-relaxed block" style={{ color: 'rgba(26,30,35,.72)', borderTop: '1px solid #F0ECE9' }}>
                 Any of the {autoFails.length} auto-fail conditions forces a FAIL regardless of score.
-              </p>
+              </span>
             )}
-          </div>
-        </div>
+          </span>
+        </span>
       )}
     </span>
   )

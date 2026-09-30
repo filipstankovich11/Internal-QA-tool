@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
 
 // Reusable calendar-popover date picker (Gorgias warm/light).
 // Controlled: `value` is a YYYY-MM-DD string ('' = empty); `onChange(YYYY-MM-DD)`.
@@ -17,17 +17,24 @@ const Chevron = ({ dir }) => (
   </svg>
 )
 
-export default function DatePicker({ value, onChange, placeholder = 'dd.mm.yyyy', width = 150 }) {
+export default function DatePicker({ value, onChange, placeholder = 'dd.mm.yyyy', width = 150, height = 38, ariaLabel = 'Choose a date' }) {
   const [open, setOpen] = useState(false)
   const selected = parseISO(value)
   const [view, setView] = useState(selected || new Date())
   const rootRef = useRef(null)
+  const triggerRef = useRef(null)
+  const dialogId = useId()
 
   useEffect(() => {
     if (!open) return
     setView(selected || new Date())
     const onDoc = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false) }
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey) }
@@ -39,21 +46,22 @@ export default function DatePicker({ value, onChange, placeholder = 'dd.mm.yyyy'
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1))]
 
-  const navBtn = { width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,30,35,.6)', background: 'transparent', border: 'none', cursor: 'pointer' }
+  const navBtn = { width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(26,30,35,.72)', background: 'transparent', border: 'none', cursor: 'pointer' }
 
   return (
     <div ref={rootRef} className="relative" style={{ width }}>
-      <button type="button" onClick={() => setOpen(o => !o)}
+      <button ref={triggerRef} type="button" onClick={() => setOpen(o => !o)}
+        aria-label={ariaLabel} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? dialogId : undefined}
         className="w-full flex items-center justify-between gap-2 rounded-lg text-sm transition-colors"
-        style={{ height: 38, padding: '0 10px', background: '#fff', border: `1px solid ${open ? '#FF9780' : '#E1DCD7'}`, color: selected ? '#1A1E23' : 'rgba(26,30,35,.45)', outline: 'none' }}>
+        style={{ height, padding: '0 10px', background: '#fff', border: `1px solid ${open ? '#FF9780' : '#E1DCD7'}`, color: selected ? '#1A1E23' : 'rgba(26,30,35,.72)', outline: 'none' }}>
         <span className="truncate">{selected ? fmt(selected) : placeholder}</span>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(26,30,35,.45)', flexShrink: 0 }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(26,30,35,.72)', flexShrink: 0 }}>
           <rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18M8 2v4M16 2v4" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute z-40 left-0 mt-1.5"
+        <div id={dialogId} role="dialog" aria-label={ariaLabel} className="absolute z-40 left-0 mt-1.5"
           style={{ width: 246, background: '#fff', border: '1px solid #EEEEEE', borderRadius: 14, boxShadow: '0 16px 36px -10px rgba(0,0,0,.2)', padding: 12, animation: 'datepop .18s ease' }}>
           {/* Month header */}
           <div className="flex items-center justify-between mb-2">
@@ -65,7 +73,7 @@ export default function DatePicker({ value, onChange, placeholder = 'dd.mm.yyyy'
           </div>
           {/* Day-of-week row */}
           <div className="grid grid-cols-7 mb-1">
-            {DOW.map((d, i) => <span key={i} className="text-center" style={{ fontSize: 10, fontWeight: 600, color: 'rgba(26,30,35,.45)' }}>{d}</span>)}
+            {DOW.map((d, i) => <span key={i} className="text-center" style={{ fontSize: 10, fontWeight: 600, color: 'rgba(26,30,35,.72)' }}>{d}</span>)}
           </div>
           {/* Day grid */}
           <div className="grid grid-cols-7 gap-0.5">
@@ -84,7 +92,7 @@ export default function DatePicker({ value, onChange, placeholder = 'dd.mm.yyyy'
           </div>
           {value && (
             <button type="button" onClick={() => { onChange?.(''); setOpen(false) }}
-              className="w-full mt-2 text-xs py-1.5 rounded-md transition-colors" style={{ color: 'rgba(26,30,35,.55)' }}
+              className="w-full mt-2 text-xs py-1.5 rounded-md transition-colors" style={{ color: 'rgba(26,30,35,.72)' }}
               onMouseEnter={e => e.currentTarget.style.background = '#F4EEE9'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               Clear
             </button>
