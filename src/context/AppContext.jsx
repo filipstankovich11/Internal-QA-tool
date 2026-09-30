@@ -184,7 +184,7 @@ export function AppProvider({ children }) {
     const { data, error } = await supabase
       .from('teams').insert({ name }).select().single()
     if (!error) setTeams(prev => [...prev, data])
-    return data
+    return { data, error }
   }
 
   const updateTeam = async (id, patch) => {
@@ -201,6 +201,7 @@ export function AppProvider({ children }) {
       setTeams(prev => prev.filter(t => t.id !== id))
       setAgents(prev => prev.map(a => a.team_id === id ? { ...a, team_id: null } : a))
     }
+    return { error }
   }
 
   // ── Agents ─────────────────────────────────────────────────────────────────
@@ -226,6 +227,7 @@ export function AppProvider({ children }) {
     const { data, error } = await supabase
       .from('agents').update(dbPatch).eq('id', id).select().single()
     if (!error) setAgents(prev => prev.map(a => a.id === id ? data : a))
+    return { data, error }
   }
 
   const deleteAgent = async (id) => {
