@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef, useId } from 'react'
+import { ArrowRight, Check, CheckCircle2, LoaderCircle, Minus, Play, Plus, Search, TriangleAlert, Upload, X } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -10,12 +11,10 @@ import ScoringProgress from '../components/ScoringProgress'
 import DatePicker from '../components/DatePicker'
 import Segmented from '../components/Segmented'
 import Dropdown from '../components/Dropdown'
+import { parseScoreCSV } from '../lib/scoreCsv'
+import './ScorePage.css'
 
 const HISTORY_PAGE_SIZE = 10 // history rows shown before "Show more"
-
-const inputStyle = { background: '#FFFFFF', border: '1px solid #E1DCD7', color: '#1A1E23', outline: 'none' }
-const onFocus    = e => e.target.style.borderColor = '#FF9780'
-const onBlur     = e => e.target.style.borderColor = '#E1DCD7'
 
 // Cache the Gorgias views fetch for the session — ViewPicker remounts every time
 // the user toggles into View mode, so without this it re-hits /api/views each time.
@@ -43,19 +42,10 @@ function ModeToggle({ mode, setMode }) {
     { id: 'csv',    label: 'CSV Upload'    },
     { id: 'view',   label: 'Gorgias View'  },
   ]
-  return <Segmented options={modes} value={mode} onChange={setMode} segWidth={116} fontPx={14} padY={8} />
+  return <Segmented options={modes} value={mode} onChange={setMode} fontPx={14} padY={10} fluid ariaLabel="Scoring method" />
 }
 
 // ── Batch — CSV upload zone ───────────────────────────────────────────────────
-
-function parseCSV(text) {
-  const lines   = text.trim().split(/\r?\n/).filter(Boolean)
-  if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row')
-  const headers = lines[0].split(',').map(h => h.trim().replace(/['"]/g, '').toLowerCase())
-  const colIdx  = headers.findIndex(h => ['ticket_id', 'ticket_url', 'url', 'id', 'ticket'].includes(h))
-  if (colIdx === -1) throw new Error('No ticket_id or ticket_url column found')
-  return lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/['"]/g, '')).at(colIdx)).filter(Boolean)
-}
 
 function CSVUploadZone({ onTickets, disabled }) {
   const [dragging, setDragging] = useState(false)
@@ -66,7 +56,7 @@ function CSVUploadZone({ onTickets, disabled }) {
   const inputRef = useRef()
 
   const process = text => {
-    try   { const ids = parseCSV(text); setPreview(ids); setErr(null); onTickets(ids) }
+    try   { const ids = parseScoreCSV(text); setPreview(ids); setErr(null); onTickets(ids) }
     catch (e) { setErr(e.message); setPreview(null); onTickets([]) }
   }
   const onFile = f => {
@@ -107,7 +97,7 @@ function CSVUploadZone({ onTickets, disabled }) {
         tabIndex={disabled ? -1 : 0}
         aria-disabled={disabled}
         aria-label={loaded ? `Replace ${fileName} CSV file` : 'Choose a CSV file to upload'}
-        className="border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all"
+        className="score-csv-zone border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all"
         style={{ borderColor, background: bg, transform: dragging ? 'scale(1.005)' : 'none', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? .65 : 1 }}>
         {loaded ? (
           <>
@@ -119,13 +109,11 @@ function CSVUploadZone({ onTickets, disabled }) {
           </>
         ) : (
           <>
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-              className="mx-auto mb-3" style={{ color: dragging || hover ? 'var(--coral)' : 'var(--ink-45)', transition: 'color 150ms' }}>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
+            <Upload aria-hidden="true" size={34} strokeWidth={1.5} className="mx-auto mb-3"
+              style={{ color: dragging || hover ? 'var(--coral)' : 'var(--ink-72)', transition: 'color 150ms' }} />
             <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Drop your CSV here</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--ink-50)' }}>or click to browse</p>
-            <p className="text-xs mt-3" style={{ color: 'var(--ink-50)' }}>Expected column: <code style={{ color: 'var(--ink-72)' }}>ticket_id</code> or <code style={{ color: 'var(--ink-72)' }}>ticket_url</code></p>
+            <p className="text-xs mt-1" style={{ color: 'var(--ink-72)' }}>or click to browse</p>
+            <p className="text-xs mt-3" style={{ color: 'var(--ink-72)' }}>Expected column: <code>ticket_id</code> or <code>ticket_url</code></p>
           </>
         )}
         <input ref={inputRef} type="file" accept=".csv" className="hidden" disabled={disabled} onChange={e => onFile(e.target.files[0])} />
@@ -149,8 +137,10 @@ function ViewCombobox({ views, value, onChange, loading, disabled }) {
   const [query,     setQuery]     = useState('')
   const [highlight, setHighlight] = useState(0)
   const rootRef  = useRef(null)
+  const triggerRef = useRef(null)
   const inputRef = useRef(null)
   const listRef  = useRef(null)
+  const listboxId = useId()
 
   const selected = views.find(v => String(v.id) === String(value))
   const q = query.trim().toLowerCase()
@@ -173,23 +163,32 @@ function ViewCombobox({ views, value, onChange, loading, disabled }) {
     if (open) listRef.current?.children[highlight]?.scrollIntoView({ block: 'nearest' })
   }, [highlight, open])
 
-  const choose = (v) => { onChange(String(v.id)); setOpen(false) }
+  const closeAndRestoreFocus = () => {
+    setOpen(false)
+    requestAnimationFrame(() => triggerRef.current?.focus())
+  }
+  const choose = (v) => {
+    onChange(String(v.id))
+    closeAndRestoreFocus()
+  }
 
   const onKeyDown = e => {
     if (e.key === 'ArrowDown')      { e.preventDefault(); setHighlight(h => Math.min(h + 1, filtered.length - 1)) }
     else if (e.key === 'ArrowUp')   { e.preventDefault(); setHighlight(h => Math.max(h - 1, 0)) }
     else if (e.key === 'Enter')     { e.preventDefault(); if (filtered[highlight]) choose(filtered[highlight]) }
-    else if (e.key === 'Escape')    { setOpen(false) }
+    else if (e.key === 'Escape')    { e.preventDefault(); closeAndRestoreFocus() }
   }
 
   return (
     <div ref={rootRef} className="relative">
-      <button type="button" disabled={disabled || loading} onClick={() => setOpen(o => !o)}
-        className="w-full rounded-xl px-4 py-2.5 text-sm flex items-center justify-between gap-2 text-left transition-colors"
-        style={{ background: 'var(--white)', border: `1px solid ${open ? 'var(--coral)' : 'var(--input-border)'}`, color: selected ? 'var(--ink)' : 'var(--ink-45)', outline: 'none', opacity: disabled ? 0.5 : 1 }}>
+      <button ref={triggerRef} type="button" disabled={disabled || loading} onClick={() => setOpen(o => !o)}
+        onKeyDown={event => { if (event.key === 'ArrowDown' && !open) { event.preventDefault(); setOpen(true) } }}
+        aria-label="Choose a Gorgias view" aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined}
+        className="w-full min-h-11 rounded-xl px-4 py-2.5 text-sm flex items-center justify-between gap-2 text-left transition-colors"
+        style={{ background: 'var(--white)', border: `1px solid ${open ? 'var(--coral)' : 'var(--input-border)'}`, color: selected ? 'var(--ink)' : 'var(--ink-72)', outline: 'none', opacity: disabled ? 0.5 : 1 }}>
         <span className="truncate">{loading ? 'Loading views…' : selected ? selected.name : 'Select a view…'}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-          style={{ color: 'var(--ink-45)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', flexShrink: 0 }}>
+          style={{ color: 'var(--ink-72)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', flexShrink: 0 }}>
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
@@ -200,25 +199,25 @@ function ViewCombobox({ views, value, onChange, loading, disabled }) {
           {/* Search */}
           <div className="p-2" style={{ borderBottom: '1px solid var(--hairline)' }}>
             <div className="relative">
-              <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ink-45)' }}>
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
+              <Search aria-hidden="true" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--ink-72)' }} />
               <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onKeyDown}
-                placeholder="Search views…"
-                className="g-input w-full rounded-lg pl-8 pr-2 py-2 text-sm outline-none" />
+                role="combobox" aria-label="Search Gorgias views" aria-autocomplete="list" aria-expanded="true"
+                aria-controls={listboxId} aria-activedescendant={filtered[highlight] ? `${listboxId}-option-${filtered[highlight].id}` : undefined}
+                placeholder="Search views…" className="g-input w-full min-h-11 rounded-lg pl-8 pr-2 py-2 text-sm outline-none" />
             </div>
           </div>
           {/* List */}
-          <div ref={listRef} className="max-h-60 overflow-y-auto py-1">
+          <div ref={listRef} id={listboxId} role="listbox" aria-label="Gorgias views" className="max-h-60 overflow-y-auto py-1">
             {filtered.length === 0 ? (
-              <p className="text-xs text-center py-4 px-3" style={{ color: 'var(--ink-50)' }}>No views match “{query}”</p>
+              <p className="text-xs text-center py-4 px-3" style={{ color: 'var(--ink-72)' }}>No views match “{query}”</p>
             ) : filtered.map((v, i) => {
               const isSel = String(v.id) === String(value)
               return (
-                <button key={v.id} type="button" onClick={() => choose(v)} onMouseEnter={() => setHighlight(i)}
-                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors"
+                <button key={v.id} id={`${listboxId}-option-${v.id}`} type="button" role="option" aria-selected={isSel}
+                  onClick={() => choose(v)} onMouseEnter={() => setHighlight(i)}
+                  className="w-full min-h-11 text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors"
                   style={{ background: i === highlight ? 'var(--warm-surface)' : 'transparent', color: isSel ? 'var(--coral-text)' : 'var(--ink)' }}>
-                  <span style={{ width: 12, flexShrink: 0, color: 'var(--coral-text)' }}>{isSel ? '✓' : ''}</span>
+                  <span className="flex items-center" style={{ width: 14, flexShrink: 0, color: 'var(--coral-text)' }}>{isSel && <Check aria-hidden="true" size={14} />}</span>
                   <span className="truncate">{v.name}</span>
                 </button>
               )
@@ -265,9 +264,9 @@ function ViewPicker({ onTickets, disabled }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-end gap-3">
-        <div className="flex-1 min-w-0">
-          <label className="text-xs mb-1.5 block" style={{ color: 'var(--ink-60)' }}>Gorgias View</label>
+      <div className="score-view-grid flex items-end gap-3">
+        <div className="score-view-select flex-1 min-w-0">
+          <span className="text-xs mb-1.5 block" style={{ color: 'var(--ink-72)' }}>Gorgias View</span>
           <ViewCombobox
             views={views}
             value={viewId}
@@ -276,24 +275,24 @@ function ViewPicker({ onTickets, disabled }) {
             disabled={disabled}
           />
         </div>
-        <div className="w-28 shrink-0">
-          <label className="text-xs mb-1.5 block" style={{ color: 'var(--ink-60)' }}>Limit</label>
-          <div className="flex items-center rounded-xl overflow-hidden" style={{ background: 'var(--white)', border: '1px solid var(--input-border)' }}>
-            <button type="button" aria-label="Decrease"
+        <div className="score-view-limit w-28 shrink-0">
+          <label htmlFor="score-view-limit" className="text-xs mb-1.5 block" style={{ color: 'var(--ink-72)' }}>Ticket limit</label>
+          <div className="flex items-center min-h-11 rounded-xl overflow-hidden" style={{ background: 'var(--white)', border: '1px solid var(--input-border)' }}>
+            <button type="button" aria-label="Decrease ticket limit"
               onClick={() => setLimit(l => String(Math.max(1, (parseInt(l) || 30) - 5)))}
               disabled={disabled || (parseInt(limit) || 0) <= 1}
-              className="stepper-btn shrink-0 w-8 py-2.5 text-base leading-none">−</button>
-            <input type="number" min={1} max={100} value={limit}
+              className="stepper-btn shrink-0 w-11 h-11 flex items-center justify-center"><Minus aria-hidden="true" size={16} /></button>
+            <input id="score-view-limit" type="number" min={1} max={100} value={limit}
               onChange={e => setLimit(e.target.value)}
               onBlur={e => setLimit(String(Math.min(100, Math.max(1, parseInt(e.target.value) || 30))))}
               onFocus={e => e.target.select()}
               disabled={disabled}
-              className="no-spinner w-full text-center text-sm py-2.5 bg-transparent outline-none"
+              className="no-spinner w-full h-11 text-center text-sm bg-transparent outline-none"
               style={{ color: 'var(--ink)' }} />
-            <button type="button" aria-label="Increase"
+            <button type="button" aria-label="Increase ticket limit"
               onClick={() => setLimit(l => String(Math.min(100, (parseInt(l) || 30) + 5)))}
               disabled={disabled || (parseInt(limit) || 0) >= 100}
-              className="stepper-btn shrink-0 w-8 py-2.5 text-base leading-none">+</button>
+              className="stepper-btn shrink-0 w-11 h-11 flex items-center justify-center"><Plus aria-hidden="true" size={16} /></button>
           </div>
         </div>
         {(() => {
@@ -302,24 +301,24 @@ function ViewPicker({ onTickets, disabled }) {
             <button onClick={load} disabled={!viewId || fetching || disabled}
               onMouseEnter={() => setBtnHover(true)}
               onMouseLeave={() => setBtnHover(false)}
-              className="g-btn-primary text-sm px-5 py-2.5 rounded-xl whitespace-nowrap shrink-0 flex items-center gap-1.5">
+              className="score-load-button g-btn-primary min-h-11 text-sm px-5 py-2.5 rounded-xl whitespace-nowrap shrink-0 flex items-center gap-1.5">
               {fetching
-                ? <><svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>Loading…</>
-                : <>Load Tickets <span style={{ display: 'inline-block', transform: hot ? 'translateX(3px)' : 'none', transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1)' }}>→</span></>}
+                ? <><LoaderCircle aria-hidden="true" size={15} className="animate-spin" />Loading…</>
+                : <>Load Tickets <ArrowRight aria-hidden="true" size={15} style={{ transform: hot ? 'translateX(3px)' : 'none', transition: 'transform 160ms cubic-bezier(0.16,1,0.3,1)' }} /></>}
             </button>
           )
         })()}
       </div>
-      {err && <p className="text-xs" style={{ color: 'var(--danger)' }}>{err}</p>}
+      {err && <p role="alert" className="text-xs" style={{ color: 'var(--danger)' }}>{err}</p>}
       {preview && (
         <div className="rounded-xl p-3" style={{ background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)' }}>
-          <p className="text-xs mb-2" style={{ color: 'var(--success)' }}>✓ {preview.length} tickets ready to run</p>
+          <p className="text-xs mb-2 flex items-center gap-1.5" style={{ color: 'var(--success)' }}><CheckCircle2 aria-hidden="true" size={14} />{preview.length} tickets ready to run</p>
           <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
             {preview.map(t => (
               <div key={t.id} className="flex items-center gap-2 text-xs">
                 <span className="font-mono" style={{ color: 'var(--coral-text)' }}>#{t.id}</span>
-                <span className="truncate" style={{ color: 'var(--ink-60)' }}>{t.subject || '(no subject)'}</span>
-                <span className="shrink-0 px-1.5 py-0.5 rounded" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', color: 'var(--ink-50)' }}>{t.status}</span>
+                <span className="truncate" style={{ color: 'var(--ink-72)' }}>{t.subject || '(no subject)'}</span>
+                <span className="shrink-0 px-1.5 py-0.5 rounded" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', color: 'var(--ink-72)' }}>{t.status}</span>
               </div>
             ))}
           </div>
@@ -335,7 +334,7 @@ function ResultRow({ result, onView }) {
   const color = VERDICT_COLOR[result.verdict]
   const bg    = VERDICT_BG[result.verdict]
   if (result.error) return (
-    <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl"
+    <div className="score-result-row flex items-center gap-3 py-2.5 px-3 rounded-xl stagger-item"
       style={{ background: 'rgba(209,75,61,0.06)', border: '1px solid rgba(209,75,61,0.15)' }}>
       <a href={gorgiasTicketUrl(result.ticketId)} target="_blank" rel="noopener noreferrer"
         className="font-mono text-xs w-24 shrink-0" style={{ color: 'var(--coral-text)' }}>#{result.ticketId}</a>
@@ -343,7 +342,7 @@ function ResultRow({ result, onView }) {
     </div>
   )
   return (
-    <div className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all"
+    <div className="score-result-row w-full flex items-center gap-3 py-2.5 px-3 rounded-xl text-left transition-all stagger-item"
       style={{ border: '1px solid transparent' }}
       onMouseEnter={e => { e.currentTarget.style.background = '#FBF7F3'; e.currentTarget.style.borderColor = '#F0ECE9' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}>
@@ -356,8 +355,8 @@ function ResultRow({ result, onView }) {
       <button type="button" onClick={() => onView(result.fullScore)}
         className="min-w-0 flex-1 flex items-center gap-3 text-left rounded-lg">
         <span className="text-xs flex-1 truncate" style={{ color: 'var(--ink)' }}>{result.fullScore?.ticket_subject || '—'}</span>
-        {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'var(--ink-60)' }}>{result.agentName}</span>}
-        <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--ink-60)' }}>{Number(result.weightedScore ?? 0).toFixed(0)}/100</span>
+        {result.agentName && <span className="text-xs shrink-0 hidden sm:block" style={{ color: 'var(--ink-72)' }}>{result.agentName}</span>}
+        <span className="text-xs shrink-0 tabular-nums" style={{ color: 'var(--ink-72)' }}>{Number(result.weightedScore ?? 0).toFixed(0)}/100</span>
         {color && <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full" style={{ color, background: bg }}>{VERDICT_LABEL[result.verdict]}</span>}
       </button>
     </div>
@@ -479,15 +478,15 @@ export default function ScorePage() {
 
   return (
     <div className="panel-push">
-    <div className="max-w-6xl mx-auto px-8 pt-8 pb-14">
+    <div className="score-page-content max-w-6xl mx-auto px-8 pt-8 pb-14">
       {/* Header */}
       <div className="mb-6">
         <h1 className="mb-1" style={{ fontSize: 30, color: 'var(--ink)', fontFamily: "'Inter Tight', sans-serif", fontWeight: 600, letterSpacing: '-0.02em' }}>Score</h1>
-        <p className="text-sm" style={{ color: 'var(--ink-60)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
+        <p className="text-sm" style={{ color: 'var(--ink-72)' }}>Score a single ticket, upload a CSV, or pull from a Gorgias view</p>
       </div>
 
       {/* Mode toggle */}
-      <div className="mb-6">
+      <div className="score-mode-toggle mb-6">
         <ModeToggle mode={mode} setMode={switchMode} />
       </div>
 
@@ -496,18 +495,20 @@ export default function ScorePage() {
         <>
           {!canScore && (
             <div className="rounded-xl px-4 py-3 mb-4 text-sm text-center"
-              style={{ background: 'var(--coral-tint)', border: '1px solid #FFD2C9', color: 'var(--ink-60)' }}>
+              style={{ background: 'var(--coral-tint)', border: '1px solid #FFD2C9', color: 'var(--ink-72)' }}>
               Your role is <strong style={{ color: 'var(--coral-text)' }}>read-only</strong>. Contact an admin to score tickets.
             </div>
           )}
 
-          <div className="flex gap-2 mb-3 max-w-2xl">
+          <div className="score-single-form flex gap-2 mb-3 max-w-2xl">
             <label htmlFor="score-ticket-url" className="sr-only">Gorgias ticket URL or ID</label>
             <input
               id="score-ticket-url" type="text" value={ticketUrl}
               onChange={e => setTicketUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && analyze()}
               disabled={loading || !canScore}
+              aria-invalid={Boolean(urlError)}
+              aria-describedby={urlError ? 'score-ticket-url-error' : undefined}
               placeholder="https://yourcompany.gorgias.com/app/ticket/…"
               className="flex-1 rounded-xl px-4 py-3 text-sm outline-none transition-colors g-input disabled:opacity-50"
               style={{ color: 'var(--ink)' }}
@@ -531,38 +532,38 @@ export default function ScorePage() {
             })()}
           </div>
 
-          {urlError && <p className="text-xs mt-2 ml-1" style={{ color: 'var(--amber)' }}>⚠ {urlError}</p>}
+          {urlError && <p id="score-ticket-url-error" role="alert" className="text-xs mt-2 ml-1 flex items-center gap-1.5" style={{ color: 'var(--amber)' }}><TriangleAlert aria-hidden="true" size={14} />{urlError}</p>}
           <ScoringProgress loading={loading} />
-          {error && <p className="text-xs text-center mt-2" style={{ color: 'var(--danger)' }}>{error}</p>}
+          {error && <p role="alert" className="text-xs text-center mt-2" style={{ color: 'var(--danger)' }}>{error}</p>}
 
           {scoreHistory.length > 0 && (
             <div className="mt-10">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-wider flex items-center" style={{ color: 'var(--ink-50)', fontWeight: 600, letterSpacing: '0.06em' }}>
+              <div className="score-history-heading flex items-center justify-between mb-3">
+                <div className="text-xs uppercase tracking-wider flex items-center" style={{ color: 'var(--ink-72)', fontWeight: 600, letterSpacing: '0.06em' }}>
                   History<ScoreInfoPopover rubric={rubric} />
-                </p>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs" style={{ color: 'var(--ink-50)' }}>
+                </div>
+                <div className="score-history-meta flex items-center gap-3">
+                  <span className="text-xs" style={{ color: 'var(--ink-72)' }}>
                     Showing {Math.min(historyCount, filteredHistory.length)} of {filteredHistory.length}
                     {hasFilters && <span style={{ color: 'var(--coral-text)' }}> · filtered</span>}
                   </span>
                   {hasFilters && (
                     <button onClick={() => setFilters({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })}
-                      className="text-xs transition-colors" style={{ color: 'var(--ink-50)' }}
+                      className="text-xs min-h-11 px-2 rounded-lg transition-colors" style={{ color: 'var(--ink-72)' }}
                       onMouseEnter={e => e.target.style.color = '#D14B3D'}
-                      onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>
+                      onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.72)'}>
                       Clear filters
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
+              <div className="score-filter-bar rounded-2xl p-4 mb-4 flex flex-wrap gap-3 items-end"
                 style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
                 <div className="flex flex-col gap-1.5 w-full">
                   <label htmlFor="history-ticket-search" className="text-xs" style={{ color: 'var(--ink-72)' }}>Ticket URL or ID</label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: filters.ticketSearch ? 'var(--coral)' : 'var(--ink-45)' }}>
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: filters.ticketSearch ? 'var(--coral)' : 'var(--ink-72)' }}>
                       <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
                     <input
@@ -582,39 +583,41 @@ export default function ScorePage() {
                       <button onClick={() => setF('ticketSearch', '')}
                         type="button" aria-label="Clear ticket search"
                         className="absolute right-0 top-0 w-11 h-11 rounded-xl flex items-center justify-center text-base transition-colors"
-                        style={{ color: 'var(--ink-50)', background: 'var(--segmented)' }}
+                        style={{ color: 'var(--ink-72)', background: 'var(--segmented)' }}
                         onMouseEnter={e => { e.currentTarget.style.color='#1A1E23'; e.currentTarget.style.background='#E7E3DF' }}
-                        onMouseLeave={e => { e.currentTarget.style.color='rgba(26,30,35,.5)'; e.currentTarget.style.background='#F1ECE8' }}>
-                        ×
+                        onMouseLeave={e => { e.currentTarget.style.color='rgba(26,30,35,.72)'; e.currentTarget.style.background='#F1ECE8' }}>
+                        <X aria-hidden="true" size={16} />
                       </button>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
-                  <label className="text-xs" style={{ color: 'var(--ink-60)' }}>Agent</label>
-                  <Dropdown value={filters.agent} onChange={v => setF('agent', v)} width={180} avatars
+                <div className="score-agent-filter flex flex-col gap-1.5 flex-1 min-w-[140px]">
+                  <span className="text-xs" style={{ color: 'var(--ink-72)' }}>Agent</span>
+                  <Dropdown value={filters.agent} onChange={v => setF('agent', v)} width="100%" height={44} ariaLabel="Filter by agent" avatars
                     options={[{ value: '', label: 'All agents' }, ...agents.map(a => ({ value: a.id, label: a.name }))]} />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: 'var(--ink-60)' }}>From</label>
-                  <DatePicker value={filters.dateFrom} onChange={v => setF('dateFrom', v)} width={150} />
+                <div className="score-date-filter flex flex-col gap-1.5">
+                  <span className="text-xs" style={{ color: 'var(--ink-72)' }}>From</span>
+                  <DatePicker value={filters.dateFrom} onChange={v => setF('dateFrom', v)} width="100%" height={44} ariaLabel="Filter from date" />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: 'var(--ink-60)' }}>To</label>
-                  <DatePicker value={filters.dateTo} onChange={v => setF('dateTo', v)} width={150} />
+                <div className="score-date-filter flex flex-col gap-1.5">
+                  <span className="text-xs" style={{ color: 'var(--ink-72)' }}>To</span>
+                  <DatePicker value={filters.dateTo} onChange={v => setF('dateTo', v)} width="100%" height={44} ariaLabel="Filter to date" />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs" style={{ color: 'var(--ink-60)' }}>Status</label>
-                  <div className="flex gap-1.5">
+                <div className="score-status-filter flex flex-col gap-1.5">
+                  <span className="text-xs" style={{ color: 'var(--ink-72)' }}>Status</span>
+                  <div className="score-status-options flex gap-1.5">
                     {VERDICTS.map(v => {
                       const active = filters.verdicts.includes(v)
                       return (
                         <button key={v}
                           onClick={() => setF('verdicts', active ? filters.verdicts.filter(x => x !== v) : [...filters.verdicts, v])}
-                          className="text-xs px-2.5 py-2 rounded-xl border transition-all font-medium"
+                          aria-pressed={active}
+                          className="text-xs min-h-11 px-2.5 py-2 rounded-xl border transition-all font-medium inline-flex items-center justify-center gap-1.5"
                           style={active
                             ? { color: VERDICT_COLOR[v], background: VERDICT_BG[v], borderColor: VERDICT_COLOR[v] + '66' }
                             : { color: 'var(--ink-72)', borderColor: 'var(--input-border)', background: 'var(--white)' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[v], flexShrink: 0, opacity: active ? 1 : 0.5 }} />
                           {VERDICT_LABEL[v]}
                         </button>
                       )
@@ -624,29 +627,35 @@ export default function ScorePage() {
               </div>
 
               {filteredHistory.length === 0 ? (
-                <p className="text-xs text-center py-8" style={{ color: 'var(--ink-50)' }}>No tickets match your filters.</p>
+                <div className="flex flex-col items-center gap-3 py-14 text-center">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ink-72)' }}>
+                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                  </div>
+                  <p className="text-sm" style={{ color: 'var(--ink-72)' }}>No tickets match your filters.</p>
+                  <p className="text-xs" style={{ color: 'var(--ink-72)' }}>Try adjusting or clearing the filters above.</p>
+                </div>
               ) : (
-                <div className="rounded-2xl overflow-x-auto" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
+                <div className="score-history-list rounded-2xl overflow-x-auto" style={{ background: 'var(--white)', border: '1px solid var(--hairline)', boxShadow: '0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04)' }}>
                   {/* Column headers — classify each section, same as the dashboard table */}
-                  <div className="grid px-4 py-3" style={{
+                  <div className="score-history-header grid px-4 py-3" style={{
                     gridTemplateColumns: historyGrid, minWidth: 620,
                     background: 'var(--warm-surface)',
                     borderBottom: '1px solid var(--hairline-2)',
                     fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em',
-                    textTransform: 'uppercase', color: 'var(--ink-50)',
+                    textTransform: 'uppercase', color: 'var(--ink-72)',
                   }}>
                     <span>Ticket</span><span>Subject</span><span className="text-center">Agents</span>
                     <span className="text-right">Score</span><span className="text-center">Status</span><span className="text-right">Date</span>
                   </div>
 
-                  {filteredHistory.slice(0, historyCount).map(item => (
-                    <div key={item.id} className="grid items-center px-4 py-3 transition-colors"
-                      style={{ gridTemplateColumns: historyGrid, minWidth: 620, borderBottom: '1px solid var(--hairline)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#FBF7F3'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  {filteredHistory.slice(0, historyCount).map((item, i) => (
+                    <div key={item.id} className="score-history-row grid items-center px-4 py-3 stagger-item"
+                      style={{ gridTemplateColumns: historyGrid, minWidth: 620, borderBottom: '1px solid var(--hairline)', '--i': i % HISTORY_PAGE_SIZE, transition: 'background-color .15s ease' }}>
 
                       <a href={gorgiasTicketUrl(item.ticketId)} target="_blank" rel="noopener noreferrer"
-                        className="font-mono text-xs" style={{ color: 'var(--coral-text)' }}
+                        className="score-history-ticket font-mono text-xs min-h-11 inline-flex items-center" style={{ color: 'var(--coral-text)' }}
                         onMouseEnter={e => e.target.style.textDecoration = 'underline'}
                         onMouseLeave={e => e.target.style.textDecoration = 'none'}>
                         #{item.ticketId}
@@ -659,28 +668,28 @@ export default function ScorePage() {
                         acknowledged: item.acknowledged,
                         acknowledgedAt: item.acknowledgedAt,
                       })}
-                        className="text-sm text-left truncate pr-3 transition-colors"
+                        className="score-history-subject text-sm text-left truncate pr-3 min-h-11 rounded-lg transition-colors"
                         style={{ color: 'var(--ink)' }}
                         onMouseEnter={e => e.target.style.color = '#B84A2E'}
                         onMouseLeave={e => e.target.style.color = '#1A1E23'}>
                         {item.fullScore?.ticket_subject || item.fullScore?.summary?.split('.')[0] || '—'}
                       </button>
 
-                      <div className="flex flex-wrap gap-1 justify-center">
+                      <div className="score-history-agents flex flex-wrap gap-1 justify-center">
                         {item.agentIds?.length > 0
                           ? item.agentIds.map(id => agentName(id)).filter(Boolean).map((name, i) => (
                             <span key={i} className="text-xs px-1.5 py-0.5 rounded-full truncate max-w-[110px]"
                               style={{ background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)', color: 'var(--ink-72)' }}>{name}</span>
                           ))
-                          : <span style={{ color: 'var(--ink-45)' }}>—</span>}
+                          : <span style={{ color: 'var(--ink-72)' }}>—</span>}
                       </div>
 
-                      <span className="text-sm tabular-nums text-right" style={{ color: gradeColor(item.effectiveScore) }}>
+                      <span className="score-history-score text-sm tabular-nums text-right" style={{ color: gradeColor(item.effectiveScore) }}>
                         {item.effectiveScore?.toFixed(0)}/100
                         {item.overrideVerdict && <span className="text-xs ml-0.5" style={{ color: '#818cf8' }}>*</span>}
                       </span>
 
-                      <div className="flex justify-center">
+                      <div className="score-history-status flex justify-center">
                         <span className="flex items-center gap-1.5">
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: VERDICT_COLOR[item.effectiveVerdict], flexShrink: 0, opacity: 0.8 }} />
                           <span className="text-xs font-medium" style={{ color: 'var(--ink-72)', letterSpacing: '0.04em' }}>
@@ -689,16 +698,16 @@ export default function ScorePage() {
                         </span>
                       </div>
 
-                      <span className="text-xs text-right" style={{ color: 'var(--ink-50)' }}>
+                      <span className="score-history-date text-xs text-right" style={{ color: 'var(--ink-72)' }}>
                         {new Date(item.scoredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
                   ))}
 
                   {historyCount < filteredHistory.length && (
-                    <div className="flex items-center justify-center px-4 py-3" style={{ background: 'var(--warm-surface)', minWidth: 620 }}>
+                    <div className="score-history-more flex items-center justify-center px-4 py-3" style={{ background: 'var(--warm-surface)', minWidth: 620 }}>
                       <button onClick={() => setHistoryCount(c => c + HISTORY_PAGE_SIZE)}
-                        className="text-xs px-4 py-1.5 rounded-lg transition-colors"
+                        className="text-xs min-h-11 px-4 py-2 rounded-lg transition-colors"
                         style={{ color: 'var(--ink)', background: 'var(--white)', border: '1px solid var(--btn-border)' }}
                         onMouseEnter={e => { e.currentTarget.style.borderColor = '#D6CFC8' }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = '#E7E3DF' }}>
@@ -723,47 +732,57 @@ export default function ScorePage() {
               : <ViewPicker    onTickets={setTicketIds} disabled={running} />}
           </div>
 
-          <div className="flex items-center gap-3 mb-8">
+          {ticketIds.length > 0 && <div className="score-batch-actions flex items-center gap-3 mb-8">
             <button onClick={runBatch} disabled={!ticketIds.length || running}
-              className="g-btn-primary text-sm px-6 py-3 rounded-xl flex items-center gap-2"
+              className="g-btn-primary min-h-11 text-sm px-6 py-3 rounded-xl flex items-center justify-center gap-2"
               style={{ opacity: !ticketIds.length || running ? 0.5 : 1 }}>
               {running
-                ? <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                  </svg>Scoring…</>
-                : `▶ Score ${ticketIds.length} ticket${ticketIds.length !== 1 ? 's' : ''}`}
+                ? <><LoaderCircle aria-hidden="true" size={16} className="animate-spin" />Scoring…</>
+                : <><Play aria-hidden="true" size={15} fill="currentColor" />Score {ticketIds.length} ticket{ticketIds.length !== 1 ? 's' : ''}</>}
             </button>
             {running && (
               <button onClick={() => { abortRef.current = true }}
-                className="text-sm transition-colors" style={{ color: 'var(--ink-50)' }}
+                className="text-sm min-h-11 px-3 rounded-lg transition-colors" style={{ color: 'var(--ink-72)' }}
                 onMouseEnter={e => e.target.style.color = '#D14B3D'}
-                onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.5)'}>
+                onMouseLeave={e => e.target.style.color = 'rgba(26,30,35,.72)'}>
                 Stop
               </button>
             )}
             {!running && results.length > 0 && (
-              <button onClick={() => setResults([])} className="text-sm g-btn-ghost">Clear</button>
+              <button onClick={() => setResults([])} className="text-sm min-h-11 px-3 rounded-lg g-btn-ghost">Clear</button>
             )}
-          </div>
+          </div>}
 
           {(running || results.length > 0) && (
             <div>
               <div className="mb-5">
-                <div className="flex justify-between text-xs mb-1.5" style={{ color: 'var(--ink-50)' }}>
+                <div aria-live="polite" className="flex justify-between text-xs mb-1.5" style={{ color: 'var(--ink-72)' }}>
                   <span>{batchDone} / {ticketIds.length} scored</span>
                   <span>{Math.round(ticketIds.length > 0 ? (batchDone / ticketIds.length) * 100 : 0)}%</span>
                 </div>
-                <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: 'var(--segmented)' }}>
-                  <div className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${ticketIds.length > 0 ? (batchDone / ticketIds.length) * 100 : 0}%`, background: 'var(--coral)' }} />
+                <div role="progressbar" aria-label="Batch scoring progress" aria-valuemin={0} aria-valuemax={ticketIds.length}
+                  aria-valuenow={batchDone} aria-valuetext={`${batchDone} of ${ticketIds.length} tickets scored`}
+                  className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: 'var(--segmented)' }}>
+                  <div className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
+                    style={{ width: `${ticketIds.length > 0 ? (batchDone / ticketIds.length) * 100 : 0}%`, background: 'var(--coral)' }}>
+                    {running && <span className="progress-shimmer" />}
+                  </div>
                 </div>
-                {batchAvg && (
-                  <div className="flex items-center gap-4 mt-3 text-xs">
-                    <span style={{ color: 'var(--ink-50)' }}>Average: <span className="font-medium" style={{ color: 'var(--ink)' }}>{batchAvg}/100</span></span>
-                    <span style={{ color: 'var(--success)' }}>{results.filter(r => r.verdict === 'PASS').length} pass</span>
-                    <span style={{ color: 'var(--amber)' }}>{results.filter(r => r.verdict === 'NEEDS_REVIEW').length} review</span>
-                    <span style={{ color: 'var(--danger)' }}>{results.filter(r => r.verdict === 'FAIL').length} fail</span>
+                {batchAvg !== null && (
+                  <div className="score-batch-summary flex items-center gap-4 mt-3 text-xs">
+                    <span style={{ color: 'var(--ink-72)' }}>Average: <span className="font-medium" style={{ color: 'var(--ink)' }}>{batchAvg}/100</span></span>
+                    <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--success)' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--success)', flexShrink: 0 }} />
+                      {results.filter(r => r.verdict === 'PASS').length} pass
+                    </span>
+                    <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--amber)' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)', flexShrink: 0 }} />
+                      {results.filter(r => r.verdict === 'NEEDS_REVIEW').length} review
+                    </span>
+                    <span className="inline-flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', flexShrink: 0 }} />
+                      {results.filter(r => r.verdict === 'FAIL').length} fail
+                    </span>
                   </div>
                 )}
               </div>
@@ -772,11 +791,8 @@ export default function ScorePage() {
                 {results.map((r, i) => <ResultRow key={i} result={r} onView={openPanel} />)}
                 {running && batchDone < ticketIds.length && (
                   <div className="flex items-center gap-2 py-2 px-3">
-                    <svg className="animate-spin h-3 w-3" style={{ color: 'var(--coral)' }} viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                    </svg>
-                    <span className="text-xs" style={{ color: 'var(--ink-50)' }}>Scoring next ticket…</span>
+                    <LoaderCircle aria-hidden="true" size={13} className="animate-spin" style={{ color: 'var(--coral)' }} />
+                    <span className="text-xs" style={{ color: 'var(--ink-72)' }}>Scoring next ticket…</span>
                   </div>
                 )}
               </div>
