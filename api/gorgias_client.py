@@ -55,6 +55,43 @@ class GorgiasClient:
             "Please wait a moment and try again."
         )
 
+    def _post(self, path: str, payload: dict, retries: int = 4) -> dict:
+        url = f"{self.base_url}{path}"
+        last_exc = None
+        for attempt in range(retries):
+            try:
+                response = requests.post(url, headers=self.headers, json=payload, timeout=30)
+            except requests.RequestException as e:
+                last_exc = e
+                if attempt == retries - 1:
+                    raise
+                time.sleep(min(2 ** attempt + random.random(), self.MAX_BACKOFF))
+                continue
+
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt == retries - 1:
+                    break
+                retry_after = response.headers.get("Retry-After")
+                try:
+                    wait = float(retry_after) + 1 if retry_after is not None else 2 ** attempt
+                except ValueError:
+                    wait = 2 ** attempt
+                time.sleep(min(wait + random.random(), self.MAX_BACKOFF))
+                continue
+
+            response.raise_for_status()
+            return response.json() if response.content else {}
+
+        if last_exc is not None:
+            raise last_exc
+        raise requests.HTTPError(f"Gorgias rate limit / server error persisted after {retries} retries for {path}.")
+
+    def add_ticket_tags(self, ticket_id: int, tags: list[str]) -> dict:
+        """Add one or more tags (by name) to a ticket — creating the tag if it
+        doesn't exist. Used to flag a ticket for the Cortex QA automation."""
+        payload = {"tags": [{"name": t} for t in tags]}
+        return self._post(f"/tickets/{ticket_id}/tags", payload)
+
     def list_tickets(self, limit: int = 10, cursor: Optional[str] = None) -> dict:
         params = {"limit": limit, "order_by": "created_datetime:desc"}
         if cursor:

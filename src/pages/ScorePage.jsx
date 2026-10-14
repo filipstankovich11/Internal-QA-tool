@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useId } from 'react'
-import { ArrowRight, Check, CheckCircle2, LoaderCircle, Minus, Play, Plus, Search, TriangleAlert, Upload, X } from 'lucide-react'
+import { ArrowRight, Check, CheckCircle2, LoaderCircle, Minus, Play, Plus, Search, Sparkles, TriangleAlert, Upload, X } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -378,6 +378,7 @@ export default function ScorePage() {
   // Single mode state
   const [ticketUrl, setTicketUrl] = useState('')
   const [loading,   setLoading]   = useState(false)
+  const [cortexBusy, setCortexBusy] = useState(false)
   const [error,     setError]     = useState(null)
   const [filters,   setFilters]   = useState({ agent: '', verdicts: [], dateFrom: '', dateTo: '', ticketSearch: '' })
   const [historyCount, setHistoryCount] = useState(HISTORY_PAGE_SIZE) // progressive reveal
@@ -442,6 +443,22 @@ export default function ScorePage() {
       })
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
+  }
+
+  // Hand the ticket off to the Cortex QA automation instead of grading in-app:
+  // tag it in Gorgias (qa-request), which fires Cortex's ticket_tag_added trigger.
+  // The graded result lands in history asynchronously once Cortex posts it back.
+  const requestCortexGrade = async () => {
+    const url = ticketUrl.trim()
+    if (!url || cortexBusy || urlError || !canScore) return
+    setCortexBusy(true); setError(null)
+    try {
+      const { ok, data } = await authFetchJson('/api/request-cortex-grade', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket_url: url }) })
+      if (!ok) { setError(data.error || 'Could not request a Cortex grade.'); return }
+      setTicketUrl('')
+      toast.success(`Sent #${data.ticket_id} to Cortex — the grade will appear in history shortly.`)
+    } catch (e) { setError(e.message) }
+    finally { setCortexBusy(false) }
   }
 
   const runBatch = async () => {
@@ -531,6 +548,23 @@ export default function ScorePage() {
               )
             })()}
           </div>
+
+          {canScore && (
+            <div className="max-w-2xl mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <button type="button" onClick={requestCortexGrade}
+                disabled={cortexBusy || loading || !ticketUrl.trim() || !!urlError}
+                className="g-btn-ghost text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-2 whitespace-nowrap"
+                style={{ opacity: (cortexBusy || loading || !ticketUrl.trim() || !!urlError) ? 0.5 : 1 }}
+                title="Flags the ticket for the Cortex QA automation to grade">
+                {cortexBusy
+                  ? <><LoaderCircle aria-hidden="true" size={15} className="animate-spin" />Requesting…</>
+                  : <><Sparkles aria-hidden="true" size={15} />Grade via Cortex</>}
+              </button>
+              <span className="text-xs" style={{ color: 'var(--ink-50)' }}>
+                Hands the ticket to the Cortex automation — the grade lands in history shortly.
+              </span>
+            </div>
+          )}
 
           {urlError && <p id="score-ticket-url-error" role="alert" className="text-xs mt-2 ml-1 flex items-center gap-1.5" style={{ color: 'var(--amber)' }}><TriangleAlert aria-hidden="true" size={14} />{urlError}</p>}
           <ScoringProgress loading={loading} />

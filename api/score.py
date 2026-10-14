@@ -243,6 +243,32 @@ def fire_slack_notification(webhook_url: str, result: dict, gorgias_domain: str)
 
 # ─── Score a single ticket ───────────────────────────────────────────────────
 
+# Tag the Cortex automation watches for. The app's "Grade via Cortex" button adds
+# this tag to a ticket; Cortex's ticket_tag_added trigger then grades it.
+CORTEX_REQUEST_TAG = os.environ.get('CORTEX_REQUEST_TAG', 'qa-request')
+
+
+@app.route('/api/request-cortex-grade', methods=['POST'])
+@require_role('admin', 'lead')
+def request_cortex_grade():
+    data = request.get_json(silent=True) or {}
+    ticket_id = extract_ticket_id(data.get('ticket_url', '') or str(data.get('ticket_id', '')))
+    if not ticket_id:
+        return jsonify({'error': 'Could not find a ticket ID in the URL'}), 400
+
+    gorgias_auth, gorgias_domain, _ = get_env()
+    if not gorgias_auth:
+        return jsonify({'error': 'GORGIAS_AUTH not configured'}), 503
+
+    try:
+        GorgiasClient(gorgias_domain, gorgias_auth).add_ticket_tags(ticket_id, [CORTEX_REQUEST_TAG])
+    except Exception as e:
+        app.logger.exception('Failed to tag ticket for Cortex grading')
+        return jsonify({'error': f'Could not tag the ticket in Gorgias: {e}'}), 502
+
+    return jsonify({'ok': True, 'ticket_id': ticket_id, 'tag': CORTEX_REQUEST_TAG})
+
+
 @app.route('/api/score', methods=['POST'])
 @require_role('admin', 'lead')
 def score():
