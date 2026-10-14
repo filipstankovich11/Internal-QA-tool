@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useId } from 'react'
-import { ArrowRight, Check, CheckCircle2, LoaderCircle, Minus, Play, Plus, Search, Sparkles, TriangleAlert, Upload, X } from 'lucide-react'
+import { ArrowRight, Check, CheckCircle2, LoaderCircle, Minus, Play, Plus, Search, TriangleAlert, Upload, X } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -534,11 +534,9 @@ export default function ScorePage() {
               const disabled = cortexBusy || loading || !ticketUrl.trim() || !!urlError || !canScore
               return (
             <button onClick={requestCortexGrade} disabled={disabled}
-              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap inline-flex items-center gap-2"
+              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap"
               style={disabled && !cortexBusy ? { background: '#FFD2C9', color: 'var(--ink-50)' } : undefined}>
-              {cortexBusy
-                ? <><LoaderCircle aria-hidden="true" size={16} className="animate-spin" />Requesting…</>
-                : <><Sparkles aria-hidden="true" size={16} />Grade via Cortex</>}
+              {cortexBusy ? 'Requesting…' : 'Grade via Cortex'}
             </button>
               )
             })()}
