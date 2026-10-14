@@ -55,9 +55,10 @@ class GorgiasClient:
             "Please wait a moment and try again."
         )
 
-    def _post(self, path: str, payload: dict, retries: int = 4) -> dict:
+    def _post(self, path: str, payload, retries: int = 3) -> dict:
         url = f"{self.base_url}{path}"
         last_exc = None
+        last_response = None
         for attempt in range(retries):
             try:
                 response = requests.post(url, headers=self.headers, json=payload, timeout=30)
@@ -69,6 +70,7 @@ class GorgiasClient:
                 continue
 
             if response.status_code == 429 or response.status_code >= 500:
+                last_response = response
                 if attempt == retries - 1:
                     break
                 retry_after = response.headers.get("Retry-After")
@@ -79,18 +81,51 @@ class GorgiasClient:
                 time.sleep(min(wait + random.random(), self.MAX_BACKOFF))
                 continue
 
-            response.raise_for_status()
+            if not response.ok:
+                raise requests.HTTPError(self._err(response, path), response=response)
             return response.json() if response.content else {}
 
+        if last_response is not None:
+            raise requests.HTTPError(self._err(last_response, path, retries), response=last_response)
         if last_exc is not None:
             raise last_exc
-        raise requests.HTTPError(f"Gorgias rate limit / server error persisted after {retries} retries for {path}.")
+        raise requests.HTTPError(f"Request to {path} failed after {retries} retries.")
+
+    @staticmethod
+    def _err(response, path, retries=None):
+        body = ""
+        try:
+            body = response.text[:600]
+        except Exception:
+            pass
+        suffix = f" (after {retries} retries)" if retries else ""
+        return f"{response.status_code} {response.reason} for {path}{suffix}: {body}"
+
+    def _ensure_tag(self, name: str):
+        """Create an account tag by name; a 400/409 means it already exists."""
+        try:
+            self._post("/tags", {"name": name})
+        except requests.HTTPError as e:
+            resp = getattr(e, "response", None)
+            if resp is not None and resp.status_code in (400, 409):
+                return
+            raise
 
     def add_ticket_tags(self, ticket_id: int, tags: list[str]) -> dict:
-        """Add one or more tags (by name) to a ticket — creating the tag if it
-        doesn't exist. Used to flag a ticket for the Cortex QA automation."""
-        payload = {"tags": [{"name": t} for t in tags]}
-        return self._post(f"/tickets/{ticket_id}/tags", payload)
+        """Add tags to a ticket by name. Gorgias wants `{"names": [...]}` and only
+        accepts tags that already exist — so if it reports them missing, create them
+        and retry once. Used to flag a ticket for the Cortex QA automation."""
+        body = {"names": list(tags)}
+        path = f"/tickets/{ticket_id}/tags"
+        try:
+            return self._post(path, body)
+        except requests.HTTPError as e:
+            resp = getattr(e, "response", None)
+            if resp is not None and resp.status_code == 400 and "not found" in (resp.text or "").lower():
+                for name in tags:
+                    self._ensure_tag(name)
+                return self._post(path, body)
+            raise
 
     def list_tickets(self, limit: int = 10, cursor: Optional[str] = None) -> dict:
         params = {"limit": limit, "order_by": "created_datetime:desc"}
