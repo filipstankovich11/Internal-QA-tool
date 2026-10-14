@@ -522,8 +522,8 @@ export default function ScorePage() {
             <input
               id="score-ticket-url" type="text" value={ticketUrl}
               onChange={e => setTicketUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && analyze()}
-              disabled={loading || !canScore}
+              onKeyDown={e => e.key === 'Enter' && requestCortexGrade()}
+              disabled={cortexBusy || loading || !canScore}
               aria-invalid={Boolean(urlError)}
               aria-describedby={urlError ? 'score-ticket-url-error' : undefined}
               placeholder="https://yourcompany.gorgias.com/app/ticket/…"
@@ -531,19 +531,14 @@ export default function ScorePage() {
               style={{ color: 'var(--ink)' }}
             />
             {(() => {
-              const disabled = loading || !ticketUrl.trim() || !!urlError || !canScore
+              const disabled = cortexBusy || loading || !ticketUrl.trim() || !!urlError || !canScore
               return (
-            <button onClick={analyze} disabled={disabled}
-              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap"
-              style={disabled && !loading ? { background: '#FFD2C9', color: 'var(--ink-50)' } : undefined}>
-              {loading
-                ? <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                    </svg>Analyzing…
-                  </span>
-                : 'Analyze'}
+            <button onClick={requestCortexGrade} disabled={disabled}
+              className="g-btn-primary text-sm px-6 py-3 rounded-xl whitespace-nowrap inline-flex items-center gap-2"
+              style={disabled && !cortexBusy ? { background: '#FFD2C9', color: 'var(--ink-50)' } : undefined}>
+              {cortexBusy
+                ? <><LoaderCircle aria-hidden="true" size={16} className="animate-spin" />Requesting…</>
+                : <><Sparkles aria-hidden="true" size={16} />Grade via Cortex</>}
             </button>
               )
             })()}
@@ -551,17 +546,17 @@ export default function ScorePage() {
 
           {canScore && (
             <div className="max-w-2xl mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <button type="button" onClick={requestCortexGrade}
-                disabled={cortexBusy || loading || !ticketUrl.trim() || !!urlError}
+              <button type="button" onClick={analyze}
+                disabled={loading || cortexBusy || !ticketUrl.trim() || !!urlError}
                 className="g-btn-ghost text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-2 whitespace-nowrap"
-                style={{ opacity: (cortexBusy || loading || !ticketUrl.trim() || !!urlError) ? 0.5 : 1 }}
-                title="Flags the ticket for the Cortex QA automation to grade">
-                {cortexBusy
-                  ? <><LoaderCircle aria-hidden="true" size={15} className="animate-spin" />Requesting…</>
-                  : <><Sparkles aria-hidden="true" size={15} />Grade via Cortex</>}
+                style={{ opacity: (loading || cortexBusy || !ticketUrl.trim() || !!urlError) ? 0.5 : 1 }}
+                title="Grade immediately in-app with Claude, skipping the Cortex automation">
+                {loading
+                  ? <><LoaderCircle aria-hidden="true" size={15} className="animate-spin" />Analyzing…</>
+                  : <><Play aria-hidden="true" size={15} />Grade in-app</>}
               </button>
               <span className="text-xs" style={{ color: 'var(--ink-50)' }}>
-                Hands the ticket to the Cortex automation — the grade lands in history shortly.
+                Grades instantly in-app with Claude — skips the Cortex automation.
               </span>
             </div>
           )}
