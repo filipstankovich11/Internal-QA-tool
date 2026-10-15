@@ -283,6 +283,14 @@ export default function Sidebar({ page, setPage }) {
         </button>
       </div>
 
+      <button type="button" onClick={() => { closeMobile(); window.dispatchEvent(new Event('qc:open-search')) }}
+        aria-label="Search QC" aria-haspopup="dialog" title="Search QC (⌘K / Ctrl+K)"
+        className="g-btn-ghost flex items-center gap-2 rounded-lg text-sm"
+        style={{ margin: '0 8px 8px', padding: '10px 12px', color: 'var(--ink-72)', justifyContent: compact ? 'center' : 'flex-start' }}>
+        {ic(<><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></>)}
+        {!compact && <><span>Search</span><span className="ml-auto text-xs">⌘K / Ctrl K</span></>}
+      </button>
+
       {/* ── Nav ── */}
       <nav style={{
         flex: 1, display: 'flex', flexDirection: 'column',

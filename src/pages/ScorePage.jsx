@@ -542,23 +542,6 @@ export default function ScorePage() {
             })()}
           </div>
 
-          {canScore && (
-            <div className="max-w-2xl mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <button type="button" onClick={analyze}
-                disabled={loading || cortexBusy || !ticketUrl.trim() || !!urlError}
-                className="g-btn-ghost text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-2 whitespace-nowrap"
-                style={{ opacity: (loading || cortexBusy || !ticketUrl.trim() || !!urlError) ? 0.5 : 1 }}
-                title="Grade immediately in-app with Claude, skipping the Cortex automation">
-                {loading
-                  ? <><LoaderCircle aria-hidden="true" size={15} className="animate-spin" />Analyzing…</>
-                  : <><Play aria-hidden="true" size={15} />Grade in-app</>}
-              </button>
-              <span className="text-xs" style={{ color: 'var(--ink-50)' }}>
-                Grades instantly in-app with Claude — skips the Cortex automation.
-              </span>
-            </div>
-          )}
-
           {urlError && <p id="score-ticket-url-error" role="alert" className="text-xs mt-2 ml-1 flex items-center gap-1.5" style={{ color: 'var(--amber)' }}><TriangleAlert aria-hidden="true" size={14} />{urlError}</p>}
           <ScoringProgress loading={loading} />
           {error && <p role="alert" className="text-xs text-center mt-2" style={{ color: 'var(--danger)' }}>{error}</p>}
