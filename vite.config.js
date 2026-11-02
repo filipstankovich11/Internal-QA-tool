@@ -11,7 +11,12 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:5001'
+      '/api': {
+        target: 'http://localhost:5001',
+        // api/scorecard_v8.json is also imported by the frontend (the shared V8
+        // rubric) — serve it from disk instead of forwarding it to Flask.
+        bypass: req => (req.url.split('?')[0].endsWith('.json') ? req.url : undefined),
+      },
     }
   }
 })
