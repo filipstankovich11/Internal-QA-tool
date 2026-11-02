@@ -5,7 +5,8 @@ import { useNavigate } from '../context/NavigationContext'
 import { useToast } from './Toast'
 import { authFetch } from '../lib/api'
 import { gorgiasTicketUrl } from '../lib/gorgias'
-import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS } from '../lib/verdict'
+import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_WASH, VERDICTS, gradeColor } from '../lib/verdict'
+import { breakdownSections, scorecardFor, scaleOf, isCandidateGate, isCandidateFail } from '../lib/scorecard'
 import TicketTranscript from './TicketTranscript'
 import Linkify from './Linkify'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
@@ -49,12 +50,12 @@ const CONF = {
   low:    { label: 'Low',    color: '#B84A2E', bg: '#FFEAE6' },
 }
 
-// ── 5-dot score indicator ─────────────────────────────────────────────────────
-function ScoreDots({ score }) {
-  const color = scoreColor(score)
+// ── Dot score indicator (one dot per point; a 0 shows none filled) ─────────────────────────────────────────────────────
+function ScoreDots({ score, max = 5 }) {
+  const color = scoreColor(score / max * 5)
   return (
     <div className="flex items-center gap-1">
-      {[1,2,3,4,5].map(i => (
+      {Array.from({ length: max }, (_, i) => i + 1).map(i => (
         <div key={i} className="rounded-full transition-all"
           style={{
             width: 8, height: 8,
@@ -67,22 +68,28 @@ function ScoreDots({ score }) {
 }
 
 // ── Dimension summary strip ───────────────────────────────────────────────────
-function DimensionStrip({ dimensions }) {
+// `points` (V8) shows the section's earned points against its weight, which is
+// how the scorecard reports section scores; older scores show the 1–5 average.
+function DimensionStrip({ sections, max }) {
   return (
-    <div className="grid grid-cols-3 gap-2 mb-4">
-      {dimensions.map(({ name, weight, average }, index) => {
-        const avg   = Number(average)
-        const color = scoreColor(avg)
-        const pct   = (avg / 5) * 100
+    <div className="grid gap-2 mb-4" style={{ gridTemplateColumns: `repeat(${Math.max(1, sections.length)}, minmax(0, 1fr))` }}>
+      {sections.map(({ id, name, weight, average, points }, index) => {
+        const avg   = average ?? NaN
+        const color = scoreColor(avg / max * 5)
+        const pct   = (avg / max) * 100
         return (
-          <div key={name} className="score-dimension-reveal rounded-xl p-3 flex flex-col gap-2"
+          <div key={id} className="score-dimension-reveal rounded-xl p-3 flex flex-col gap-2"
             style={{ '--i': index, background: 'var(--warm-surface)', border: '1px solid var(--hairline-2)' }}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold tabular-nums" style={{ color }}>{isFinite(avg) ? avg.toFixed(1) : '—'}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ color: 'var(--coral-text)', background: '#FFF4F1' }}>{weight}</span>
+              {weight != null && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full tabular-nums" style={{ color: 'var(--coral-text)', background: '#FFF4F1' }}>
+                  {points != null ? `${points.toFixed(1)}/${weight}` : `${weight}%`}
+                </span>
+              )}
             </div>
             <div className="w-full rounded-full overflow-hidden" style={{ height: 3, background: 'var(--hairline-2)' }}>
-              <div className="g-progress-fill score-progress-reveal rounded-full" style={{ '--i': index, '--progress': Math.max(0, Math.min(1, pct / 100)), '--progress-duration': '.8s', background: color }} />
+              <div className="g-progress-fill score-progress-reveal rounded-full" style={{ '--i': index, '--progress': isFinite(pct) ? Math.max(0, Math.min(1, pct / 100)) : 0, '--progress-duration': '.8s', background: color }} />
             </div>
             <p className="text-xs leading-tight" style={{ color: 'var(--ink-60)' }}>{name}</p>
           </div>
@@ -93,9 +100,9 @@ function DimensionStrip({ dimensions }) {
 }
 
 // ── Criteria row with dots ────────────────────────────────────────────────────
-function SubScoreRow({ label, data, onActivate }) {
-  const { score, notes, confidence, evidence } = data
-  const color = scoreColor(score)
+function SubScoreRow({ row, max, onActivate }) {
+  const { score, notes, confidence, evidence, na } = row
+  const color = scoreColor(score / max * 5)
   const conf = CONF[confidence]
   const ev = (evidence || []).map(String)
   // Expanding a criterion highlights its cited messages in the transcript
@@ -105,10 +112,17 @@ function SubScoreRow({ label, data, onActivate }) {
     <Accordion type="single" collapsible onValueChange={onOpen}>
       <AccordionItem value="row" className="border-b-0" style={{ borderBottom: '1px solid var(--hairline-2)' }}>
         <AccordionTrigger className="gap-3 py-2.5 hover:no-underline">
-          <span className="text-sm flex-1 text-left" style={{ color: 'var(--ink-72)' }}>{label}</span>
+          <span className="text-sm flex-1 text-left" style={{ color: 'var(--ink-72)' }}>
+            {row.code && <span className="font-semibold mr-1.5" style={{ color: 'var(--ink-45)' }}>{row.code}</span>}
+            {row.label}
+          </span>
           {ev.length > 0 && <span title={`${ev.length} cited message${ev.length>1?'s':''}`} style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--coral)', flexShrink: 0 }} />}
-          <ScoreDots score={score} />
-          <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/5</span>
+          {na ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ color: 'var(--ink-50)', background: 'var(--hairline-2)' }} title="Not applicable — points redistributed within the section">N/A</span>
+          ) : score != null ? (<>
+            <ScoreDots score={score} max={max} />
+            <span className="text-xs font-semibold w-6 text-right shrink-0 tabular-nums" style={{ color }}>{score}/{max}</span>
+          </>) : null}
         </AccordionTrigger>
         <AccordionContent className="pb-0">
           <div className="pb-2.5">
@@ -127,43 +141,35 @@ function SubScoreRow({ label, data, onActivate }) {
   )
 }
 
-function DimensionAccordion({ inquiry_resolution, internal_processes, customer_perception, onActivate }) {
+function DimensionAccordion({ sections, max, onActivate }) {
   // Start collapsed — no dimension auto-opens; one open at a time (type="single").
-  const dims = [
-    { name: 'Inquiry Resolution', weight: '50%', average: inquiry_resolution.dimension_average, rows: [
-      { label: 'Core Resolution',    data: inquiry_resolution.core_inquiry_resolved },
-      { label: 'Troubleshooting',    data: inquiry_resolution.troubleshooting_procedure },
-      { label: 'Forward Resolution', data: inquiry_resolution.forward_resolution },
-    ] },
-    { name: 'Internal Processes', weight: '25%', average: internal_processes.dimension_average, rows: [
-      { label: 'Ticket Handling', data: internal_processes.ticket_handling_procedure },
-    ] },
-    { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average, rows: [
-      { label: 'Tone & Professionalism', data: customer_perception.tone_professionalism },
-      { label: 'Communication Clarity',  data: customer_perception.communication_clarity },
-    ] },
-  ]
   return (
     <Accordion type="single" collapsible className="flex flex-col gap-2">
-      {dims.map((d, i) => {
-        const avg = typeof d.average === 'number' ? d.average : Number(d.average) || 0
-        const color = scoreColor(avg)
+      {sections.map((d) => {
+        const avg = d.average ?? 0
+        const color = scoreColor(avg / max * 5)
+        const naCount = d.rows.filter(r => r.na).length
         return (
-          <AccordionItem key={i} value={`dim-${i}`}
+          <AccordionItem key={d.id} value={`dim-${d.id}`}
             className="border-b-0 rounded-xl overflow-hidden"
             style={{ background: '#FBF7F3', border: '1px solid #F0ECE9' }}>
             <AccordionTrigger className="px-4 py-3.5 hover:no-underline">
               <span className="flex flex-1 items-center justify-between gap-2 min-w-0">
                 <span className="text-sm font-semibold truncate" style={{ color: 'rgba(26,30,35,.72)' }}>{d.name}</span>
                 <span className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-bold tabular-nums" style={{ color }}>{avg.toFixed(1)}<span style={{ color: 'rgba(26,30,35,.45)', fontWeight: 400 }}>/5</span></span>
-                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: '#B84A2E', background: '#FFF4F1' }}>{d.weight}</span>
+                  {naCount > 0 && <span className="text-[11px]" style={{ color: 'var(--ink-45)' }} title="N/A points are redistributed within the section">{naCount} N/A</span>}
+                  <span className="text-sm font-bold tabular-nums" style={{ color }}>{d.average != null ? avg.toFixed(1) : '—'}<span style={{ color: 'rgba(26,30,35,.45)', fontWeight: 400 }}>/{max}</span></span>
+                  {d.weight != null && (
+                    <span className="text-xs px-2 py-0.5 rounded-full tabular-nums" style={{ color: '#B84A2E', background: '#FFF4F1' }}>
+                      {d.points != null ? `${d.points.toFixed(1)}/${d.weight} pts` : `${d.weight}%`}
+                    </span>
+                  )}
                 </span>
               </span>
             </AccordionTrigger>
             <AccordionContent className="pb-0">
               <div style={{ padding: '4px 16px 16px', borderTop: '1px solid #F0ECE9' }}>
-                {d.rows.map(r => <SubScoreRow key={r.label} label={r.label} data={r.data} onActivate={onActivate} />)}
+                {d.rows.map(r => <SubScoreRow key={r.id} row={r} max={max} onActivate={onActivate} />)}
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -238,7 +244,7 @@ function NotesSection({ scoreId, initialNote }) {
 }
 
 function OverrideSection({ scoreId, actions = false, currentVerdict, currentScore, overrideVerdict, overrideScore, overrideNote, overrideAt }) {
-  const { overrideScore: saveOverride } = useApp()
+  const { overrideScore: saveOverride, rubric } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
   const [open,    setOpen]    = useState(false)
@@ -338,7 +344,7 @@ function OverrideSection({ scoreId, actions = false, currentVerdict, currentScor
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-xs" style={{ color: 'var(--ink-60)' }}>Adjusted score</p>
               <span className="text-sm font-bold tabular-nums"
-                style={{ color: score >= 80 ? 'var(--success)' : score >= 60 ? 'var(--amber)' : 'var(--danger)' }}>
+                style={{ color: gradeColor(Number(score), rubric?.verdict_thresholds) }}>
                 {parseFloat(score).toFixed(0)}/100
               </span>
             </div>
@@ -479,7 +485,7 @@ function DisputeSection({ scoreId, disputed, disputeNote, disputeAt }) {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export default function ScoreModal({ score, onClose, actions = false, variant = null }) {
-  const { agents, deleteScore, acknowledgeScore, markReviewed, reopenReview, scoreHistory, openScoreEditor } = useApp()
+  const { agents, deleteScore, acknowledgeScore, markReviewed, reopenReview, scoreHistory, openScoreEditor, rubric } = useApp()
   const { isAdmin, user } = useAuth()
   const navigateTo = useNavigate()
   const toast = useToast()
@@ -504,8 +510,15 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
   const displayVerdict  = s.overrideVerdict || s.verdict
   const displayScore    = s.overrideScore   ?? s.weighted_score
   const animatedScore   = useCountUp(Math.round(displayScore))
-  const vc = VERDICT[displayVerdict] || VERDICT.FAIL
-  const { inquiry_resolution, internal_processes, customer_perception } = s.scores ?? {}
+  // A pending V8 Q9 is stored as NEEDS_REVIEW but reads as a candidate fail
+  const vc = isCandidateFail(s, record)
+    ? { ...VERDICT.FAIL, label: 'CANDIDATE FAIL', icon: '⚠' }
+    : VERDICT[displayVerdict] || VERDICT.FAIL
+  // Breakdown labelled + scaled by the rubric this score was graded with
+  const card = scorecardFor(s, rubric)
+  const { max: scaleMax } = scaleOf(card)
+  const sections = breakdownSections(s.scores, card)
+  const gateCode = card?.fail_gate?.code || 'Q9'
 
   const matchedAgents = (s.agent_senders || [])
     .map(a => agents.find(ag =>
@@ -759,30 +772,39 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
               {s.scoring_context.guidance_version ? ` · Team guidance v${s.scoring_context.guidance_version}` : ' · Shared rubric only'}
             </div>
           )}
-          {/* Auto-fail */}
+          {/* Scorecard context — ticket type, account context, scorecard version */}
+          {(s.ticket_type || s.account_context || s.scorecard?.name) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {s.scorecard?.name && <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: 'var(--ink-60)', background: 'var(--hairline-2)' }}>{s.scorecard.name}</span>}
+              {s.ticket_type && <span className="text-xs px-2 py-0.5 rounded-full capitalize" style={{ color: 'var(--coral-text)', background: '#FFF4F1' }}>{s.ticket_type}</span>}
+              {s.account_context && <span className="text-xs" style={{ color: 'var(--ink-60)' }}>{typeof s.account_context === 'string' ? s.account_context : Object.entries(s.account_context).map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`).join(' · ')}</span>}
+            </div>
+          )}
+
+          {/* Fail gate: V8 Q9 candidate (awaiting Quality + manager review) or a legacy auto-fail */}
           {s.auto_fail?.triggered && (
             <div className="rounded-xl p-4" style={{ background: 'var(--danger-tint)', border: '1px solid var(--danger-border)' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--danger)' }}>⚠ Auto-Fail Triggered</p>
-              <ul className="space-y-1">{(s.auto_fail.reasons || []).map((r, i) => <li key={i} className="text-sm" style={{ color: 'var(--ink-72)' }}>• {r}</li>)}</ul>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--danger)' }}>
+                {isCandidateGate(card)
+                  ? (isCandidateFail(s, record)
+                      ? `⚠ ${gateCode} candidate fail — needs Quality and manager review`
+                      : `${gateCode} fail gate — reviewed`)
+                  : '⚠ Auto-Fail Triggered'}
+              </p>
+              {isCandidateFail(s, record) && (
+                <p className="text-xs mb-2" style={{ color: 'var(--ink-60)' }}>Not final. Confirm or dismiss it with Edit score — a confirmed fail sets the total to 0.</p>
+              )}
+              <ul className="space-y-1">{(s.auto_fail.reasons || []).map((r, i) => <li key={i} className="text-sm" style={{ color: 'var(--ink-72)' }}>• <Linkify text={r} /></li>)}</ul>
             </div>
           )}
 
           {/* Dimension breakdown — guarded against incomplete score data */}
-          {inquiry_resolution && internal_processes && customer_perception ? (
+          {sections.length ? (
             <>
-              <DimensionStrip dimensions={[
-                { name: 'Inquiry Resolution',  weight: '50%', average: inquiry_resolution.dimension_average },
-                { name: 'Internal Processes',  weight: '25%', average: internal_processes.dimension_average },
-                { name: 'Customer Perception', weight: '25%', average: customer_perception.dimension_average },
-              ]} />
+              <DimensionStrip sections={sections} max={scaleMax} />
 
               {/* Criteria detail — accordion, one open at a time */}
-              <DimensionAccordion
-                inquiry_resolution={inquiry_resolution}
-                internal_processes={internal_processes}
-                customer_perception={customer_perception}
-                onActivate={setActiveEvidence}
-              />
+              <DimensionAccordion sections={sections} max={scaleMax} onActivate={setActiveEvidence} />
             </>
           ) : (
             <p className="text-xs px-1" style={{ color: 'var(--ink-50)' }}>Detailed dimension breakdown unavailable for this score.</p>
@@ -815,6 +837,17 @@ export default function ScoreModal({ score, onClose, actions = false, variant = 
               </div>
             </div>
           )}
+
+          {/* V8 output: follow-up / KB requests, and determinations left for Quality calibration */}
+          {[
+            { key: 'follow_ups',   title: 'Follow-ups & KB requests', items: s.follow_ups,   tone: { bg: 'var(--warm-surface)', border: 'var(--hairline-2)', ink: 'var(--ink-50)' } },
+            { key: 'review_flags', title: 'Flagged for review',        items: s.review_flags, tone: { bg: '#FBEBD3', border: '#F2D6AE', ink: '#A86A12' } },
+          ].filter(b => Array.isArray(b.items) && b.items.length).map(b => (
+            <div key={b.key} className="rounded-xl p-4" style={{ background: b.tone.bg, border: `1px solid ${b.tone.border}` }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: b.tone.ink }}>{b.title}</p>
+              <ul className="space-y-1">{b.items.map((t, i) => <li key={i} className="text-sm leading-relaxed" style={{ color: 'var(--ink-72)' }}>• <Linkify text={String(t)} /></li>)}</ul>
+            </div>
+          ))}
 
           {/* Reviewer note — key forces remount on re-score so note state resets */}
           <NotesSection key={s.scoreId} scoreId={s.scoreId} initialNote={s.reviewerNote} />

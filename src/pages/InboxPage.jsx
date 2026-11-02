@@ -5,30 +5,30 @@ import { useToast } from '../components/Toast'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
 import Linkify from '../components/Linkify'
 import { gorgiasTicketUrl } from '../lib/gorgias'
+import { breakdownSections, scorecardFor, scaleOf } from '../lib/scorecard'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_BORDER, VERDICT_LABEL, gradeColor } from '../lib/verdict'
 
 const CheckIcon = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 const FlagIcon  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
 
 // ── Dimension mini-bars ───────────────────────────────────────────────────────
-function DimMini({ scores }) {
-  const dims = [
-    { key: 'inquiry_resolution',  label: 'IR',  short: 'Inquiry' },
-    { key: 'internal_processes',  label: 'IP',  short: 'Internal' },
-    { key: 'customer_perception', label: 'CP',  short: 'Customer' },
-  ]
+function DimMini({ fullScore }) {
+  const { rubric } = useApp()
+  const card = scorecardFor(fullScore, rubric)
+  const { max } = scaleOf(card)
   return (
     <div className="flex gap-3">
-      {dims.map(d => {
-        const avg = Number(scores?.[d.key]?.dimension_average)
-        if (!isFinite(avg)) return null
-        const color = avg >= 4 ? '#2F8F5B' : avg >= 3 ? '#C8841E' : '#D14B3D'
+      {breakdownSections(fullScore?.scores, card).filter(d => d.average != null).map(d => {
+        const avg = d.average
+        const frac = avg / max
+        const color = frac >= 0.8 ? '#2F8F5B' : frac >= 0.6 ? '#C8841E' : '#D14B3D'
+        const short = d.name.split(' ')[0]
         return (
-          <div key={d.key} className="flex flex-col gap-1" title={`${d.short}: ${avg.toFixed(1)}/5`}>
+          <div key={d.id} className="flex flex-col gap-1" title={`${d.name}: ${avg.toFixed(1)}/${max}`}>
             <div className="w-12 rounded-full overflow-hidden" style={{ height: 3, background: '#F0ECE9' }}>
-              <div className="h-full rounded-full" style={{ width: `${(avg / 5) * 100}%`, background: color }} />
+              <div className="h-full rounded-full" style={{ width: `${frac * 100}%`, background: color }} />
             </div>
-            <span className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>{d.short} {avg.toFixed(1)}</span>
+            <span className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>{short} {avg.toFixed(1)}</span>
           </div>
         )
       })}
@@ -217,14 +217,14 @@ function ScoreCard({ s, onAcknowledge, onDispute, onView, isNew }) {
             style={{ color: vc, background: vb, borderColor: vborder }}>
             {VERDICT_LABEL[s.effectiveVerdict]}
           </span>
-          <ScoreBreakdownHover scores={s.fullScore?.scores} align="left">
+          <ScoreBreakdownHover fullScore={s.fullScore} align="left">
             <span className="text-2xl font-bold tabular-nums cursor-default" style={{ color: gradeColor(s.effectiveScore) }}>
               {s.effectiveScore?.toFixed(0)}
               <span className="text-sm font-normal ml-0.5" style={{ color: 'rgba(26,30,35,.5)' }}>/100</span>
             </span>
           </ScoreBreakdownHover>
         </div>
-        <DimMini scores={s.fullScore?.scores} />
+        <DimMini fullScore={s.fullScore} />
       </div>
 
       {/* Reviewer note */}

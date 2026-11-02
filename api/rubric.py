@@ -1,10 +1,14 @@
 import json
 
-# ── Default rubric config ────────────────────────────────────────────────────
-# This is the source-of-truth fallback. The frontend stores an editable copy
-# in Supabase (rubric table) and passes it with each score request.
+from scorecard import SCORECARD_V8, fail_gate_mode, scale_of
 
-DEFAULT_RUBRIC = {
+# ── Rubric configs ───────────────────────────────────────────────────────────
+# The live, editable rubric is stored in Supabase (rubric table). DEFAULT_RUBRIC
+# is only the fallback when none is saved: Support Scorecard V8, defined once in
+# scorecard_v8.json (the frontend imports the same file). The 1–5 rubric below
+# is kept so scores graded before V8 can still be recomputed.
+
+LEGACY_RUBRIC_V7 = {
     "dimensions": [
         {
             "id": "inquiry_resolution",
@@ -147,6 +151,8 @@ DEFAULT_RUBRIC = {
     "slack_webhook_url": "",
 }
 
+DEFAULT_RUBRIC = SCORECARD_V8
+
 
 def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
     """Generate a scoring system prompt from a rubric config dict."""
@@ -154,6 +160,9 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
     auto_fails = rubric.get("auto_fail_conditions", [])
     thresholds = rubric.get("verdict_thresholds", {"pass": 80, "needs_review": 60})
     guidance = (rubric.get("scoring_guidance") or "").strip()
+    lo, hi = scale_of(rubric)
+    candidate_gate = fail_gate_mode(rubric) == "candidate"
+    gate = rubric.get("fail_gate") or {}
 
     lines = [
         "You are a QA analyst for a customer support team.",
@@ -185,17 +194,30 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
     for i, dim in enumerate(dims, 1):
         lines.append(f'## {i}. {dim["name"]} — Weight: {dim["weight"]}%')
         lines.append("")
-        lines.append("Score each sub-dimension 1–5:")
+        lines.append(f"Score each question {lo}–{hi}:")
         lines.append("")
         for j, crit in enumerate(dim.get("criteria", [])):
-            letter = chr(ord("a") + j)
-            lines.append(f'### {i}{letter}. {crit["name"]}')
+            label = crit.get("code") or f'{i}{chr(ord("a") + j)}'
+            lines.append(f'### {label}. {crit["name"]}')
             lines.append(crit.get("description", ""))
+            if crit.get("allow_na"):
+                rule = crit.get("na_rule") or "N/A only when the question does not apply to this ticket."
+                lines.append(f'N/A allowed: {rule} For N/A return "na": true and "score": null.')
             lines.append("")
         lines.append("---")
         lines.append("")
 
-    if auto_fails:
+    if auto_fails and candidate_gate:
+        lines += [
+            f'## {gate.get("code", "Q9")}. {gate.get("name", "FAIL GATE")}',
+            gate.get("description", ""),
+            "Set auto_fail.triggered to true only for one of these, with the evidence in auto_fail.reasons:",
+            "",
+        ]
+        for af in auto_fails:
+            lines.append(f'- **{af["name"]}**: {af["description"]}')
+        lines += ["", "Never finalize a fail — the app routes a Yes to Quality and manager review.", "", "---", ""]
+    elif auto_fails:
         lines += [
             "## AUTO-FAIL CONDITIONS",
             "If ANY of these are present, the entire scorecard FAILS regardless of scores:",
@@ -212,13 +234,27 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
         formula_parts.append(f'{dim_avg_key} * {dim["weight"] / 100:.2f}')
     lines += [
         "## WEIGHTED SCORE CALCULATION",
-        f'weighted_score = ({" + ".join(formula_parts)}) * 20',
-        "(Result is 0–100 scale)",
+        f'weighted_score = ({" + ".join(formula_parts)}) * {100 // hi}',
+        "(Result is 0–100 scale. Each section average uses only its applicable questions, "
+        "so N/A points are redistributed within the section.)",
         "",
         "## VERDICT",
-        f'- PASS: weighted_score >= {thresholds["pass"]} AND no auto-fail triggered',
-        f'- NEEDS_REVIEW: weighted_score >= {thresholds["needs_review"]} AND no auto-fail triggered',
-        f'- FAIL: weighted_score < {thresholds["needs_review"]} OR any auto-fail triggered',
+    ]
+    if candidate_gate:
+        training = thresholds.get("pass_training")
+        lines += [
+            f'- PASS: weighted_score >= {thresholds["pass"]} (pass goal'
+            + (f'; {training} for agents in their training period' if training else "") + ")",
+            f'- NEEDS_REVIEW: below the pass goal, or {gate.get("code", "Q9")} = Yes (candidate fail)',
+            "- Never return FAIL — only a human can confirm a fail.",
+        ]
+    else:
+        lines += [
+            f'- PASS: weighted_score >= {thresholds["pass"]} AND no auto-fail triggered',
+            f'- NEEDS_REVIEW: weighted_score >= {thresholds["needs_review"]} AND no auto-fail triggered',
+            f'- FAIL: weighted_score < {thresholds["needs_review"]} OR any auto-fail triggered',
+        ]
+    lines += [
         "",
         "---",
         "",
@@ -262,12 +298,15 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
     for dim in dims:
         dim_obj = {"weight": dim["weight"] / 100}
         for crit in dim.get("criteria", []):
-            dim_obj[crit["id"]] = {
-                "score": "<1-5>",
+            cell = {
+                "score": f"<{lo}-{hi}>" + (" or null when N/A" if crit.get("allow_na") else ""),
                 "notes": "<specific observation>",
                 "confidence": "<high|medium|low — your certainty in this score>",
                 "evidence": ["<MSG ids from the thread that justify this score, e.g. 12345>"],
             }
+            if crit.get("allow_na"):
+                cell["na"] = "<true only when this question does not apply>"
+            dim_obj[crit["id"]] = cell
         dim_obj["dimension_average"] = "<float, 1 decimal>"
         scores_spec[dim["id"]] = dim_obj
 
@@ -298,6 +337,10 @@ def build_system_prompt(rubric: dict, few_shot_examples: list = None) -> str:
             {"message_id": "<MSG id>", "type": "<good|bad>", "note": "<short observation>"}
         ],
     }
+    if candidate_gate:
+        output_template["ticket_type"] = "<troubleshooting|how-to|non-support>"
+        output_template["follow_ups"] = ["<follow-up or KB request, if any>"]
+        output_template["review_flags"] = ["<open item or determination pending review, if any>"]
     lines.append(json.dumps(output_template, indent=2))
 
     return "\n".join(lines)

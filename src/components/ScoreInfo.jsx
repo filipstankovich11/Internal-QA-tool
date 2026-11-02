@@ -1,12 +1,13 @@
 import { useId, useState } from 'react'
 import { VERDICT_COLOR } from '../lib/verdict'
+import { isCandidateGate, verdictRanges } from '../lib/scorecard'
 
 // Plain-language definition of the QA score, derived from the live rubric so it
 // stays accurate if weights/thresholds are edited on the Rubric page.
 export function scoreExplanation(rubric) {
   const dims = (rubric?.dimensions || []).map(d => `${d.name} ${d.weight}%`).join(' · ')
-  const t = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
-  return `Weighted QA score, 0–100${dims ? `, combining ${dims}` : ''}. ≥${t.pass} = pass · ${t.needs_review}–${t.pass - 1} = needs review · <${t.needs_review} = fail.`
+  const r = verdictRanges(rubric)
+  return `Weighted QA score, 0–100${dims ? `, combining ${dims}` : ''}. ${r.PASS} = pass · ${r.NEEDS_REVIEW} = needs review · ${r.FAIL} = fail.`
 }
 
 // "How the QA score works" — full rubric breakdown, shown on hover (and on
@@ -17,12 +18,13 @@ export function ScoreInfoPopover({ rubric }) {
   const popoverId = useId()
 
   const dims = rubric?.dimensions || []
-  const t = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
+  const r = verdictRanges(rubric)
   const autoFails = rubric?.auto_fail_conditions || []
+  const candidateGate = isCandidateGate(rubric)
   const verdicts = [
-    { c: VERDICT_COLOR.PASS,         label: `≥${t.pass} — Pass` },
-    { c: VERDICT_COLOR.NEEDS_REVIEW, label: `${t.needs_review}–${t.pass - 1} — Needs review` },
-    { c: VERDICT_COLOR.FAIL,         label: `<${t.needs_review} — Fail` },
+    { c: VERDICT_COLOR.PASS,         label: `${r.PASS} — Pass` },
+    { c: VERDICT_COLOR.NEEDS_REVIEW, label: `${r.NEEDS_REVIEW} — Needs review` },
+    { c: VERDICT_COLOR.FAIL,         label: `${r.FAIL} — Fail` },
   ]
 
   return (
@@ -55,7 +57,7 @@ export function ScoreInfoPopover({ rubric }) {
             style={{ width: 300, background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', animation: 'fadeIn 120ms ease' }}>
             <span className="text-xs font-semibold mb-2 block" style={{ color: '#1A1E23' }}>How the QA score works</span>
             <span className="text-xs leading-relaxed mb-3 block" style={{ color: 'rgba(26,30,35,.72)' }}>
-              Each ticket gets a 0–100 score — a weighted blend of the rubric dimensions:
+              Each ticket gets a 0–100 score — a weighted blend of the rubric {candidateGate ? 'sections (N/A questions redistribute within their section)' : 'dimensions'}:
             </span>
             <span className="flex flex-col gap-1.5 mb-3">
               {dims.map(d => (
@@ -75,7 +77,9 @@ export function ScoreInfoPopover({ rubric }) {
             </span>
             {autoFails.length > 0 && (
               <span className="text-xs mt-3 pt-2 leading-relaxed block" style={{ color: 'rgba(26,30,35,.72)', borderTop: '1px solid #F0ECE9' }}>
-                Any of the {autoFails.length} auto-fail conditions forces a FAIL regardless of score.
+                {candidateGate
+                  ? `${rubric.fail_gate?.code || 'Q9'} = Yes makes a candidate fail; once Quality and the manager approve it, the total becomes 0.`
+                  : `Any of the ${autoFails.length} auto-fail conditions forces a FAIL regardless of score.`}
               </span>
             )}
           </span>

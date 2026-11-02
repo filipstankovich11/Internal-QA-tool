@@ -10,6 +10,13 @@ export function diffRubricDetailed(prev = {}, next = {}) {
   const changes = []
   const push = (label, before = null, after = null) => changes.push({ label, before, after })
 
+  // ── Scorecard version / scale ──
+  if ((prev.version || null) !== (next.version || null) && next.name) {
+    push(`Switched to ${next.name}`, prev.name || prev.version || 'previous rubric', next.name)
+  }
+  const scale = r => `${r.scale?.min ?? 1}–${r.scale?.max ?? 5}`
+  if (scale(prev) !== scale(next)) push(`Score scale ${scale(prev)} → ${scale(next)}`, scale(prev), scale(next))
+
   // ── Dimensions (pillars) + their criteria ──
   const prevDims = byId(prev.dimensions)
   const nextDims = byId(next.dimensions)
@@ -28,6 +35,9 @@ export function diffRubricDetailed(prev = {}, next = {}) {
       if ((co.description || '') !== (c.description || '')) {
         push(`Edited scoring guide for “${c.name}”`, co.description || '', c.description || '')
       }
+      if ((co.code || '') !== (c.code || '')) push(`“${c.name}” code ${co.code || '—'} → ${c.code || '—'}`, co.code || '', c.code || '')
+      if (!!co.allow_na !== !!c.allow_na) push(`“${c.name}” ${c.allow_na ? 'now allows' : 'no longer allows'} N/A`)
+      else if ((co.na_rule || '') !== (c.na_rule || '')) push(`Edited the N/A rule for “${c.name}”`, co.na_rule || '', c.na_rule || '')
     }
     for (const co of o.criteria || []) {
       if (!(d.criteria || []).some(c => c.id === co.id)) {
@@ -59,6 +69,12 @@ export function diffRubricDetailed(prev = {}, next = {}) {
   const nt = next.verdict_thresholds || {}
   if (Number(pt.pass) !== Number(nt.pass)) push(`Pass threshold ${pt.pass} → ${nt.pass}`, String(pt.pass), String(nt.pass))
   if (Number(pt.needs_review) !== Number(nt.needs_review)) push(`Review threshold ${pt.needs_review} → ${nt.needs_review}`, String(pt.needs_review), String(nt.needs_review))
+  if ((pt.pass_training ?? null) !== (nt.pass_training ?? null)) push(`Training-period pass goal ${pt.pass_training ?? '—'} → ${nt.pass_training ?? '—'}`, String(pt.pass_training ?? ''), String(nt.pass_training ?? ''))
+  if ((prev.fail_gate?.mode || 'auto') !== (next.fail_gate?.mode || 'auto')) {
+    push(next.fail_gate?.mode === 'candidate'
+      ? `${next.fail_gate.code || 'Q9'} fail gate: a Yes is a candidate fail until Quality and the manager approve`
+      : 'Auto-fail conditions force a FAIL again')
+  }
 
   // ── Global scoring guidance free-text ──
   if ((prev.scoring_guidance || '') !== (next.scoring_guidance || '')) {

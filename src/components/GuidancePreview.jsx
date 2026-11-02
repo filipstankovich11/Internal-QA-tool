@@ -28,9 +28,12 @@ function ScoreResult({ label, result, error }) {
 function CriterionChanges({ published, draft, rubric }) {
   if (!published?.scores || !draft?.scores) return null
   const changes = (rubric?.dimensions || []).flatMap(dim => (dim.criteria || []).map(crit => {
-    const before = Number(published.scores?.[dim.id]?.[crit.id]?.score)
-    const after = Number(draft.scores?.[dim.id]?.[crit.id]?.score)
-    return Number.isFinite(before) && Number.isFinite(after) && before !== after
+    // N/A cells carry score: null — compare them as "N/A", never as 0
+    const value = cell => cell?.na ? 'N/A' : cell?.score == null ? NaN : Number(cell.score)
+    const before = value(published.scores?.[dim.id]?.[crit.id])
+    const after = value(draft.scores?.[dim.id]?.[crit.id])
+    const known = v => v === 'N/A' || Number.isFinite(v)
+    return known(before) && known(after) && before !== after
       ? { id: `${dim.id}:${crit.id}`, name: crit.name, before, after,
           note: draft.scores?.[dim.id]?.[crit.id]?.notes }
       : null

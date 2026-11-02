@@ -6,6 +6,7 @@ import TicketTranscript from '../components/TicketTranscript'
 import Linkify from '../components/Linkify'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { gradeColor } from '../lib/verdict'
+import { scaleOf, isNA, isCandidateGate, scorecardFor, computeTotal, deriveVerdict, critLabel } from '../lib/scorecard'
 
 const CONF = {
   high:   { label: 'High confidence',   color: '#2F8F5B', bg: '#E6F4EC' },
@@ -16,19 +17,22 @@ const CONF = {
 const CARD = { background: '#fff', border: '1px solid #EEEEEE', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)' }
 const VERDICT_LABEL = { PASS: 'PASS', NEEDS_REVIEW: 'NEEDS REVIEW', FAIL: 'FAIL' }
 
-// 1–5 pill selector
-function Pills({ value, onChange }) {
+// Score pills for the rubric's scale (0–5 on V8, 1–5 before), plus N/A where the
+// question allows it.
+function Pills({ value, onChange, min, max, allowNA }) {
+  const options = [...Array.from({ length: max - min + 1 }, (_, i) => min + i), ...(allowNA ? ['NA'] : [])]
   return (
     <div className="flex gap-1.5">
-      {[1, 2, 3, 4, 5].map(n => {
+      {options.map(n => {
         const sel = value === n
         return (
           <button key={n} type="button" onClick={() => onChange(n)}
             className="flex items-center justify-center text-sm font-semibold rounded-lg transition-colors"
-            style={{ width: 34, height: 34, border: `1px solid ${sel ? 'var(--coral)' : 'var(--input-border)'}`, background: sel ? 'var(--coral)' : '#fff', color: sel ? 'var(--ink)' : 'var(--ink-60)' }}
+            style={{ width: n === 'NA' ? 42 : 34, height: 34, border: `1px solid ${sel ? 'var(--coral)' : 'var(--input-border)'}`, background: sel ? 'var(--coral)' : '#fff', color: sel ? 'var(--ink)' : 'var(--ink-60)' }}
             onMouseEnter={e => { if (!sel) e.currentTarget.style.background = '#FBF7F3' }}
-            onMouseLeave={e => { if (!sel) e.currentTarget.style.background = '#fff' }}>
-            {n}
+            onMouseLeave={e => { if (!sel) e.currentTarget.style.background = '#fff' }}
+            aria-pressed={sel} aria-label={n === 'NA' ? 'Not applicable' : `Score ${n}`}>
+            {n === 'NA' ? 'N/A' : n}
           </button>
         )
       })}
@@ -43,17 +47,23 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   const { canScore } = useAuth()
   const toast = useToast()
 
-  const dims = rubric?.dimensions || []
-  const thresholds = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
-  const autoFailConds = rubric?.auto_fail_conditions || []
+  // Grade with the rubric this score was made with (V8 vs the older 1–5 rubric)
+  const card = scorecardFor(initialScore, rubric)
+  const dims = card?.dimensions || []
+  const thresholds = card?.verdict_thresholds || { pass: 80, needs_review: 60 }
+  const autoFailConds = card?.auto_fail_conditions || []
+  const { min, max } = scaleOf(card)
+  const candidateGate = isCandidateGate(card)
+  const gateCode = card?.fail_gate?.code || 'Q9'
   const ticketId = initialScore.ticket_id
 
   // The AI's original per-criterion scores — baseline for the agree/override read-out
   const aiScores = useMemo(() => {
     const m = {}
     if (initialScore?.scores) dims.forEach(d => d.criteria.forEach(c => {
-      const v = initialScore.scores[d.id]?.[c.id]?.score
-      if (v != null) m[c.id] = Math.max(1, Math.min(5, Math.round(v)))
+      const cell = initialScore.scores[d.id]?.[c.id]
+      if (isNA(cell)) m[c.id] = 'NA'
+      else if (cell?.score != null) m[c.id] = Math.max(min, Math.min(max, Math.round(cell.score)))
     }))
     return m
   }, [initialScore, dims])
@@ -78,7 +88,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
     return m
   }, [initialScore, dims])
 
-  // criterionId -> 1..5 (pre-filled from the AI score)
+  // criterionId -> score on the rubric scale, or 'NA' (pre-filled from the AI score)
   const [scores, setScores] = useState(() => {
     const init = {}
     dims.forEach(d => d.criteria.forEach(c => { init[c.id] = aiScores[c.id] ?? 3 }))
@@ -86,9 +96,13 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   })
   const [autoFails, setAutoFails] = useState(() => {
     if (!initialScore?.auto_fail?.triggered) return []
-    const names = initialScore.auto_fail.conditions || []
+    const names = [...(initialScore.auto_fail.conditions || []), ...(initialScore.auto_fail.reasons || [])]
     return autoFailConds.filter(c => names.includes(c.name)).map(c => c.id)
   })
+  // V8: Q9 is an explicit Yes/No (conditions are optional tags); a Yes stays a
+  // candidate fail until Quality + the manager approve it
+  const [gateOn, setGateOn] = useState(() => !!initialScore?.auto_fail?.triggered)
+  const [failConfirmed, setFailConfirmed] = useState(false)
   const [note, setNote] = useState(initialScore?.reviewerNote || initialScore?.overrideNote || '')
   const allCrit = useMemo(() => dims.flatMap(d => d.criteria.map(c => c.id)), [dims])
   const [focusIdx, setFocusIdx] = useState(-1)  // -1 = nothing focused yet — no default evidence highlight
@@ -116,16 +130,18 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
     [aiMeta]
   )
 
-  const dimAvg = (d) => {
-    const vals = d.criteria.map(c => scores[c.id]).filter(v => v != null)
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0
-  }
-  const total = useMemo(() => Math.round(dims.reduce((sum, d) => sum + (dimAvg(d) / 5) * (d.weight || 0), 0)), [scores, dims]) // eslint-disable-line
-  const verdict = autoFails.length ? 'FAIL' : total >= thresholds.pass ? 'PASS' : total >= thresholds.needs_review ? 'NEEDS_REVIEW' : 'FAIL'
+  const { total: rawTotal, sections } = useMemo(() => computeTotal(card, c => scores[c.id]), [scores, card])
+  const gateYes = candidateGate ? gateOn : autoFails.length > 0
+  const verdict = deriveVerdict(rawTotal, card, { gateTriggered: gateYes, gateConfirmed: failConfirmed })
+  // V8: a confirmed Q9 fail sets the total to 0
+  const total = gateYes && candidateGate && failConfirmed ? 0 : Math.round(rawTotal)
+  const candidate = gateYes && candidateGate && !failConfirmed
   const vColor = verdict === 'PASS' ? '#2F8F5B' : verdict === 'NEEDS_REVIEW' ? '#C8841E' : '#D14B3D'
   const vBg    = verdict === 'PASS' ? '#E6F4EC' : verdict === 'NEEDS_REVIEW' ? '#FBEBD3' : '#FCE9E6'
+  const meetsTrainingGoal = thresholds.pass_training != null && !gateYes && total >= thresholds.pass_training && total < thresholds.pass
 
   const toggleAutoFail = (id) => setAutoFails(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const setGate = (on) => { setGateOn(on); if (!on) setFailConfirmed(false) }
 
   const submit = async () => {
     await overrideScore(initialScore.scoreId, { verdict, score: total, note: note.trim() })
@@ -133,17 +149,20 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
     onSaved?.()
   }
 
-  // Keyboard scoring: 1–5 score the focused criterion, ↑/↓ move, ⌘↵ submit.
+  // Keyboard scoring: digits score the focused criterion (N = N/A where allowed), ↑/↓ move, ⌘↵ submit.
   // Subscribe once and read the latest values through a ref (avoids re-binding
   // the listener on every keystroke in the coaching note).
   const latest = useRef(null)
-  latest.current = { focusIdx, canScore, submit, allCrit }
+  const naAllowed = useMemo(() => new Set(dims.flatMap(d => d.criteria.filter(c => c.allow_na).map(c => c.id))), [dims])
+  latest.current = { focusIdx, canScore, submit, allCrit, min, max, naAllowed }
   useEffect(() => {
     const onKey = (e) => {
       const tag = e.target.tagName
       if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return
-      const { focusIdx, canScore, submit, allCrit } = latest.current
-      if (e.key >= '1' && e.key <= '5' && allCrit[focusIdx]) { setScores(s => ({ ...s, [allCrit[focusIdx]]: +e.key })) }
+      const { focusIdx, canScore, submit, allCrit, min, max, naAllowed } = latest.current
+      const crit = allCrit[focusIdx]
+      if (/^\d$/.test(e.key) && +e.key >= min && +e.key <= max && crit) { setScores(s => ({ ...s, [crit]: +e.key })) }
+      else if (e.key.toLowerCase() === 'n' && crit && naAllowed.has(crit)) { setScores(s => ({ ...s, [crit]: 'NA' })) }
       else if (e.key === 'ArrowDown') { e.preventDefault(); setFocusIdx(i => Math.min(i + 1, allCrit.length - 1)) }
       else if (e.key === 'ArrowUp')   { e.preventDefault(); setFocusIdx(i => Math.max(i - 1, 0)) }
       else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (canScore) submit() }
@@ -158,7 +177,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
   // ── Derived for the layout ───────────────────────────────────────────────────
   const agentChips = (initialScore.agent_senders || []).map(a => a.name).filter(Boolean)
   // What went well: AI's `strengths` when present, else derive from high-scoring criteria notes
-  const derivedWell = dims.flatMap(d => d.criteria).filter(c => (aiScores[c.id] || 0) >= 4 && aiNotes[c.id]).map(c => aiNotes[c.id]).slice(0, 3)
+  const derivedWell = dims.flatMap(d => d.criteria).filter(c => typeof aiScores[c.id] === 'number' && aiScores[c.id] >= 4 && aiNotes[c.id]).map(c => aiNotes[c.id]).slice(0, 3)
   const wentWell = initialScore.strengths?.length ? initialScore.strengths : derivedWell
   const toFix = initialScore?.key_improvements || []
   // Per-message inline annotations from the AI: { msgId: [{ type, note }] }
@@ -246,14 +265,21 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ color: vColor, background: vBg }}>{VERDICT_LABEL[verdict]}</span>
-                <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.4)' }}>Pass ≥ {thresholds.pass} · Review ≥ {thresholds.needs_review}</p>
+                <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ color: candidate ? '#D14B3D' : vColor, background: candidate ? '#FCE9E6' : vBg }}>{candidate ? 'CANDIDATE FAIL' : VERDICT_LABEL[verdict]}</span>
+                <p className="text-xs mt-1.5" style={{ color: 'rgba(26,30,35,.4)' }}>
+                  {candidateGate
+                    ? <>Pass goal {thresholds.pass}{thresholds.pass_training != null && <> · {thresholds.pass_training} in training</>}</>
+                    : <>Pass ≥ {thresholds.pass} · Review ≥ {thresholds.needs_review}</>}
+                </p>
               </div>
             </div>
             <div className="w-full rounded-full overflow-hidden" style={{ height: 6, background: 'var(--hairline-2)' }}>
               <div className="g-progress-fill" style={{ '--progress': Math.max(0, Math.min(1, total / 100)), '--progress-duration': '.35s', background: gradeColor(total, thresholds) }} />
             </div>
-            {autoFails.length > 0 && <p className="text-xs mt-2" style={{ color: 'var(--danger)' }}>Auto-fail triggered — verdict forced to FAIL.</p>}
+            {!candidateGate && autoFails.length > 0 && <p className="text-xs mt-2" style={{ color: 'var(--danger)' }}>Auto-fail triggered — verdict forced to FAIL.</p>}
+            {candidate && <p className="text-xs mt-2" style={{ color: 'var(--danger)' }}>{gateCode} = Yes — candidate fail, needs Quality and manager review. The total becomes 0 once approved.</p>}
+            {gateYes && candidateGate && failConfirmed && <p className="text-xs mt-2" style={{ color: 'var(--danger)' }}>Fail confirmed — total set to 0.</p>}
+            {meetsTrainingGoal && <p className="text-xs mt-2" style={{ color: 'var(--ink-60)' }}>Below the pass goal, but meets the training-period goal ({thresholds.pass_training}).</p>}
           </div>
 
           {/* Dimensions — boxed cards, consistent with live-score/auto-fail/coaching */}
@@ -265,13 +291,20 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                     {d.name}
                     <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'var(--coral-tint)', color: 'var(--coral-text)', fontWeight: 600 }}>{d.weight}%</span>
                   </p>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor((dimAvg(d) / 5) * 100, thresholds) }}>{dimAvg(d).toFixed(1)}<span className="text-xs font-normal" style={{ color: 'var(--ink-45)' }}>/5</span></span>
+                  {sections[d.id]?.avg != null
+                    ? <span className="text-sm font-bold tabular-nums" style={{ color: gradeColor(sections[d.id].avg / max * 100, thresholds) }}>
+                        {candidateGate
+                          ? <>{sections[d.id].points.toFixed(1)}<span className="text-xs font-normal" style={{ color: 'var(--ink-45)' }}>/{d.weight} pts</span></>
+                          : <>{sections[d.id].avg.toFixed(1)}<span className="text-xs font-normal" style={{ color: 'var(--ink-45)' }}>/{max}</span></>}
+                      </span>
+                    : <span className="text-xs" style={{ color: 'var(--ink-45)' }}>All N/A</span>}
                 </div>
                 <div className="flex flex-col gap-1">
                   {d.criteria.map(c => {
                     const idx = allCrit.indexOf(c.id)
                     const focused = idx === focusIdx
                     const ai = aiScores[c.id]
+                    const fmt = v => v === 'NA' ? 'N/A' : v
                     const diff = ai != null && scores[c.id] !== ai
                     const conf = CONF[aiMeta[c.id]?.confidence]
                     const ev = aiMeta[c.id]?.evidence || []
@@ -282,18 +315,22 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
                         style={{ background: focused ? 'var(--warm-surface)' : 'transparent' }}>
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm min-w-0 flex items-center gap-2 flex-wrap" style={{ color: 'var(--ink)' }}>
-                            {c.name}
+                            {critLabel(c)}
                             {conf && (
                               <span className="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: conf.color, background: conf.bg }}>{conf.label}</span>
                             )}
                             {ai != null && (
                               <span className="text-xs font-medium" style={{ color: diff ? 'var(--coral-text)' : 'rgba(26,30,35,.4)' }}>
-                                {diff ? `overrode ${ai}→${scores[c.id]}` : `matches AI (${ai})`}
+                                {diff ? `overrode ${fmt(ai)}→${fmt(scores[c.id])}` : `matches AI (${fmt(ai)})`}
                               </span>
                             )}
                           </span>
-                          <Pills value={scores[c.id]} onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
+                          <Pills value={scores[c.id]} min={min} max={max} allowNA={!!c.allow_na}
+                            onChange={(n) => { setScores(s => ({ ...s, [c.id]: n })); setFocusIdx(idx) }} />
                         </div>
+                        {focused && c.allow_na && c.na_rule && (
+                          <p className="text-xs mt-2" style={{ color: 'var(--ink-50)' }}>N/A: {c.na_rule}</p>
+                        )}
                         {focused && aiNotes[c.id] && (
                           <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--ink-60)' }}>
                             <span className="font-semibold" style={{ color: 'var(--coral-text)' }}>AI rationale · </span><Linkify text={aiNotes[c.id]} />
@@ -314,8 +351,53 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
             ))}
           </div>
 
-          {/* Auto-fail conditions */}
-          {autoFailConds.length > 0 && (
+          {/* Q9 fail gate (V8) — explicit Yes/No; a Yes needs Quality + manager approval */}
+          {candidateGate && (
+            <div className="rounded-xl p-4" style={{ background: '#fff', border: `1px solid ${gateYes ? 'var(--danger-border)' : 'var(--hairline)'}` }}>
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--danger)' }}>{gateCode} · {card.fail_gate?.name || 'Fail gate'}</p>
+                <div className="flex gap-1.5" role="group" aria-label={`${gateCode} answer`}>
+                  {[['No', false], ['Yes', true]].map(([label, on]) => {
+                    const sel = gateYes === on
+                    return (
+                      <button key={label} type="button" onClick={() => setGate(on)} aria-pressed={sel}
+                        className="text-xs font-semibold rounded-lg px-3 py-1.5 transition-colors"
+                        style={{ border: `1px solid ${sel ? (on ? 'var(--danger)' : 'var(--coral)') : 'var(--input-border)'}`, background: sel ? (on ? 'var(--danger)' : 'var(--coral)') : '#fff', color: sel ? (on ? '#fff' : 'var(--ink)') : 'var(--ink-60)' }}>
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--ink-50)' }}>Yes only for significant harm. Never finalize a fail without Quality and manager review.</p>
+              {gateYes && (
+                <div className="flex flex-col gap-2 mt-3">
+                  {autoFailConds.map(c => {
+                    const on = autoFails.includes(c.id)
+                    return (
+                      <button key={c.id} type="button" onClick={() => toggleAutoFail(c.id)} title={c.description}
+                        className="flex items-start gap-2.5 text-left rounded-lg px-3 py-2 transition-colors"
+                        style={{ background: on ? 'var(--danger-tint)' : 'transparent', border: `1px solid ${on ? 'var(--danger-border)' : 'transparent'}` }}>
+                        <span className="w-4 h-4 rounded flex items-center justify-center shrink-0 mt-0.5"
+                          style={{ border: `1.5px solid ${on ? 'var(--danger)' : 'var(--input-border)'}`, background: on ? 'var(--danger)' : '#fff' }}>
+                          {on && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </span>
+                        <span className="text-sm" style={{ color: 'var(--ink)' }}>{c.name}</span>
+                      </button>
+                    )
+                  })}
+                  <label className="flex items-start gap-2.5 mt-1 pt-3 text-sm cursor-pointer" style={{ borderTop: '1px solid var(--hairline-2)', color: 'var(--ink)' }}>
+                    <input type="checkbox" checked={failConfirmed} onChange={e => setFailConfirmed(e.target.checked)}
+                      style={{ accentColor: 'var(--danger)', width: 15, height: 15, marginTop: 2 }} />
+                    <span>Approved by Quality and the manager — confirm the fail <span style={{ color: 'var(--ink-50)' }}>(sets the total to 0)</span></span>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Auto-fail conditions (pre-V8 rubric) */}
+          {!candidateGate && autoFailConds.length > 0 && (
             <div className="rounded-xl p-4" style={{ background: '#fff', border: '1px solid var(--hairline)' }}>
               <p className="text-xs font-semibold uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -350,7 +432,7 @@ export default function ScoreFormPage({ initialScore, onClose, onSaved }) {
 
           {/* Actions */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'var(--ink-60)' }}>1–5</b> · <b style={{ color: 'var(--ink-60)' }}>↑↓</b> · <b style={{ color: 'var(--ink-60)' }}>⌘↵</b></p>
+            <p className="text-xs" style={{ color: 'rgba(26,30,35,.4)' }}>Press <b style={{ color: 'var(--ink-60)' }}>{min}–{max}</b>{naAllowed.size > 0 && <> · <b style={{ color: 'var(--ink-60)' }}>N</b> for N/A</>} · <b style={{ color: 'var(--ink-60)' }}>↑↓</b> · <b style={{ color: 'var(--ink-60)' }}>⌘↵</b></p>
             <button onClick={submit} disabled={!canScore}
               className="g-btn-primary text-sm px-5 py-2.5 rounded-xl font-medium inline-flex items-center gap-2 ml-auto"
               style={{ opacity: canScore ? 1 : 0.5 }}>

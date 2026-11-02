@@ -1,0 +1,102 @@
+{
+  "version": "v8",
+  "name": "Support Scorecard V8",
+  "scale": { "min": 0, "max": 5 },
+  "dimensions": [
+    {
+      "id": "inquiry_resolution",
+      "name": "Inquiry resolution",
+      "weight": 50,
+      "criteria": [
+        {
+          "id": "core_inquiry_resolved",
+          "code": "Q1",
+          "name": "Core inquiry",
+          "description": "All explicit questions answered; underlying issue addressed; accurate product knowledge; tools used; expectations and timelines set; limitations explained with workarounds. A missed reply is scored here. If wrong information is proactively corrected, judge the final answer here and any avoidable back-and-forth under Q6.\nQ1/Q2 dependency: if required troubleshooting was materially incorrect or incomplete, or the result was not verified, the core inquiry is not established as resolved and Q1 cannot be 5. Score Q1 for the impact on outcome completeness/reliability and Q2 for the method, without duplicating a process-only gap that did not affect the outcome."
+        },
+        {
+          "id": "troubleshooting_procedure",
+          "code": "Q2",
+          "name": "Troubleshooting",
+          "allow_na": true,
+          "na_rule": "N/A for how-to and other non-troubleshooting tickets.",
+          "description": "Steps follow the internal guide and are justified; fix verified before closing; customer kept informed during testing; test results shared if the issue could not be reproduced. Q2 scores the method; use its evidence to assess Q1 outcome reliability. Do not deduct for Slack-only information; request a KB addition instead."
+        },
+        {
+          "id": "forward_resolution",
+          "code": "Q3",
+          "name": "Forward resolution",
+          "allow_na": true,
+          "na_rule": "N/A when there was no relevant educational or forward-resolution opportunity.",
+          "description": "Help Center, Academy (Sana), or webinar resources shared; direct helpdesk links; screenshots or Loom for complex steps; actions on the customer's behalf explained. Admin-only actions should be directed to the customer or an Admin or Lead Agent. Third-party resources weigh less than Gorgias resources."
+        }
+      ]
+    },
+    {
+      "id": "customer_perception",
+      "name": "Conversation tone and flow",
+      "weight": 25,
+      "criteria": [
+        {
+          "id": "communication_clarity",
+          "code": "Q4",
+          "name": "Clarity",
+          "description": "Deduct only for multiple or repeated errors that materially hurt readability. One isolated typo is a note only. Do not deduct for optional mechanics the Support Voice & Tone guide labels suggestions (such as Oxford commas or number formatting) unless they materially affect understanding. Uncapitalized product terms are not deducted."
+        },
+        {
+          "id": "tone_professionalism",
+          "code": "Q5",
+          "name": "Tone",
+          "description": "Score against the Support Voice & Tone guidelines: usually professional but informal and conversational, tailored to the customer's emotional state, technical comfort, issue, and channel — warm, accessible, direct, confident, empathetic, solution-focused, concise, and human. Deduct only for evidenced departures that meaningfully hurt the experience: cold/robotic/canned language; conspicuously AI-obvious wording (e.g. \"Gorgias documentation indicates…\" instead of a natural direct answer); confidence-undermining hedge words (unless paired with an accurate explanation and follow-up plan); defensive, dismissive or patronizing language; inappropriate slang/jargon or forced humor; lack of empathy in a heated situation; or tone/verbosity poorly suited to the audience or channel. Do not deduct for AI assistance itself or slight formal/informal variation if respectful and clear. Do not infer AI use; cite exact wording. Acknowledge frustration or delay with empathy; deduct for apologies only when they improperly imply fault beyond what is known. Keep clarity deductions in Q4."
+        },
+        {
+          "id": "conversation_flow",
+          "code": "Q6",
+          "name": "Flow",
+          "description": "Use prior context (messages, prior tickets, handover, screenshots, URLs). Do not re-ask for known information. Consider account type, plan, and permissions. Avoid unnecessary back-and-forth. Offer a call where the customer is stuck. Address open items from AI Agent handovers. Penalize corrected wrong information here."
+        }
+      ]
+    },
+    {
+      "id": "internal_processes",
+      "name": "Internal processes",
+      "weight": 25,
+      "criteria": [
+        {
+          "id": "ticket_fields",
+          "code": "Q7",
+          "name": "Ticket fields",
+          "description": "Use the Ticket fields guide as the source of truth; fields are required only when relevant. Confirm first whether Product and Engineering Teams apply. Choose the closest Product; leave it empty if the inquiry is unclear, no suitable value exists, or it is non-support-related. If Product is set, populate Engineering Teams using the guide's mapping. Contact Reason follows the inquiry (Product Understanding, Bug, UI/UX, Feature Request, Billing…); a confirmed Bug takes precedence. Resolution = Pending, Resolved, or Escalated per status at closure. Verify GMV Band (Enterprise, Commercial, SMB, Unknown) but do not infer a team change from band alone.\nDeductions when all five fields apply: Product = 3 points missing/wrong category or 1 wrong within category; Contact Reason = 1; Engineering Teams = 1; Resolution = feedback only; GMV Band = no deduction. When Product and Engineering Teams do not apply (three-field rubric): Contact Reason = 2; Resolution and GMV Band = no deduction. Unnecessary fields: note only.\nBilling conflict (open): do not deduct for missing Billing Product/Engineering Teams and do not choose between the 1- and 2-point Contact Reason anchors on this ambiguity — mark the Q7 determination pending review. Report a confirmed GMV Band mismatch without inventing a penalty. Assess a separate routing failure under Q8 only if an applicable procedure and anchor support it."
+        },
+        {
+          "id": "ticket_handling_procedure",
+          "code": "Q8",
+          "name": "Procedures",
+          "description": "Use the Level 1 Ticket Handling Procedures as the source of truth for whether a procedure applies and its steps, routing, macros, tags, ticket state, and follow-up. For escalations, start with the Escalation Overview and open the detailed procedure. Check the full workflow in context of account status, permissions, issue type, urgency, and channel; don't assume a step was missed if the ticket record does not establish that.\nImpact guide (not a complete procedure list): security or closing without reply = 0; escalation missed = 1, 2, or 4 by severity; looping in the right team = 1; Change of AO = 1 or 2; CSM CC = 2; wrong Slack channel = 2 or 4; Product Feedback = 2 or 3; customer profile not set = 2; no CSAT follow-up = 2; Chat to Email cutoff = 3; Vitally churn flag (no CSM) = 3; internal note missing = 3; KB or macro request missing = 4 (light reminder); Gen snooze misused = 4; peer review or Shopify review = suggestion only. If a wiki procedure does not fit an anchor or conflicts with one, flag it for Quality calibration rather than inventing a deduction. Prioritize customer and resolution-time impact; avoid double deductions."
+        }
+      ]
+    }
+  ],
+  "fail_gate": {
+    "code": "Q9",
+    "name": "Fail gate",
+    "mode": "candidate",
+    "description": "Yes only for significant harm. Never finalize a fail: a Yes sets the status to \"Candidate fail: needs Quality and manager review\". Once Quality and the manager approve, the total becomes 0."
+  },
+  "auto_fail_conditions": [
+    { "id": "billing_account_damage", "name": "Billing or account damage", "description": "Changes or advice that caused billing or account damage." },
+    { "id": "security_compliance_breach", "name": "Security or compliance breach", "description": "Sharing credentials or account data with unauthorized parties, skipping identity verification, or other security/compliance violations." },
+    { "id": "communication_misconduct", "name": "Communication misconduct", "description": "Profanity, discriminatory or offensive language, disclosing internal frustrations, or blaming colleagues/the product to the customer." },
+    { "id": "severe_resolution_error", "name": "Severe resolution error", "description": "A resolution error that led to harm, churn, or public escalation." }
+  ],
+  "verdict_thresholds": { "pass": 90, "pass_training": 87, "needs_review": 0 },
+  "scoring_guidance": "Steps: (1) Read the full conversation and internal notes, including any AI Agent handover; note the ticket type — troubleshooting, how-to, or non-support. If the ticket cannot be read, stop and report the blocker; do not score from partial data. (2) Decide which questions apply. (3) Score Q1–Q6 and Q8 on the 0–5 scale, citing a message for each. (4) Score Q7 using the ticket-field rules. (5) Assess Q9. (6) Write feedback per question, one strength, one improvement area, and any follow-up or KB requests.\n\nDecide applicability first. Use N/A only where the scorecard allows it: Q2 for how-to/non-troubleshooting tickets, and Q3 when there was no relevant educational or forward-resolution opportunity. If a question applies, score 0–5; never use N/A because performance was poor or work was missed.\n\nUse the perfect-ticket comparison: for each question, imagine perfect handling for this customer's inquiry and context, compare the actual handling, identify what is missing, and judge how much each gap matters to resolution or success. Choose a holistic score; do not count checklist items mechanically.\n\n0–5 anchors:\n- 0: Complete miss, no value at all (e.g. questions left unanswered because the ticket was closed, incorrect/irrelevant information; for forward resolution, no relevant material despite relevant Help Center resources).\n- 1: Very bad, with one very small positive contribution.\n- 2: Weak and far from successful, but with something positive (e.g. one of two questions answered).\n- 3: Acceptable, but an important part is missing; the main thing needed for resolution was done (e.g. correct answer, expectations not fully set).\n- 4: Very good, almost a full success, with one minor gap (e.g. a general article linked instead of the exact section).\n- 5: Exceptional, nothing material to add.\n\nGuardrails: never finalize a fail. Do not penalize information that existed only on Slack or was impossible to know. Do not double-count a mistake across questions. Keep feedback short, specific, and constructive. Where an open item (scale mapping, N/A redistribution, training threshold, Q7 Billing/GMV Band) affects a determination, flag it instead of deciding it.",
+  "open_items": [
+    "Confirm the 0 to 5 scale to point mapping.",
+    "Confirm the N/A redistribution rule.",
+    "If a live wiki procedure has no matching numeric scoring anchor, route the case for Quality calibration; do not invent a deduction.",
+    "Confirm the training-period handling.",
+    "Resolve the Billing Product/Engineering Teams conflict and the GMV Band verification vs. no-deduction discrepancy before fully automating those Q7 cases."
+  ],
+  "slack_webhook_url": ""
+}

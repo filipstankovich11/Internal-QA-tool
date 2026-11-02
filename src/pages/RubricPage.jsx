@@ -3,13 +3,14 @@ import { useApp, DEFAULT_RUBRIC } from '../context/AppContext'
 import { useToast } from '../components/Toast'
 import { supabase } from '../lib/supabase'
 import { diffRubricDetailed } from '../lib/rubricDiff'
+import { scaleOf, isCandidateGate } from '../lib/scorecard'
 import TeamGuidanceEditor from '../components/TeamGuidanceEditor'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import AccessibleTabs from '../components/AccessibleTabs'
 
 const deepCopy = obj => JSON.parse(JSON.stringify(obj))
 
-function CriterionEditor({ crit, onChange, onRemove }) {
+function CriterionEditor({ crit, onChange, onRemove, scaleLabel }) {
   const fieldId = useId()
   return (
     <Accordion type="single" collapsible>
@@ -17,7 +18,11 @@ function CriterionEditor({ crit, onChange, onRemove }) {
         className="relative border-b-0 rounded-[10px] overflow-hidden"
         style={{ border: '1px solid #F0ECE9', background: '#FBF7F3' }}>
         <AccordionTrigger className={`py-3 pl-3.5 hover:no-underline ${onRemove ? 'pr-16' : 'pr-3.5'}`}>
-          <span className="text-sm font-medium truncate" style={{ color: crit.name ? '#1A1E23' : 'rgba(26,30,35,.5)' }}>{crit.name || 'Unnamed criterion'}</span>
+          <span className="text-sm font-medium truncate" style={{ color: crit.name ? '#1A1E23' : 'rgba(26,30,35,.5)' }}>
+            {crit.code && <span className="mr-1.5" style={{ color: 'rgba(26,30,35,.5)' }}>{crit.code}</span>}
+            {crit.name || 'Unnamed criterion'}
+          </span>
+          {crit.allow_na && <span className="text-[11px] px-1.5 py-0.5 rounded-full shrink-0" style={{ color: 'rgba(26,30,35,.6)', background: '#F0ECE9' }}>N/A allowed</span>}
         </AccordionTrigger>
         {onRemove && (
           <button onClick={onRemove}
@@ -31,19 +36,39 @@ function CriterionEditor({ crit, onChange, onRemove }) {
         )}
         <AccordionContent className="pb-0">
           <div className="px-3.5 pb-3.5 pt-3 flex flex-col gap-2.5 border-t" style={{ borderColor: '#F0ECE9' }}>
-            <div>
-              <label htmlFor={`${fieldId}-name`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Criterion name</label>
-              <input id={`${fieldId}-name`} value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
-                className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="e.g. Core Inquiry Resolution" />
+            <div className="flex gap-2.5">
+              <div style={{ width: 84 }}>
+                <label htmlFor={`${fieldId}-code`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Code</label>
+                <input id={`${fieldId}-code`} value={crit.code || ''} onChange={e => onChange({ ...crit, code: e.target.value.trim() || undefined })}
+                  className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="Q1" />
+              </div>
+              <div className="flex-1">
+                <label htmlFor={`${fieldId}-name`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Criterion name</label>
+                <input id={`${fieldId}-name`} value={crit.name} onChange={e => onChange({ ...crit, name: e.target.value })}
+                  className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="e.g. Core inquiry" />
+              </div>
             </div>
             <div>
-              <label htmlFor={`${fieldId}-description`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Description & scoring guide (1–5)</label>
+              <label htmlFor={`${fieldId}-description`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>Description & scoring guide ({scaleLabel})</label>
               <textarea id={`${fieldId}-description`} value={crit.description} onChange={e => onChange({ ...crit, description: e.target.value })}
                 rows={6}
                 className="w-full rounded-lg px-3 py-2 text-sm leading-relaxed resize-y g-input"
                 style={{ minHeight: 120 }}
-                placeholder="Describe what this criterion evaluates and what each score level (1–5) means." />
+                placeholder={`Describe what this criterion evaluates and what each score level (${scaleLabel}) means.`} />
             </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#1A1E23' }}>
+              <input type="checkbox" checked={!!crit.allow_na}
+                onChange={e => onChange({ ...crit, allow_na: e.target.checked || undefined, na_rule: e.target.checked ? crit.na_rule : undefined })}
+                style={{ accentColor: 'var(--coral)', width: 15, height: 15 }} />
+              Can be N/A <span className="text-xs" style={{ color: 'rgba(26,30,35,.6)' }}>— its points are redistributed within the section</span>
+            </label>
+            {crit.allow_na && (
+              <div>
+                <label htmlFor={`${fieldId}-na`} className="text-xs mb-1.5 block" style={{ color: 'rgba(26,30,35,.6)' }}>When is it N/A?</label>
+                <input id={`${fieldId}-na`} value={crit.na_rule || ''} onChange={e => onChange({ ...crit, na_rule: e.target.value })}
+                  className="w-full rounded-lg px-3 py-2 text-sm g-input" placeholder="e.g. N/A for how-to and other non-troubleshooting tickets." />
+              </div>
+            )}
           </div>
         </AccordionContent>
       </AccordionItem>
@@ -53,7 +78,7 @@ function CriterionEditor({ crit, onChange, onRemove }) {
 
 // memo + stable (index-based) callbacks: editing one dimension, the Scoring
 // Guidance, or the thresholds won't re-render the other dimension editors.
-const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, onRemove }) {
+const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, onRemove, scaleLabel }) {
   const [open, setOpen] = useState(dim.id.startsWith('dim_'))
   const update  = updated => onChange(index, updated)
   const addCrit = () => update({ ...dim, criteria: [...dim.criteria, { id: `c_${Date.now()}`, name: '', description: '' }] })
@@ -86,7 +111,7 @@ const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, on
       </div>
       <div className="flex flex-col gap-2">
         {dim.criteria.map((crit, ci) => (
-          <CriterionEditor key={crit.id} crit={crit}
+          <CriterionEditor key={crit.id} crit={crit} scaleLabel={scaleLabel}
             onChange={updated => update({ ...dim, criteria: dim.criteria.map((c, i) => i === ci ? updated : c) })}
             onRemove={() => update({ ...dim, criteria: dim.criteria.filter((_, i) => i !== ci) })} />
         ))}
@@ -105,14 +130,14 @@ const DimensionEditor = memo(function DimensionEditor({ dim, index, onChange, on
   )
 })
 
-function AutoFailEditor({ conditions, onChange }) {
+function AutoFailEditor({ conditions, onChange, gate }) {
   const add = () => onChange([...conditions, { id: `af_${Date.now()}`, name: '', description: '' }])
   const remove = (i) => onChange(conditions.filter((_, j) => j !== i))
 
   return (
     <div className="rounded-2xl" style={{ background: '#FFFFFF', border: '1px solid #F4DDD7', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#D14B3D' }}><span aria-hidden>⛔</span>Auto-Fail Conditions</p>
+        <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#D14B3D' }}><span aria-hidden>⛔</span>{gate ? `${gate.code || 'Q9'} · ${gate.name || 'Fail gate'} — when to answer Yes` : 'Auto-Fail Conditions'}</p>
         <button onClick={add}
           className="text-xs px-3 py-1.5 rounded-lg transition-colors"
           style={{ color: '#D14B3D', border: '1px solid #F4DDD7', background: '#FEF6F4' }}
@@ -140,13 +165,16 @@ function AutoFailEditor({ conditions, onChange }) {
             </div>
             <textarea aria-label={`Auto-fail condition ${i + 1} description`} value={af.description} onChange={e => onChange(conditions.map((c, j) => j === i ? { ...c, description: e.target.value } : c))}
               rows={2} className="w-full rounded-lg px-3 py-2 text-sm g-input resize-none"
-              placeholder="Describe what triggers this auto-fail." />
+              placeholder={gate ? 'Describe the significant harm that makes Q9 a Yes.' : 'Describe what triggers this auto-fail.'} />
           </div>
         ))}
         {conditions.length === 0 && (
           <p className="text-xs text-center py-4" style={{ color: 'rgba(26,30,35,.5)' }}>No auto-fail conditions. Add one above.</p>
         )}
       </div>
+      {gate && (
+        <p className="text-xs mt-3 leading-relaxed" style={{ color: 'rgba(26,30,35,.6)' }}>{gate.description}</p>
+      )}
     </div>
   )
 }
@@ -186,7 +214,13 @@ export default function RubricPage() {
 
   const totalWeight  = draft.dimensions.reduce((s, d) => s + d.weight, 0)
   const weightOk     = totalWeight === 100
-  const thresholdsOk = draft.verdict_thresholds.pass > draft.verdict_thresholds.needs_review
+  const { min: scaleMin, max: scaleMax } = scaleOf(draft)
+  const scaleLabel   = `${scaleMin}–${scaleMax}`
+  const candidateGate = isCandidateGate(draft)
+  const vt           = draft.verdict_thresholds
+  const thresholdsOk = candidateGate
+    ? vt.pass > 0 && (vt.pass_training == null || vt.pass_training <= vt.pass)
+    : vt.pass > vt.needs_review
   const canSave      = weightOk && thresholdsOk
 
   // Stable identities so the memoized DimensionEditors don't re-render on every keystroke
@@ -242,7 +276,7 @@ export default function RubricPage() {
               style={{ background: '#FFFFFF', borderColor: '#E7E3DF', color: 'rgba(26,30,35,.72)' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#1A1E23'; e.currentTarget.style.background = '#F6F2EF' }}
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(26,30,35,.72)'; e.currentTarget.style.background = '#FFFFFF' }}>
-              Reset to default
+              Reset to {DEFAULT_RUBRIC.name || 'default'}
             </button>
           )}
           <button onClick={save} disabled={!canSave || saving}
@@ -274,6 +308,7 @@ export default function RubricPage() {
         style={{ padding: '13px 18px', background: weightOk ? '#E6F4EC' : '#FEF6F4', border: `1px solid ${weightOk ? '#BFE3CD' : '#F4DDD7'}` }}>
         <p className="text-sm font-medium" style={{ color: weightOk ? '#2F8F5B' : '#D14B3D' }}>
           {weightOk ? '✓ Dimension weights sum to 100%' : `⚠ Weights must sum to 100% — currently ${totalWeight}%`}
+          <span className="font-normal ml-2" style={{ color: 'rgba(26,30,35,.6)' }}>· Scale {scaleLabel}{draft.name ? ` · ${draft.name}` : ''}</span>
         </p>
         <div className="flex items-center gap-3 flex-wrap">
           {draft.dimensions.map(d => (
@@ -285,7 +320,7 @@ export default function RubricPage() {
       {/* Dimensions */}
       <div className="flex flex-col gap-4 mb-4">
         {draft.dimensions.map((dim, i) => (
-          <DimensionEditor key={dim.id} dim={dim} index={i}
+          <DimensionEditor key={dim.id} dim={dim} index={i} scaleLabel={scaleLabel}
             onChange={setDim}
             onRemove={removeDimension} />
         ))}
@@ -301,18 +336,30 @@ export default function RubricPage() {
       </div>
 
       <div id="shared-rubric-panel-rules" role="tabpanel" aria-labelledby="shared-rubric-tab-rules" tabIndex={0} hidden={rubricView !== 'rules'}>
+      {/* Decisions the scorecard still leaves open — graders flag these instead of deciding them */}
+      {draft.open_items?.length > 0 && (
+        <div className="rounded-2xl mb-4" style={{ background: '#FBEBD3', border: '1px solid #F2D6AE', padding: '16px 24px' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#A86A12' }}>Open items · pending confirmation</p>
+          <ol className="flex flex-col gap-1 list-decimal pl-4">
+            {draft.open_items.map((item, i) => <li key={i} className="text-sm" style={{ color: 'rgba(26,30,35,.72)' }}>{item}</li>)}
+          </ol>
+        </div>
+      )}
       {/* Verdict thresholds */}
       <div className="rounded-2xl mb-4" style={{ background: '#FFFFFF', border: '1px solid #EEEEEE', boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.04)', padding: '20px 24px' }}>
         <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(26,30,35,.5)' }}>Verdict Thresholds</p>
         <div className="flex items-center flex-wrap" style={{ gap: 34 }}>
-          {[
+          {(candidateGate ? [
+            { key: 'pass',          label: 'PASS GOAL ≥',     color: '#2F8F5B' },
+            { key: 'pass_training', label: 'IN TRAINING ≥',   color: '#3B7DD8' },
+          ] : [
             { key: 'pass',         label: 'PASS ≥',         color: '#2F8F5B' },
             { key: 'needs_review', label: 'NEEDS REVIEW ≥', color: '#C8841E' },
-          ].map(({ key, label, color }) => (
+          ]).map(({ key, label, color }) => (
             <div key={key} className="flex items-center gap-2">
               <label htmlFor={`threshold-${key}`} className="text-sm font-medium" style={{ color }}>{label}</label>
               <input id={`threshold-${key}`} type="number" min="0" max="100"
-                value={draft.verdict_thresholds[key]}
+                value={draft.verdict_thresholds[key] ?? ''}
                 onChange={e => setDraft(d => ({ ...d, verdict_thresholds: { ...d.verdict_thresholds, [key]: parseInt(e.target.value) || 0 } }))}
                 className="text-center g-input"
                 style={{ width: 62, height: 38, borderRadius: 8, fontFamily: "'Inter Tight'", fontSize: 16, fontWeight: 600, color: '#1A1E23' }} />
@@ -320,15 +367,24 @@ export default function RubricPage() {
             </div>
           ))}
         </div>
-        <p className="text-xs mt-4 flex items-center gap-1.5" style={{ color: 'rgba(26,30,35,.6)' }}><span aria-hidden style={{ color: '#D14B3D' }}>⊘</span>Fail: below the needs-review threshold, or any auto-fail condition triggered.</p>
+        {candidateGate ? (
+          <p className="text-xs mt-4 flex items-center gap-1.5" style={{ color: 'rgba(26,30,35,.6)' }}><span aria-hidden style={{ color: '#D14B3D' }}>⊘</span>Below the pass goal = needs review. Fail only when {draft.fail_gate?.code || 'Q9'} = Yes is approved by Quality and the manager (total becomes 0).</p>
+        ) : (
+          <p className="text-xs mt-4 flex items-center gap-1.5" style={{ color: 'rgba(26,30,35,.6)' }}><span aria-hidden style={{ color: '#D14B3D' }}>⊘</span>Fail: below the needs-review threshold, or any auto-fail condition triggered.</p>
+        )}
         {!thresholdsOk && (
-          <p className="text-xs mt-3" style={{ color: '#D14B3D' }}>⚠ The PASS threshold must be higher than NEEDS REVIEW.</p>
+          <p className="text-xs mt-3" style={{ color: '#D14B3D' }}>
+            {candidateGate ? '⚠ The training-period goal can’t be higher than the pass goal.' : '⚠ The PASS threshold must be higher than NEEDS REVIEW.'}
+          </p>
+        )}
+        {candidateGate && vt.pass_training != null && (
+          <p className="text-xs mt-2" style={{ color: 'rgba(26,30,35,.6)' }}>The training-period goal is shown on scorecards; verdicts use the regular pass goal until training handling is confirmed.</p>
         )}
       </div>
 
       {/* Auto-fail conditions */}
       <AutoFailEditor
-        conditions={draft.auto_fail_conditions}
+        conditions={draft.auto_fail_conditions} gate={candidateGate ? draft.fail_gate : null}
         onChange={updated => setDraft(d => ({ ...d, auto_fail_conditions: updated }))} />
 
       {/* Scoring Guidance */}

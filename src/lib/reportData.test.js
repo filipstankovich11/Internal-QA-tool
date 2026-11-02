@@ -33,3 +33,15 @@ test('question report counts valid rubric ratings', () => {
   assert.equal(row.belowStandard, 2)
   assert.equal(row.average, 8 / 3)
 })
+
+test('question report keeps V8 ratings apart from older 1–5 scores and counts N/A', () => {
+  const rubric = { version: 'v8', scale: { min: 0, max: 5 }, dimensions: [{ id: 'resolution', name: 'Resolution', criteria: [{ id: 'answered', code: 'Q2', name: 'Troubleshooting', allow_na: true }] }] }
+  const v8 = (cell, id) => ({ ...base, id, fullScore: { scorecard: { version: 'v8' }, scores: { resolution: { answered: cell } } } })
+  const legacy = { ...base, id: 'old', fullScore: { scores: { resolution: { answered: { score: 1 } } } } }
+  const [row] = questionRows([v8({ score: 0 }, 'a'), v8({ score: 4 }, 'b'), v8({ na: true, score: null }, 'c'), legacy], rubric)
+  assert.equal(row.name, 'Q2 · Troubleshooting')
+  assert.equal(row.count, 2)
+  assert.equal(row.average, 2)
+  assert.equal(row.belowStandard, 1)
+  assert.equal(row.notApplicable, 1)
+})

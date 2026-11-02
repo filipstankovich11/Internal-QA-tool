@@ -42,4 +42,4 @@ export function gradeColor(value, thresholds) {
 }
 
 // Plain-language verdict meanings — single source for the per-ticket status tooltips.
-export const VERDICT_DESC = { PASS: 'Met the bar', NEEDS_REVIEW: 'Needs a human look', FAIL: 'Below standard or auto-fail' }
+export const VERDICT_DESC = { PASS: 'Met the pass goal', NEEDS_REVIEW: 'Below the goal or a candidate fail — needs a human look', FAIL: 'Confirmed fail' }

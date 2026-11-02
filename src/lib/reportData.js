@@ -37,22 +37,37 @@ export function scorecardSummary(scores) {
   }
 }
 
+// Only compare ratings made on the same scorecard: V8 scores (0–5, stamped with
+// `scorecard.version`) and older 1–5 scores share some question ids.
+export function sameScorecard(score, rubric) {
+  return (score.fullScore?.scorecard?.version ?? null) === (rubric?.version ?? null)
+}
+
+export function ratingFor(score, dimensionId, criterionId) {
+  const cell = score.fullScore?.scores?.[dimensionId]?.[criterionId]
+  if (!cell || cell.na === true || cell.score == null) return null
+  const value = Number(cell.score)
+  return Number.isFinite(value) ? value : null
+}
+
 export function questionRows(scores, rubric) {
+  const min = rubric?.scale?.min ?? 1
+  const max = rubric?.scale?.max ?? 5
+  const comparable = scores.filter(score => sameScorecard(score, rubric))
   return (rubric?.dimensions || []).flatMap(dimension =>
     (dimension.criteria || []).map(criterion => {
-      const entries = scores.map(score => {
-        const raw = score.fullScore?.scores?.[dimension.id]?.[criterion.id]?.score
-        return raw == null ? null : Number(raw)
-      }).filter(value => value !== null && Number.isFinite(value) && value >= 1 && value <= 5)
+      const entries = comparable.map(score => ratingFor(score, dimension.id, criterion.id))
+        .filter(value => value !== null && value >= min && value <= max)
       return {
         id: `${dimension.id}:${criterion.id}`,
         dimensionId: dimension.id,
         criterionId: criterion.id,
-        name: criterion.name,
+        name: criterion.code ? `${criterion.code} · ${criterion.name}` : criterion.name,
         dimension: dimension.name,
         count: entries.length,
         average: entries.length ? entries.reduce((sum, value) => sum + value, 0) / entries.length : null,
         belowStandard: entries.filter(value => value <= 2).length,
+        notApplicable: comparable.filter(score => score.fullScore?.scores?.[dimension.id]?.[criterion.id]?.na === true).length,
       }
     })
   )

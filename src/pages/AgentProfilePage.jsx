@@ -94,7 +94,7 @@ function ScoreRow({ s, onView, onAcknowledge }) {
       </div>
 
       {/* Score */}
-      <ScoreBreakdownHover scores={s.fullScore?.scores} align="right">
+      <ScoreBreakdownHover fullScore={s.fullScore} align="right">
         <span className="text-sm font-bold tabular-nums w-16 text-right shrink-0 cursor-default"
           style={{ color: gradeColor(s.effectiveScore) }}>
           {s.effectiveScore?.toFixed(0)}/100

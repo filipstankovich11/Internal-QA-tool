@@ -18,8 +18,10 @@ from auth import (
     require_ingest_secret, service_rest,
 )
 from gorgias_client import GorgiasClient
-from scorer import score_ticket, _recompute_weighted
+from scorer import score_ticket
 from rubric import DEFAULT_RUBRIC
+from scorecard import (SCORECARD_V8, criteria_by_code, fail_gate_mode, is_na,
+                       nest_question_scores, recompute, scale_of)
 from automated_grader import GradingError, authorized, grade, preview
 
 app = Flask(__name__)
@@ -358,6 +360,45 @@ def _resolve_agent_ids(agent_senders):
     return ids
 
 
+def _gate_from_answer(answer):
+    """Q9 sent as a question: "Yes"/"No", a bool, or {"result": "yes", "reasons": [...]}."""
+    if isinstance(answer, dict):
+        raw = answer.get('triggered', answer.get('result', answer.get('answer')))
+        reasons = answer.get('reasons') or ([answer['notes']] if answer.get('notes') else [])
+        out = {'reasons': reasons, 'evidence': answer.get('evidence') or []}
+    else:
+        raw, out = answer, {'reasons': []}
+    out['triggered'] = raw is True or str(raw).strip().lower() in ('yes', 'true', 'y', '1')
+    return out
+
+
+def _validate_breakdown(breakdown, rubric):
+    """Reject N/A on questions that can't be N/A and scores off the rubric scale."""
+    lo, hi = scale_of(rubric)
+    for dim in rubric.get('dimensions', []):
+        block = breakdown.get(dim['id'])
+        if not isinstance(block, dict):
+            continue
+        for crit in dim.get('criteria', []):
+            cell = block.get(crit['id'])
+            if not isinstance(cell, dict):
+                continue
+            label = crit.get('code') or crit['name']
+            if is_na(cell):
+                if not crit.get('allow_na'):
+                    return f'{label} ({crit["name"]}) cannot be N/A — score it {lo}–{hi}'
+                continue
+            if cell.get('score') is None:
+                continue
+            try:
+                value = float(cell['score'])
+            except (TypeError, ValueError):
+                return f'{label} has a non-numeric score'
+            if not lo <= value <= hi:
+                return f'{label} score {cell["score"]} is outside {lo}–{hi}'
+    return None
+
+
 @app.route('/api/ingest-score', methods=['POST'])
 @require_ingest_secret
 def ingest_score():
@@ -369,7 +410,47 @@ def ingest_score():
         return jsonify({'error': 'ticket_id is required'}), 400
     ticket_id = str(data['ticket_id'])
 
-    breakdown = data.get('scores') if isinstance(data.get('scores'), dict) else None
+    rubric = DEFAULT_RUBRIC
+    try:
+        rows = service_rest('rubric?select=config&limit=1')
+        if rows and rows[0].get('config'):
+            rubric = rows[0]['config']
+    except Exception:
+        pass
+
+    # Per-question payloads (Scorecard V8: {"Q1": {...}, "Q2": "N/A", …}) arrive
+    # flat under `questions` or `scores`; nest them under the rubric ids. If the
+    # live rubric predates question codes, grade against the built-in V8.
+    flat = data.get('questions') if isinstance(data.get('questions'), dict) else None
+    raw_scores = data.get('scores') if isinstance(data.get('scores'), dict) else None
+    if flat is None and raw_scores and all(re.fullmatch(r'[Qq]\d+', str(k)) for k in raw_scores):
+        flat, raw_scores = raw_scores, None
+    gate = data.get('fail_gate') if isinstance(data.get('fail_gate'), dict) else data.get('auto_fail')
+    if flat is not None:
+        flat = dict(flat)
+        if not criteria_by_code(rubric):
+            rubric = SCORECARD_V8
+        gate_code = ((rubric.get('fail_gate') or {}).get('code') or 'Q9').upper()
+        for key in [k for k in flat if str(k).strip().upper() == gate_code]:
+            gate = _gate_from_answer(flat.pop(key))
+        breakdown, unknown = nest_question_scores(flat, rubric)
+        if unknown:
+            return jsonify({'error': f'Unknown question(s) for {rubric.get("name") or "the rubric"}: '
+                                     f'{", ".join(map(str, unknown))}'}), 400
+    else:
+        breakdown = raw_scores
+
+    if breakdown:
+        problem = _validate_breakdown(breakdown, rubric)
+        if problem:
+            return jsonify({'error': problem}), 400
+
+    if not isinstance(gate, dict):
+        gate = {'triggered': False, 'reasons': []}
+    gate = {**gate, 'triggered': bool(gate.get('triggered')), 'reasons': gate.get('reasons') or []}
+
+    strengths = data.get('strengths') or ([data['strength']] if data.get('strength') else [])
+    improvements = data.get('key_improvements') or ([data['improvement']] if data.get('improvement') else [])
 
     # Assemble full_score the same way the built-in scorer stores it, tagged with
     # its origin so ingested scores are distinguishable.
@@ -378,26 +459,24 @@ def ingest_score():
         'ticket_subject':   data.get('ticket_subject') or '',
         'scores':           breakdown or {},
         'summary':          data.get('summary') or '',
-        'strengths':        data.get('strengths') or [],
-        'key_improvements': data.get('key_improvements') or [],
+        'strengths':        strengths,
+        'key_improvements': improvements,
         'annotations':      data.get('annotations') or [],
-        'auto_fail':        data.get('auto_fail') or {'triggered': False, 'reasons': []},
+        'auto_fail':        gate,
         'agent_senders':    data.get('agent_senders') or [],
         'source':           'cortex',
     }
+    for key in ('ticket_type', 'account_context', 'follow_ups', 'review_flags'):
+        if data.get(key):
+            full_score[key] = data[key]
+    if rubric.get('version'):
+        full_score['scorecard'] = {'version': rubric['version'], 'name': rubric.get('name')}
 
     # With a per-criterion breakdown, derive weighted_score + verdict from it (the
     # same deterministic rule the app uses) so ingested scores stay consistent.
     # Otherwise trust the verdict + weighted_score the caller sends.
     if breakdown:
-        rubric = DEFAULT_RUBRIC
-        try:
-            rows = service_rest('rubric?select=config&limit=1')
-            if rows and rows[0].get('config'):
-                rubric = rows[0]['config']
-        except Exception:
-            pass
-        _recompute_weighted(full_score, rubric)
+        recompute(full_score, rubric)
     else:
         v = str(data.get('verdict') or '').upper()
         if v in VALID_VERDICTS:
@@ -406,6 +485,10 @@ def ingest_score():
             full_score['weighted_score'] = float(data.get('weighted_score'))
         except (TypeError, ValueError):
             pass
+        # A caller can't finalize a fail under the V8 gate — it becomes a candidate.
+        if fail_gate_mode(rubric) == 'candidate' and (gate['triggered'] or full_score.get('verdict') == 'FAIL'):
+            gate.update(triggered=True, status='candidate')
+            full_score['verdict'] = 'NEEDS_REVIEW'
 
     verdict = full_score.get('verdict')
     if verdict not in VALID_VERDICTS:

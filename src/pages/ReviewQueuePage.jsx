@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import ScoreModal from '../components/ScoreModal'
 import DisputeResolution from '../components/DisputeResolution'
 import ScoreBreakdownHover from '../components/ScoreBreakdownHover'
+import { isCandidateFail } from '../lib/scorecard'
 import Segmented from '../components/Segmented'
 import Dropdown from '../components/Dropdown'
 import { gorgiasTicketUrl } from '../lib/gorgias'
@@ -40,6 +41,7 @@ function urgencyColor(ts) {
 function priorityOf(item) {
   if (item.disputed)                          return 0
   if (item.effectiveVerdict === 'FAIL')       return 1
+  if (isCandidateFail(item.fullScore, item))  return 1
   return 2
 }
 
@@ -48,11 +50,14 @@ const BADGES = {
   DISPUTED:     { label: '⚑ DISPUTED', color: '#B84A2E',                  bg: '#FFEAE6',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
   NEEDS_REVIEW: { label: 'REVIEW',     color: '#C8841E',                  bg: '#FBEBD3',               border: VERDICT_BORDER.NEEDS_REVIEW, hoverBorder: VERDICT_BORDER.NEEDS_REVIEW },
   FAIL:         { label: '✕ FAIL',     color: '#D14B3D',                  bg: '#FCE9E6',               border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
+  // V8 Q9 = Yes awaiting Quality + manager review (stored as NEEDS_REVIEW)
+  CANDIDATE:    { label: '⚠ Q9 FAIL?',  color: '#D14B3D',                  bg: '#FCE9E6',               border: VERDICT_BORDER.FAIL,         hoverBorder: VERDICT_BORDER.FAIL },
 }
 
 function badgeFor(item) {
   if (item.disputed)                          return BADGES.DISPUTED
   if (item.effectiveVerdict === 'FAIL')       return BADGES.FAIL
+  if (isCandidateFail(item.fullScore, item))  return BADGES.CANDIDATE
   return BADGES.NEEDS_REVIEW
 }
 
@@ -115,7 +120,7 @@ function QueueItem({ item, onClick, selected, onSelect, claimedBy, onClaim, onUn
         </div>
 
         {/* Score */}
-        <ScoreBreakdownHover scores={item.fullScore?.scores} align="right">
+        <ScoreBreakdownHover fullScore={item.fullScore} align="right">
           <span className="text-sm font-bold tabular-nums cursor-default block text-right" style={{ color: badge.color }}>
             {item.effectiveScore?.toFixed(0)}/100
           </span>

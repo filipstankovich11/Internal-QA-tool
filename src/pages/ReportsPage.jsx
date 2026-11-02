@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { VERDICT_COLOR, VERDICT_LABEL } from '../lib/verdict'
-import { filterReportScores, latestScoresByTicket, questionRows, scorecardSummary } from '../lib/reportData'
+import { filterReportScores, latestScoresByTicket, questionRows, ratingFor, sameScorecard, scorecardSummary } from '../lib/reportData'
 import './ReportsPage.css'
 
 const REPORTS = [
@@ -112,10 +112,11 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
     return { team, scores: rows, ...scorecardSummary(rows) }
   }).filter(row => row.count > 0).sort((a, b) => b.count - a.count), [teams, selectedScores, agents])
   const selectedQuestionRow = questions.find(row => row.id === selectedQuestion && row.count > 0)
-  const questionEvidence = selectedQuestionRow ? selectedScores.map(score => {
-    const raw = score.fullScore?.scores?.[selectedQuestionRow.dimensionId]?.[selectedQuestionRow.criterionId]?.score
-    return { score, rating: raw == null ? null : Number(raw) }
-  }).filter(item => item.rating !== null && Number.isFinite(item.rating))
+  const scaleMax = rubric?.scale?.max ?? 5
+  const showNA = (rubric?.dimensions || []).some(d => d.criteria?.some(c => c.allow_na))
+  const questionEvidence = selectedQuestionRow ? selectedScores.filter(score => sameScorecard(score, rubric)).map(score =>
+    ({ score, rating: ratingFor(score, selectedQuestionRow.dimensionId, selectedQuestionRow.criterionId) })
+  ).filter(item => item.rating !== null)
     .sort((a, b) => a.rating - b.rating || b.score.scoredAt - a.score.scoredAt).slice(0, 5) : []
   const questionCount = questions.filter(row => row.count > 0).length
   const reportCounts = {
@@ -146,9 +147,9 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
   })
 
   const scoresForQuestion = (row, lowOnly = false) => selectedScores.filter(score => {
-    const raw = score.fullScore?.scores?.[row.dimensionId]?.[row.criterionId]?.score
-    const rating = raw == null ? null : Number(raw)
-    return Number.isFinite(rating) && (!lowOnly || rating <= 2)
+    if (!sameScorecard(score, rubric)) return false
+    const rating = ratingFor(score, row.dimensionId, row.criterionId)
+    return rating !== null && (!lowOnly || rating <= 2)
   })
 
   useEffect(() => {
@@ -234,21 +235,22 @@ export function ReportsView({ scoreHistory, agents, teams, rubric, dataLoading, 
         {report === 'question' && (questions.every(row => row.count === 0)
           ? <Empty title="No question scores in this view" detail="Choose another period or team. Questions appear when scored tickets contain rubric ratings." />
           : <div className="report-block"><div className="report-block-heading"><h3>Rubric questions</h3><p>Lower averages appear first. Each row shows how many tickets had a rating for that question.</p></div>
-            <div className="report-table-wrap"><table className="report-table report-question-table"><thead><tr><th>Question</th><th>Section</th><th>Rated</th><th>Avg / 5</th><th>Rated 1–2</th></tr></thead>
+            <div className="report-table-wrap"><table className="report-table report-question-table"><thead><tr><th>Question</th><th>Section</th><th>Rated</th><th>Avg / {scaleMax}</th><th>Rated ≤2</th>{showNA && <th>N/A</th>}</tr></thead>
               <tbody>{[...questions].filter(row => row.count).sort((a, b) => a.average - b.average).map(row => {
                 const ratedKey = `question-${row.id}-rated`
                 const lowKey = `question-${row.id}-low`
                 return <tr key={row.id} className={selectedQuestion === row.id ? 'is-expanded' : ''}>
                   <th scope="row"><button type="button" className="report-row-link" onClick={() => setSelectedQuestion(current => current === row.id ? null : row.id)} aria-expanded={selectedQuestion === row.id} aria-controls={selectedQuestion === row.id ? 'report-question-evidence' : undefined}>{row.name} <ArrowIcon open={selectedQuestion === row.id} /></button></th><td data-label="Section">{row.dimension}</td>
                   <td data-label="Rated"><button type="button" className="report-count-link" onClick={() => showTickets(ratedKey, `${row.name} · rated tickets`, scoresForQuestion(row))} aria-expanded={ticketView?.key === ratedKey} aria-controls="report-ticket-results">{row.count}</button></td>
-                  <td data-label="Avg / 5"><strong className={row.average <= 2.5 ? 'report-low' : ''}>{fmt(row.average)}</strong></td>
-                  <td data-label="Rated 1–2">{row.belowStandard ? <button type="button" className="report-count-link" onClick={() => showTickets(lowKey, `${row.name} · rated 1–2`, scoresForQuestion(row, true))} aria-expanded={ticketView?.key === lowKey} aria-controls="report-ticket-results">{row.belowStandard}</button> : 0}</td>
+                  <td data-label={`Avg / ${scaleMax}`}><strong className={row.average <= 2.5 ? 'report-low' : ''}>{fmt(row.average)}</strong></td>
+                  <td data-label="Rated ≤2">{row.belowStandard ? <button type="button" className="report-count-link" onClick={() => showTickets(lowKey, `${row.name} · rated 2 or lower`, scoresForQuestion(row, true))} aria-expanded={ticketView?.key === lowKey} aria-controls="report-ticket-results">{row.belowStandard}</button> : 0}</td>
+                  {showNA && <td data-label="N/A">{row.notApplicable || '—'}</td>}
                 </tr>
               })}</tbody></table></div>
             {selectedQuestionRow && <div id="report-question-evidence" className="report-evidence">
               <h4>Lowest rated tickets · {selectedQuestionRow.name}</h4>
               <div>{questionEvidence.map(({ score, rating }) => <button key={score.id} type="button" onClick={() => openTicket(score)}>
-                <span>Ticket #{score.ticketId}</span><span>{rating}/5 <ArrowIcon /></span>
+                <span>Ticket #{score.ticketId}</span><span>{rating}/{scaleMax} <ArrowIcon /></span>
               </button>)}</div>
             </div>}
             <p className="report-note">Questions added to the current rubric may have fewer historical ratings.</p>

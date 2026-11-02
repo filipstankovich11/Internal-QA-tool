@@ -7,6 +7,7 @@ import Dropdown from '../components/Dropdown'
 import Segmented from '../components/Segmented'
 import { gorgiasTicketUrl } from '../lib/gorgias'
 import { VERDICT_COLOR, VERDICT_BG, VERDICT_LABEL, VERDICTS, VERDICT_DESC } from '../lib/verdict'
+import { verdictRanges } from '../lib/scorecard'
 
 const PAGE_SIZE     = 10 // ticket rows shown before "Show more"
 
@@ -446,8 +447,7 @@ export default function DashboardPage() {
           {total === 0 ? <p className="text-xs" style={{ color: 'var(--ink-45)' }}>No tickets scored yet</p> : (() => {
             const DIST = { PASS: '#3B7DD8', NEEDS_REVIEW: '#C8841E', FAIL: '#D14B3D' }
             const NAME = { PASS: 'Pass', NEEDS_REVIEW: 'Review', FAIL: 'Fail' }
-            const vt = rubric?.verdict_thresholds || { pass: 80, needs_review: 60 }
-            const range = { PASS: `≥${vt.pass}`, NEEDS_REVIEW: `${vt.needs_review}–${vt.pass - 1}`, FAIL: `<${vt.needs_review}` }
+            const range = verdictRanges(rubric)
             const rows = [['PASS', pass], ['NEEDS_REVIEW', review], ['FAIL', fail]]
             const C = 2 * Math.PI * 42
             const passRate = Math.round((pass / total) * 100)

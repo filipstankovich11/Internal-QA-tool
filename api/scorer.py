@@ -2,6 +2,7 @@ import json
 import re
 import anthropic
 from rubric import build_system_prompt, DEFAULT_RUBRIC, SCORING_SYSTEM_PROMPT
+from scorecard import recompute
 
 # change model here for A/B testing
 MODEL = "claude-sonnet-4-6"
@@ -47,54 +48,6 @@ def _format_thread(ticket: dict, messages: list[dict]) -> str:
         lines.append("")
 
     return "\n".join(lines)
-
-
-def _recompute_weighted(score: dict, rubric: dict) -> dict:
-    """Derive weighted_score, per-dimension averages, and the verdict from the
-    criterion scores instead of trusting the model's own arithmetic.
-
-    The model grades each criterion well but is unreliable at the final
-    weighted-average math — it routinely returns a weighted_score that doesn't
-    match its own per-criterion grades. The queue/modal display that reported
-    number while the Edit-score screen recomputes from the criteria, so the two
-    disagree (e.g. shows 74 but Edit shows 68). Recomputing here — with the same
-    round-then-average the Edit screen uses — makes every surface consistent and
-    keeps the score faithful to the rubric formula."""
-    scores = score.get("scores")
-    if not isinstance(scores, dict):
-        return score
-
-    thresholds = rubric.get("verdict_thresholds") or {"pass": 80, "needs_review": 60}
-    weighted = 0.0
-    for dim in rubric.get("dimensions", []):
-        block = scores.get(dim["id"])
-        if not isinstance(block, dict):
-            continue
-        vals = []
-        for crit in dim.get("criteria", []):
-            cell = block.get(crit["id"])
-            if isinstance(cell, dict) and cell.get("score") is not None:
-                try:
-                    vals.append(max(1, min(5, round(float(cell["score"])))))
-                except (TypeError, ValueError):
-                    pass
-        if not vals:
-            continue
-        avg = sum(vals) / len(vals)
-        block["dimension_average"] = round(avg, 1)
-        weighted += (avg / 5) * dim.get("weight", 0)
-
-    weighted = round(weighted, 1)
-    score["weighted_score"] = weighted
-
-    auto_failed = bool((score.get("auto_fail") or {}).get("triggered"))
-    if auto_failed or weighted < thresholds.get("needs_review", 60):
-        score["verdict"] = "FAIL"
-    elif weighted >= thresholds.get("pass", 80):
-        score["verdict"] = "PASS"
-    else:
-        score["verdict"] = "NEEDS_REVIEW"
-    return score
 
 
 def score_ticket(client: anthropic.Anthropic, ticket: dict, messages: list[dict], rubric: dict | None = None, few_shot_examples: list | None = None) -> dict:
@@ -145,7 +98,8 @@ Return only the JSON score object as specified in your instructions."""
     score["ticket_id"] = ticket_id
     # Recompute the weighted total/verdict from the criterion grades so the
     # stored score matches what the Edit-score screen derives (the model's own
-    # weighted_score arithmetic is unreliable).
+    # weighted_score arithmetic is unreliable — e.g. it reported 74 for criteria
+    # that work out to 68).
     if "error" not in score:
-        _recompute_weighted(score, rubric or DEFAULT_RUBRIC)
+        recompute(score, rubric or DEFAULT_RUBRIC)
     return score

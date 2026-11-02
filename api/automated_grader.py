@@ -11,6 +11,7 @@ import requests
 
 from gorgias_client import GorgiasClient
 from rubric import DEFAULT_RUBRIC
+from scorecard import is_na, recompute, scale_of
 from scorer import score_ticket
 
 
@@ -58,37 +59,31 @@ def assigned_team_id(ticket):
 
 
 def normalize_score(result, rubric):
-    """Recalculate numeric values from criterion scores; reject malformed model output."""
+    """Validate criterion scores, then recalculate the total and verdict from them;
+    reject malformed model output before anything is persisted."""
     if result.get('error') or not isinstance(result.get('scores'), dict):
         raise GradingError('AI scoring returned an invalid score', 502)
-    total = 0.0
+    lo, hi = scale_of(rubric)
     for dimension in rubric['dimensions']:
         row = result['scores'].get(dimension['id'])
         if not isinstance(row, dict) or not dimension.get('criteria'):
             raise GradingError('AI scoring omitted a rubric dimension', 502)
-        values = []
         for criterion in dimension['criteria']:
             item = row.get(criterion['id'])
             if not isinstance(item, dict):
                 raise GradingError('AI scoring omitted a rubric criterion', 502)
+            if is_na(item):
+                if not criterion.get('allow_na'):
+                    raise GradingError(f"AI scoring marked {criterion.get('code') or criterion['name']} N/A, "
+                                       'which the scorecard does not allow', 502)
+                continue
             try:
                 value = float(item['score'])
             except (KeyError, TypeError, ValueError):
                 raise GradingError('AI scoring returned an invalid criterion score', 502)
-            if not 1 <= value <= 5:
-                raise GradingError('AI scoring returned a score outside 1–5', 502)
-            values.append(value)
-        average = sum(values) / len(values)
-        row['dimension_average'] = round(average, 1)
-        row['weight'] = dimension['weight'] / 100
-        total += average * dimension['weight'] / 100
-    total = round(total * 20, 1)
-    result['weighted_score'] = total
-    thresholds = rubric['verdict_thresholds']
-    auto_fail = result.get('auto_fail') or {}
-    result['verdict'] = ('FAIL' if auto_fail.get('triggered') or total < thresholds['needs_review']
-                         else 'PASS' if total >= thresholds['pass'] else 'NEEDS_REVIEW')
-    return result
+            if not lo <= value <= hi:
+                raise GradingError(f'AI scoring returned a score outside {lo}–{hi}', 502)
+    return recompute(result, rubric)
 
 
 def match_agents(senders):

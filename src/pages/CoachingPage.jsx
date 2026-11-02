@@ -12,15 +12,6 @@ import SessionView from '../components/coaching/SessionView'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
 
-const CRITERIA = [
-  { key: 'core_inquiry_resolved',     name: 'Core Resolution',        dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
-  { key: 'troubleshooting_procedure', name: 'Troubleshooting',        dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
-  { key: 'forward_resolution',        name: 'Forward Resolution',     dimension: 'Inquiry Resolution',  dimKey: 'inquiry_resolution',  weight: '50%' },
-  { key: 'ticket_handling_procedure', name: 'Ticket Handling',        dimension: 'Internal Processes',  dimKey: 'internal_processes',  weight: '25%' },
-  { key: 'tone_professionalism',      name: 'Tone & Professionalism', dimension: 'Customer Perception', dimKey: 'customer_perception', weight: '25%' },
-  { key: 'communication_clarity',     name: 'Communication Clarity',  dimension: 'Customer Perception', dimKey: 'customer_perception', weight: '25%' },
-]
-
 const scoreColor = v => v >= 4 ? '#2F8F5B' : v >= 3 ? '#C8841E' : '#D14B3D'
 const scoreBg    = v => v >= 4 ? '#E6F4EC' : v >= 3 ? '#FBF1E0' : '#FEF6F4'
 const scoreBorder = v => v >= 4 ? '#BFE3CD' : v >= 3 ? '#EAD3AE' : '#F4DDD7'
@@ -94,7 +85,11 @@ function ImprovementCard({ text, index }) {
 }
 
 export default function CoachingPage() {
-  const { scoreHistory, agents, openScore } = useApp()
+  const { scoreHistory, agents, openScore, rubric } = useApp()
+  // Coaching areas follow the live rubric (V8: Q1–Q8), so new questions show up for agents
+  const criteria = useMemo(() => (rubric?.dimensions || []).flatMap(d => (d.criteria || []).map(c => ({
+    key: c.id, dimKey: d.id, name: c.code ? `${c.code} · ${c.name}` : c.name, dimension: d.name, weight: `${d.weight}%`,
+  }))), [rubric])
   const { user, role } = useAuth()
 
   const myAgentId = useMemo(
@@ -149,7 +144,7 @@ export default function CoachingPage() {
 
   // ── Per-criterion averages + notes ─────────────────────────────────────────
   const criteriaStats = useMemo(() => {
-    return CRITERIA.map(c => {
+    return criteria.map(c => {
       const entries = scores
         .map(s => s.fullScore?.scores?.[c.dimKey]?.[c.key])
         .map(entry => ({ entry, score: finiteScore(entry?.score) }))
@@ -166,7 +161,7 @@ export default function CoachingPage() {
 
       return { ...c, avg, n: entries.length, notes }
     }).filter(c => c.avg != null)
-  }, [scores])
+  }, [scores, criteria])
 
   const sorted     = [...criteriaStats].sort((a, b) => a.avg - b.avg)
   const focusAreas = sorted.slice(0, 3)
