@@ -410,6 +410,21 @@ def ingest_score():
         return jsonify({'error': 'ticket_id is required'}), 400
     ticket_id = str(data['ticket_id'])
 
+    # Callers don't need to remember what they've scored: a ticket that already has
+    # a Cortex score is acknowledged (200) without storing a duplicate. Send
+    # "regrade": true to store a fresh score on purpose.
+    if not data.get('regrade'):
+        try:
+            existing = service_rest(
+                f'scores?select=id,verdict,weighted_score&ticket_id=eq.{urllib.parse.quote(ticket_id)}'
+                '&full_score->>source=eq.cortex&order=scored_at.desc&limit=1')
+        except Exception:
+            existing = None  # lookup failure shouldn't block ingestion
+        if existing:
+            row = existing[0]
+            return jsonify({'ok': True, 'already_scored': True, 'id': row['id'], 'ticket_id': ticket_id,
+                            'verdict': row['verdict'], 'weighted_score': row['weighted_score']}), 200
+
     rubric = DEFAULT_RUBRIC
     try:
         rows = service_rest('rubric?select=config&limit=1')
